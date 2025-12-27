@@ -1,0 +1,107 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  SPECIALIST
+  CLIENT
+}
+
+enum ClientStatus {
+  LEAD
+  ONBOARDING
+  ACTIVE
+  PAUSED
+  CHURNED
+}
+
+enum ServiceType {
+  SEO
+  AEO
+  WEB_DEVELOPMENT
+  PAID_MEDIA
+  SOCIAL_MEDIA
+  CONTENT
+  BRANDING
+  CONSULTING
+}
+
+enum ProjectStatus {
+  DRAFT
+  PENDING_APPROVAL
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(SPECIALIST)
+  isActive  Boolean  @default(true)
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  name           String
+  slug           String       @unique
+  website        String?
+  industry       String?
+  status         ClientStatus @default(LEAD)
+  primaryContact String?
+  primaryEmail   String?
+  monthlyRetainer Decimal?    @db.Decimal(10, 2)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  users          User[]
+  projects       Project[]
+
+  @@map("clients")
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  name          String
+  description   String?
+  serviceType   ServiceType
+  status        ProjectStatus @default(DRAFT)
+  startDate     DateTime?
+  budget        Decimal?      @db.Decimal(10, 2)
+  clientId      String
+  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  stages        ProjectStage[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@map("projects")
+}
+
+model ProjectStage {
+  id          String    @id @default(cuid())
+  name        String
+  order       Int
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("project_stages")
+}
