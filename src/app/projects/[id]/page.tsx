@@ -94,7 +94,13 @@ export default async function ProjectViewPage({ params }: { params: { id: string
           </div>
         </div>
 
-        <StageManager projectId={project.id} initialStages={project.stages} />
+<StageManager projectId={project.id} initialStages={project.stages.map(s => ({
+  ...s,
+  completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+  createdAt: s.createdAt.toISOString(),
+  updatedAt: s.updatedAt.toISOString(),
+}))} />
+        
       </main>
     </div>
   );
