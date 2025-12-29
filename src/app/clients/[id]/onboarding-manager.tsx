@@ -11,6 +11,7 @@ type OnboardingItem = {
   isCompleted: boolean;
   completedAt: string | null;
   completedBy: string | null;
+  notes: string | null;
 };
 
 export default function OnboardingManager({ 
@@ -25,6 +26,8 @@ export default function OnboardingManager({
   const router = useRouter();
   const [items, setItems] = useState<OnboardingItem[]>(initialItems);
   const [initializing, setInitializing] = useState(false);
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [notesValue, setNotesValue] = useState("");
 
   const completed = items.filter(i => i.isCompleted).length;
   const total = items.length;
@@ -59,6 +62,20 @@ export default function OnboardingManager({
       } : i));
       router.refresh();
     }
+  }
+
+  async function saveNotes(item: OnboardingItem) {
+    const res = await fetch(`/api/onboarding-items/${item.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ notes: notesValue }),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setItems(items.map(i => i.id === item.id ? { ...i, notes: updated.notes } : i));
+    }
+    setEditingNotesId(null);
   }
 
   // Only show for LEAD or ONBOARDING clients
@@ -111,52 +128,95 @@ export default function OnboardingManager({
             <div 
               key={item.id} 
               style={{ 
-                display: "flex", 
-                alignItems: "flex-start", 
                 padding: 12, 
                 borderBottom: "1px solid #eee",
-                gap: 12 
               }}
             >
-              <button
-                onClick={() => toggleItem(item)}
-                style={{ 
-                  width: 24, 
-                  height: 24, 
-                  borderRadius: 4, 
-                  border: item.isCompleted ? "none" : "2px solid #ddd",
-                  background: item.isCompleted ? "#4caf50" : "white",
-                  color: "white", 
-                  fontSize: 14, 
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  flexShrink: 0,
-                  marginTop: 2
-                }}
-              >
-                {item.isCompleted ? "✓" : ""}
-              </button>
+              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <button
+                  onClick={() => toggleItem(item)}
+                  style={{ 
+                    width: 24, 
+                    height: 24, 
+                    borderRadius: 4, 
+                    border: item.isCompleted ? "none" : "2px solid #ddd",
+                    background: item.isCompleted ? "#4caf50" : "white",
+                    color: "white", 
+                    fontSize: 14, 
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                    marginTop: 2
+                  }}
+                >
+                  {item.isCompleted ? "✓" : ""}
+                </button>
 
-              <div style={{ flex: 1 }}>
-                <div style={{ 
-                  fontWeight: 500, 
-                  textDecoration: item.isCompleted ? "line-through" : "none",
-                  color: item.isCompleted ? "#888" : "#333"
-                }}>
-                  {item.name}
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontWeight: 500, 
+                    textDecoration: item.isCompleted ? "line-through" : "none",
+                    color: item.isCompleted ? "#888" : "#333"
+                  }}>
+                    {item.name}
+                  </div>
+                  {item.description && (
+                    <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
+                      {item.description}
+                    </div>
+                  )}
+                  {item.completedAt && item.completedBy && (
+                    <div style={{ fontSize: 12, color: "#4caf50", marginTop: 4 }}>
+                      ✓ Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
+                    </div>
+                  )}
+
+                  {/* Notes section */}
+                  <div style={{ marginTop: 8 }}>
+                    {editingNotesId === item.id ? (
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <input
+                          value={notesValue}
+                          onChange={(e) => setNotesValue(e.target.value)}
+                          placeholder="Add notes (e.g., N/A, pending, etc.)"
+                          style={{ flex: 1, padding: 6, border: "1px solid #ddd", borderRadius: 4, fontSize: 13 }}
+                          autoFocus
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") saveNotes(item);
+                            if (e.key === "Escape") setEditingNotesId(null);
+                          }}
+                        />
+                        <button
+                          onClick={() => saveNotes(item)}
+                          style={{ padding: "6px 12px", background: "#333", color: "white", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingNotesId(null)}
+                          style={{ padding: "6px 12px", background: "#eee", color: "#333", border: "none", borderRadius: 4, fontSize: 13, cursor: "pointer" }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <div 
+                        onClick={() => { setEditingNotesId(item.id); setNotesValue(item.notes || ""); }}
+                        style={{ 
+                          fontSize: 13, 
+                          color: item.notes ? "#666" : "#aaa", 
+                          cursor: "pointer",
+                          fontStyle: item.notes ? "normal" : "italic",
+                          padding: "4px 0"
+                        }}
+                      >
+                        {item.notes || "+ Add notes"}
+                      </div>
+                    )}
+                  </div>
                 </div>
-                {item.description && (
-                  <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
-                    {item.description}
-                  </div>
-                )}
-                {item.completedAt && item.completedBy && (
-                  <div style={{ fontSize: 12, color: "#4caf50", marginTop: 4 }}>
-                    ✓ Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
-                  </div>
-                )}
               </div>
             </div>
           ))}
