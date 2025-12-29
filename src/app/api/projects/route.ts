@@ -9,6 +9,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const data = await req.json();
+    
+    // Create the project
     const project = await prisma.project.create({
       data: {
         name: data.name,
@@ -20,8 +22,28 @@ export async function POST(req: NextRequest) {
         budget: data.budget,
       },
     });
+
+    // Get stage templates for this service type
+    const templates = await prisma.stageTemplate.findMany({
+      where: { serviceType: data.serviceType },
+      orderBy: { order: "asc" },
+    });
+
+    // Auto-create stages from templates
+    if (templates.length > 0) {
+      await prisma.projectStage.createMany({
+        data: templates.map(t => ({
+          projectId: project.id,
+          name: t.name,
+          order: t.order,
+          isCompleted: false,
+        })),
+      });
+    }
+
     return NextResponse.json(project);
   } catch (error) {
+    console.error("Failed to create project:", error);
     return NextResponse.json({ error: "Failed to create project" }, { status: 500 });
   }
 }
