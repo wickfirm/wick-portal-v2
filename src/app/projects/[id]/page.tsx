@@ -24,6 +24,14 @@ export default async function ProjectViewPage({ params }: { params: { id: string
   const total = project.stages.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  const stagesForClient = project.stages.map(s => ({
+    id: s.id,
+    name: s.name,
+    order: s.order,
+    isCompleted: s.isCompleted,
+    completedAt: s.completedAt ? s.completedAt.toISOString() : null,
+  }));
+
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
       <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -94,13 +102,7 @@ export default async function ProjectViewPage({ params }: { params: { id: string
           </div>
         </div>
 
-<StageManager projectId={project.id} initialStages={project.stages.map(s => ({
-  ...s,
-  completedAt: s.completedAt ? s.completedAt.toISOString() : null,
-  createdAt: s.createdAt.toISOString(),
-  updatedAt: s.updatedAt.toISOString(),
-}))} />
-        
+        <StageManager projectId={project.id} initialStages={stagesForClient} />
       </main>
     </div>
   );
