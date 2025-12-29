@@ -71,6 +71,7 @@ model Client {
   projects        Project[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+onboardingItems OnboardingItem[]
 
   @@map("clients")
 }
@@ -115,4 +116,31 @@ model StageTemplate {
   updatedAt   DateTime    @updatedAt
 
   @@map("stage_templates")
+}
+
+model OnboardingTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("onboarding_templates")
+}
+
+model OnboardingItem {
+  id          String    @id @default(cuid())
+  name        String
+  description String?
+  order       Int
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  completedBy String?
+  clientId    String
+  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("onboarding_items")
 }
