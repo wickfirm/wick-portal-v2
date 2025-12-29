@@ -73,21 +73,21 @@ model User {
 }
 
 model Client {
-  id              String       @id @default(cuid())
+  id              String           @id @default(cuid())
   name            String
-  slug            String       @unique
+  slug            String           @unique
   website         String?
   industry        String?
-  status          ClientStatus @default(LEAD)
+  status          ClientStatus     @default(LEAD)
   primaryContact  String?
   primaryEmail    String?
-  monthlyRetainer Decimal?     @db.Decimal(10, 2)
+  monthlyRetainer Decimal?         @db.Decimal(10, 2)
   users           User[]
   projects        Project[]
   onboardingItems OnboardingItem[]
   tasks           ClientTask[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
 
   @@map("clients")
 }
@@ -195,5 +195,3 @@ model ClientTask {
 
   @@map("client_tasks")
 }
-
-
