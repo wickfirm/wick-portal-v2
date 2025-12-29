@@ -91,7 +91,6 @@ export default function StageManager({ projectId, initialStages }: { projectId: 
 
     const otherStage = stages[newIndex];
 
-    // Swap orders
     await Promise.all([
       fetch(`/api/stages/${stage.id}`, {
         method: "PUT",
@@ -105,7 +104,6 @@ export default function StageManager({ projectId, initialStages }: { projectId: 
       }),
     ]);
 
-    // Update local state
     const newStages = [...stages];
     newStages[currentIndex] = { ...otherStage, order: stage.order };
     newStages[newIndex] = { ...stage, order: otherStage.order };
