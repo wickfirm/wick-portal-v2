@@ -7,6 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  ONGOING
+  ON_HOLD
+  COMPLETED
+  FUTURE_PLAN
+}
+
 enum UserRole {
   ADMIN
   MANAGER
@@ -144,4 +159,39 @@ model OnboardingItem {
   updatedAt   DateTime  @updatedAt
 
   @@map("onboarding_items")
+}
+
+model TaskCategory {
+  id        String       @id @default(cuid())
+  name      String
+  order     Int
+  tasks     ClientTask[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("task_categories")
+}
+
+model ClientTask {
+  id                String        @id @default(cuid())
+  name              String
+  categoryId        String?
+  category          TaskCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  clientId          String
+  client            Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  dueDate           DateTime?
+  priority          TaskPriority  @default(MEDIUM)
+  status            TaskStatus    @default(PENDING)
+  notes             String?
+  nextSteps         String?
+  tasks           ClientTask[]
+  externalLink      String?
+  externalLinkLabel String?
+  internalLink      String?
+  internalLinkLabel String?
+  order             Int           @default(0)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@map("client_tasks")
 }
