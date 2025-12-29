@@ -53,43 +53,37 @@ model User {
   client    Client?  @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@map("users")
 }
 
 model Client {
-  id             String       @id @default(cuid())
-  name           String
-  slug           String       @unique
-  website        String?
-  industry       String?
-  status         ClientStatus @default(LEAD)
-  primaryContact String?
-  primaryEmail   String?
-  monthlyRetainer Decimal?    @db.Decimal(10, 2)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  users          User[]
-  projects       Project[]
-
-  @@map("clients")
+  id              String       @id @default(cuid())
+  name            String
+  slug            String       @unique
+  website         String?
+  industry        String?
+  status          ClientStatus @default(LEAD)
+  primaryContact  String?
+  primaryEmail    String?
+  monthlyRetainer Decimal?     @db.Decimal(10, 2)
+  users           User[]
+  projects        Project[]
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 }
 
 model Project {
-  id            String        @id @default(cuid())
-  name          String
-  description   String?
-  serviceType   ServiceType
-  status        ProjectStatus @default(DRAFT)
-  startDate     DateTime?
-  budget        Decimal?      @db.Decimal(10, 2)
-  clientId      String
-  client        Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  stages        ProjectStage[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  @@map("projects")
+  id          String        @id @default(cuid())
+  name        String
+  description String?
+  serviceType ServiceType
+  status      ProjectStatus @default(DRAFT)
+  startDate   DateTime?
+  budget      Decimal?      @db.Decimal(10, 2)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  stages      ProjectStage[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 }
 
 model ProjectStage {
@@ -104,4 +98,15 @@ model ProjectStage {
   updatedAt   DateTime  @updatedAt
 
   @@map("project_stages")
+}
+
+model StageTemplate {
+  id          String      @id @default(cuid())
+  serviceType ServiceType
+  name        String
+  order       Int
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@map("stage_templates")
 }
