@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import OnboardingManager from "./onboarding-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -12,12 +13,25 @@ export default async function ClientViewPage({ params }: { params: { id: string 
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
-    include: { projects: { include: { stages: true } } },
+    include: { 
+      projects: { include: { stages: true } },
+      onboardingItems: { orderBy: { order: "asc" } }
+    },
   });
 
   if (!client) {
     return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
   }
+
+  const onboardingForClient = client.onboardingItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    order: item.order,
+    isCompleted: item.isCompleted,
+    completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+    completedBy: item.completedBy,
+  }));
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
@@ -29,6 +43,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
             <Link href="/clients" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Clients</Link>
             <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
             <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
+            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
           </nav>
         </div>
         <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
@@ -44,8 +59,8 @@ export default async function ClientViewPage({ params }: { params: { id: string 
             <h1 style={{ margin: 0 }}>{client.name}</h1>
             <span style={{ 
               display: "inline-block", marginTop: 8, padding: "4px 12px", borderRadius: 4, fontSize: 14,
-              background: client.status === "ACTIVE" ? "#e8f5e9" : "#f5f5f5",
-              color: client.status === "ACTIVE" ? "#2e7d32" : "#666"
+              background: client.status === "ACTIVE" ? "#e8f5e9" : client.status === "ONBOARDING" ? "#e3f2fd" : "#f5f5f5",
+              color: client.status === "ACTIVE" ? "#2e7d32" : client.status === "ONBOARDING" ? "#1976d2" : "#666"
             }}>
               {client.status}
             </span>
@@ -54,6 +69,12 @@ export default async function ClientViewPage({ params }: { params: { id: string 
             Edit Client
           </Link>
         </div>
+
+        <OnboardingManager 
+          clientId={client.id} 
+          clientStatus={client.status}
+          initialItems={onboardingForClient} 
+        />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
           <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
