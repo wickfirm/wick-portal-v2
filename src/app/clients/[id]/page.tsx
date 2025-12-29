@@ -66,9 +66,14 @@ const onboardingForClient = client.onboardingItems.map(item => ({
               {client.status}
             </span>
           </div>
-          <Link href={`/clients/${client.id}/edit`} style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
-            Edit Client
-          </Link>
+<div style={{ display: "flex", gap: 8 }}>
+  <Link href={`/clients/${client.id}/tasks`} style={{ background: "#1976d2", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
+    Weekly Tasks
+  </Link>
+  <Link href={`/clients/${client.id}/edit`} style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
+    Edit Client
+  </Link>
+</div>
         </div>
 
         <OnboardingManager 
