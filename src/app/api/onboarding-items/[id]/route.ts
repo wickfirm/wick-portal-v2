@@ -19,6 +19,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       updateData.completedBy = data.isCompleted ? user.name : null;
     }
 
+    if (data.notes !== undefined) {
+      updateData.notes = data.notes;
+    }
+
     const item = await prisma.onboardingItem.update({
       where: { id: params.id },
       data: updateData,
