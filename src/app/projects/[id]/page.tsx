@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import StageManager from "./stage-manager";
 
 export const dynamic = "force-dynamic";
 
@@ -33,6 +34,7 @@ export default async function ProjectViewPage({ params }: { params: { id: string
             <Link href="/clients" style={{ color: "#666", textDecoration: "none" }}>Clients</Link>
             <Link href="/projects" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Projects</Link>
             <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
+            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
           </nav>
         </div>
         <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
@@ -92,41 +94,7 @@ export default async function ProjectViewPage({ params }: { params: { id: string
           </div>
         </div>
 
-        <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Project Stages</h3>
-          
-          {project.stages.length === 0 ? (
-            <p style={{ color: "#888", textAlign: "center", padding: 24 }}>No stages defined</p>
-          ) : (
-            <div>
-              {project.stages.map((stage, index) => (
-                <div key={stage.id} style={{ display: "flex", alignItems: "center", padding: 12, borderBottom: index < project.stages.length - 1 ? "1px solid #eee" : "none" }}>
-                  <div style={{ 
-                    width: 24, height: 24, borderRadius: "50%", marginRight: 12,
-                    background: stage.isCompleted ? "#4caf50" : "#eee",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    color: "white", fontSize: 14
-                  }}>
-                    {stage.isCompleted ? "✓" : stage.order}
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 500 }}>{stage.name}</div>
-                    {stage.completedAt && (
-                      <div style={{ fontSize: 12, color: "#888" }}>Completed {new Date(stage.completedAt).toLocaleDateString()}</div>
-                    )}
-                  </div>
-                  <span style={{ 
-                    padding: "4px 8px", borderRadius: 4, fontSize: 12,
-                    background: stage.isCompleted ? "#e8f5e9" : "#fff3e0",
-                    color: stage.isCompleted ? "#2e7d32" : "#f57c00"
-                  }}>
-                    {stage.isCompleted ? "Completed" : "Pending"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        <StageManager projectId={project.id} initialStages={project.stages} />
       </main>
     </div>
   );
