@@ -53,6 +53,8 @@ model User {
   client    Client?  @relation(fields: [clientId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("users")
 }
 
 model Client {
@@ -69,6 +71,8 @@ model Client {
   projects        Project[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@map("clients")
 }
 
 model Project {
@@ -84,6 +88,8 @@ model Project {
   stages      ProjectStage[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+
+  @@map("projects")
 }
 
 model ProjectStage {
