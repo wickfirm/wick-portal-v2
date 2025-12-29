@@ -84,9 +84,10 @@ model Client {
   monthlyRetainer Decimal?     @db.Decimal(10, 2)
   users           User[]
   projects        Project[]
+  onboardingItems OnboardingItem[]
+  tasks           ClientTask[]
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
-onboardingItems OnboardingItem[]
 
   @@map("clients")
 }
@@ -184,7 +185,6 @@ model ClientTask {
   status            TaskStatus    @default(PENDING)
   notes             String?
   nextSteps         String?
-  tasks           ClientTask[]
   externalLink      String?
   externalLinkLabel String?
   internalLink      String?
