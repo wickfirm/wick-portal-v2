@@ -128,6 +128,11 @@ export default function ClientTasksPage() {
     fetchData();
   }
 
+  function isOverdue(dueDate: string | null, status: string): boolean {
+    if (!dueDate || status === "COMPLETED") return false;
+    return new Date(dueDate) < new Date();
+  }
+
   // Group tasks by category
   const groupedTasks = categories.map(cat => ({
     category: cat,
@@ -154,7 +159,7 @@ export default function ClientTasksPage() {
         <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
       </header>
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
           <Link href={`/clients/${clientId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {clientName}</Link>
         </div>
@@ -224,16 +229,18 @@ export default function ClientTasksPage() {
         )}
 
         {/* Task Table */}
-        <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        <div style={{ background: "white", borderRadius: 8, overflow: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
             <thead>
               <tr style={{ background: "#f9f9f9", textAlign: "left" }}>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "20%" }}>Category</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "25%" }}>Task</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "10%" }}>Priority</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "12%" }}>Status</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "20%" }}>Notes / Links</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee", width: "13%" }}>Actions</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Category</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Task</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Due Date</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Priority</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Status</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Notes / Links</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Next Steps</th>
+                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -246,6 +253,17 @@ export default function ClientTasksPage() {
                       </td>
                     )}
                     <td style={{ padding: 12 }}>{task.name}</td>
+                    <td style={{ padding: 12, fontSize: 13 }}>
+                      {task.dueDate ? (
+                        <span style={{ 
+                          color: isOverdue(task.dueDate, task.status) ? "#c62828" : "#666",
+                          fontWeight: isOverdue(task.dueDate, task.status) ? 600 : 400
+                        }}>
+                          {new Date(task.dueDate).toLocaleDateString()}
+                          {isOverdue(task.dueDate, task.status) && " ⚠"}
+                        </span>
+                      ) : "-"}
+                    </td>
                     <td style={{ padding: 12 }}>
                       <span style={{ 
                         padding: "4px 8px", borderRadius: 4, fontSize: 12,
@@ -285,6 +303,10 @@ export default function ClientTasksPage() {
                           {task.internalLinkLabel || "Internal"} ↗
                         </a>
                       )}
+                      {!task.notes && !task.externalLink && !task.internalLink && "-"}
+                    </td>
+                    <td style={{ padding: 12, fontSize: 13, color: "#666" }}>
+                      {task.nextSteps || "-"}
                     </td>
                     <td style={{ padding: 12 }}>
                       <button
@@ -312,6 +334,17 @@ export default function ClientTasksPage() {
                     </td>
                   )}
                   <td style={{ padding: 12 }}>{task.name}</td>
+                  <td style={{ padding: 12, fontSize: 13 }}>
+                    {task.dueDate ? (
+                      <span style={{ 
+                        color: isOverdue(task.dueDate, task.status) ? "#c62828" : "#666",
+                        fontWeight: isOverdue(task.dueDate, task.status) ? 600 : 400
+                      }}>
+                        {new Date(task.dueDate).toLocaleDateString()}
+                        {isOverdue(task.dueDate, task.status) && " ⚠"}
+                      </span>
+                    ) : "-"}
+                  </td>
                   <td style={{ padding: 12 }}>
                     <span style={{ 
                       padding: "4px 8px", borderRadius: 4, fontSize: 12,
@@ -351,6 +384,10 @@ export default function ClientTasksPage() {
                         {task.internalLinkLabel || "Internal"} ↗
                       </a>
                     )}
+                    {!task.notes && !task.externalLink && !task.internalLink && "-"}
+                  </td>
+                  <td style={{ padding: 12, fontSize: 13, color: "#666" }}>
+                    {task.nextSteps || "-"}
                   </td>
                   <td style={{ padding: 12 }}>
                     <button
@@ -371,7 +408,7 @@ export default function ClientTasksPage() {
 
               {tasks.length === 0 && (
                 <tr>
-                  <td colSpan={6} style={{ padding: 48, textAlign: "center", color: "#888" }}>
+                  <td colSpan={8} style={{ padding: 48, textAlign: "center", color: "#888" }}>
                     No tasks yet. Click "+ Add Task" to create one.
                   </td>
                 </tr>
