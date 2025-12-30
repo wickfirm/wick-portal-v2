@@ -197,3 +197,40 @@ model ClientTask {
 
   @@map("client_tasks")
 }
+
+model ClientMetrics {
+  id                   String   @id @default(cuid())
+  clientId             String
+  client               Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month                DateTime @db.Date
+  
+  // Google Analytics
+  gaSessions           Int?     @map("ga_sessions")
+  gaUsers              Int?     @map("ga_users")
+  gaPageviews          Int?     @map("ga_pageviews")
+  gaBounceRate         Decimal? @map("ga_bounce_rate") @db.Decimal(5, 2)
+  gaAvgSessionDuration Int?     @map("ga_avg_session_duration")
+  
+  // Google Search Console
+  gscImpressions       Int?     @map("gsc_impressions")
+  gscClicks            Int?     @map("gsc_clicks")
+  gscCtr               Decimal? @map("gsc_ctr") @db.Decimal(5, 2)
+  gscAvgPosition       Decimal? @map("gsc_avg_position") @db.Decimal(5, 2)
+  
+  // META Ads
+  metaSpend            Decimal? @map("meta_spend") @db.Decimal(10, 2)
+  metaImpressions      Int?     @map("meta_impressions")
+  metaClicks           Int?     @map("meta_clicks")
+  metaConversions      Int?     @map("meta_conversions")
+  metaCtr              Decimal? @map("meta_ctr") @db.Decimal(5, 2)
+  metaCpc              Decimal? @map("meta_cpc") @db.Decimal(10, 2)
+  metaRoas             Decimal? @map("meta_roas") @db.Decimal(5, 2)
+  
+  notes                String?
+  
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([clientId, month])
+  @@map("client_metrics")
+}
