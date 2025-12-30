@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -48,15 +49,7 @@ export default function NewProjectPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", alignItems: "center", gap: 24 }}>
-        <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-        <nav style={{ display: "flex", gap: 16 }}>
-          <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-          <Link href="/clients" style={{ color: "#666", textDecoration: "none" }}>Clients</Link>
-          <Link href="/projects" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Projects</Link>
-          <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-        </nav>
-      </header>
+      <Header />
 
       <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
@@ -98,9 +91,8 @@ export default function NewProjectPage() {
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-              <select name="status" defaultValue="DRAFT" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-                <option value="DRAFT">Draft</option>
-                <option value="PENDING_APPROVAL">Pending Approval</option>
+              <select name="status" defaultValue="NOT_STARTED" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+                <option value="NOT_STARTED">Not Started</option>
                 <option value="IN_PROGRESS">In Progress</option>
                 <option value="ON_HOLD">On Hold</option>
                 <option value="COMPLETED">Completed</option>
