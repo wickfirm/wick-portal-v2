@@ -85,11 +85,10 @@ export default async function ProjectViewPage({ params }: { params: { id: string
           </div>
         </div>
 
-        <StageManager 
-          projectId={project.id}
-          serviceType={project.serviceType}
-          initialStages={stagesForClient}
-        />
+<StageManager
+  projectId={project.id}
+  initialStages={stagesForClient}
+/>
 
         {project.description && (
           <div style={{ background: "white", padding: 24, borderRadius: 8, marginTop: 24 }}>
