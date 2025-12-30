@@ -91,13 +91,14 @@ export default function NewProjectPage() {
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-              <select name="status" defaultValue="NOT_STARTED" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-                <option value="NOT_STARTED">Not Started</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="ON_HOLD">On Hold</option>
-                <option value="COMPLETED">Completed</option>
-                <option value="CANCELLED">Cancelled</option>
-              </select>
+<select name="status" defaultValue="DRAFT" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+  <option value="DRAFT">Draft</option>
+  <option value="PENDING_APPROVAL">Pending Approval</option>
+  <option value="IN_PROGRESS">In Progress</option>
+  <option value="ON_HOLD">On Hold</option>
+  <option value="COMPLETED">Completed</option>
+  <option value="CANCELLED">Cancelled</option>
+</select>
             </div>
 
             <div style={{ marginBottom: 16 }}>
