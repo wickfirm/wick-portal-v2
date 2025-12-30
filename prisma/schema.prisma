@@ -298,7 +298,7 @@ enum ProjectStatus {
 enum ServiceType {
   SEO
   AEO
-  WEB_DEV
+  WEB_DEVELOPMENT
   PAID_MEDIA
   SOCIAL_MEDIA
   CONTENT
