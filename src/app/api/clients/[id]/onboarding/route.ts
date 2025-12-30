@@ -39,6 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 data: templates.map((t) => ({
   clientId: params.id,
   name: t.name,
+  description: t.description,
   order: t.order,
   isCompleted: false,
 })),
