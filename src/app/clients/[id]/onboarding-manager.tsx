@@ -161,11 +161,6 @@ export default function OnboardingManager({
                   }}>
                     {item.name}
                   </div>
-                  {item.description && (
-                    <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>
-                      {item.description}
-                    </div>
-                  )}
                   {item.completedAt && item.completedBy && (
                     <div style={{ fontSize: 12, color: "#4caf50", marginTop: 4 }}>
                       ✓ Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
