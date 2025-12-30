@@ -32,6 +32,9 @@ model Client {
   industry        String?
   status          ClientStatus      @default(LEAD)
   notes           String?
+  monthlyRetainer Decimal?          @db.Decimal(10, 2)
+  primaryContact  String?
+  primaryEmail    String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   projects        Project[]
