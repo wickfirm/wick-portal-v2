@@ -38,7 +38,7 @@ export default function ClientMetricsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<Section>>(new Set<Section>(["analytics", "hours"]));
+  const [expandedSections, setExpandedSections] = useState<Set<Section>>(() => new Set(["analytics", "hours"] as Section[]));
 
   useEffect(() => { fetchData(); }, [clientId]);
 
@@ -94,7 +94,7 @@ export default function ClientMetricsPage() {
     setForm(newForm);
     setEditingId(m.id);
     setShowForm(true);
-    setExpandedSections(new Set<Section>(["analytics", "seo", "aeo", "meta", "google", "linkedin", "tiktok", "instagram", "facebook", "liOrganic", "ttOrganic", "twitter", "content", "hours"]));
+    setExpandedSections(new Set(["analytics", "seo", "aeo", "meta", "google", "linkedin", "tiktok", "instagram", "facebook", "liOrganic", "ttOrganic", "twitter", "content", "hours"] as Section[]));
   }
 
   async function deleteMetrics(m: any) {
