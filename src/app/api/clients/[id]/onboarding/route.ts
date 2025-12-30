@@ -36,13 +36,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // Create onboarding items for this client
     await prisma.onboardingItem.createMany({
-      data: templates.map(t => ({
-        clientId: params.id,
-        name: t.name,
-        description: t.description,
-        order: t.order,
-        isCompleted: false,
-      })),
+data: templates.map((t) => ({
+  clientId: params.id,
+  name: t.name,
+  order: t.order,
+  isCompleted: false,
+})),
     });
 
     const items = await prisma.onboardingItem.findMany({
