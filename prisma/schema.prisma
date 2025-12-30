@@ -50,7 +50,7 @@ model Project {
   id          String        @id @default(cuid())
   name        String
   description String?
-  status      ProjectStatus @default(NOT_STARTED)
+  status      ProjectStatus @default(DRAFT)
   serviceType ServiceType
   startDate   DateTime?
   endDate     DateTime?
