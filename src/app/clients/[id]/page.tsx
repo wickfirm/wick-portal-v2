@@ -25,6 +25,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
 
 const onboardingForClient = client.onboardingItems.map(item => ({
   id: item.id,
+  description: item.description,
   name: item.name,
   order: item.order,
   isCompleted: item.isCompleted,
