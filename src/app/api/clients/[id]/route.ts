@@ -26,7 +26,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       where: { id: params.id },
       data: {
         name: data.name,
-        slug: data.slug,
         website: data.website,
         industry: data.industry,
         status: data.status,
