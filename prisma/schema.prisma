@@ -1,236 +1,119 @@
-// Force rebuild v2
-
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-enum TaskPriority {
-  HIGH
-  MEDIUM
-  LOW
-}
-
-enum TaskStatus {
-  PENDING
-  IN_PROGRESS
-  ONGOING
-  ON_HOLD
-  COMPLETED
-  FUTURE_PLAN
-}
-
-enum UserRole {
-  ADMIN
-  MANAGER
-  SPECIALIST
-  CLIENT
-}
-
-enum ClientStatus {
-  LEAD
-  ONBOARDING
-  ACTIVE
-  PAUSED
-  CHURNED
-}
-
-enum ServiceType {
-  SEO
-  AEO
-  WEB_DEVELOPMENT
-  PAID_MEDIA
-  SOCIAL_MEDIA
-  CONTENT
-  BRANDING
-  CONSULTING
-}
-
-enum ProjectStatus {
-  DRAFT
-  PENDING_APPROVAL
-  IN_PROGRESS
-  ON_HOLD
-  COMPLETED
-  CANCELLED
-}
-
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      UserRole @default(SPECIALIST)
-  isActive  Boolean  @default(true)
-  clientId  String?
-  client    Client?  @relation(fields: [clientId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("users")
-}
-
-model Client {
-  id              String           @id @default(cuid())
-  name            String
-  slug            String           @unique
-  website         String?
-  industry        String?
-  status          ClientStatus     @default(LEAD)
-  primaryContact  String?
-  primaryEmail    String?
-  monthlyRetainer Decimal?         @db.Decimal(10, 2)
-  users           User[]
-  projects        Project[]
-  onboardingItems OnboardingItem[]
-  metrics         ClientMetrics[]
-  tasks           ClientTask[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-
-  @@map("clients")
-}
-
-model Project {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  serviceType ServiceType
-  status      ProjectStatus @default(DRAFT)
-  startDate   DateTime?
-  budget      Decimal?      @db.Decimal(10, 2)
-  clientId    String
-  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  stages      ProjectStage[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  @@map("projects")
-}
-
-model ProjectStage {
-  id          String    @id @default(cuid())
-  name        String
-  order       Int
-  isCompleted Boolean   @default(false)
-  completedAt DateTime?
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("project_stages")
-}
-
-model StageTemplate {
-  id          String      @id @default(cuid())
-  serviceType ServiceType
-  name        String
-  order       Int
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-
-  @@map("stage_templates")
-}
-
-model OnboardingTemplate {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  order       Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("onboarding_templates")
-}
-
-model OnboardingItem {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  order       Int
-  isCompleted Boolean   @default(false)
-  completedAt DateTime?
-  completedBy String?
-  notes       String?
-  clientId    String
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@map("onboarding_items")
-}
-
-model TaskCategory {
-  id        String       @id @default(cuid())
-  name      String
-  order     Int
-  tasks     ClientTask[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  @@map("task_categories")
-}
-
-model ClientTask {
-  id                String        @id @default(cuid())
-  name              String
-  categoryId        String?
-  category          TaskCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  clientId          String
-  client            Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  dueDate           DateTime?
-  priority          TaskPriority  @default(MEDIUM)
-  status            TaskStatus    @default(PENDING)
-  notes             String?
-  nextSteps         String?
-  externalLink      String?
-  externalLinkLabel String?
-  internalLink      String?
-  internalLinkLabel String?
-  order             Int           @default(0)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-
-  @@map("client_tasks")
-}
-
 model ClientMetrics {
-  id                   String   @id @default(cuid())
-  clientId             String
-  client               Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  month                DateTime @db.Date
-  
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month     DateTime @db.Date
+
   // Google Analytics
   gaSessions           Int?     @map("ga_sessions")
   gaUsers              Int?     @map("ga_users")
   gaPageviews          Int?     @map("ga_pageviews")
   gaBounceRate         Decimal? @map("ga_bounce_rate") @db.Decimal(5, 2)
   gaAvgSessionDuration Int?     @map("ga_avg_session_duration")
-  
+
   // Google Search Console
-  gscImpressions       Int?     @map("gsc_impressions")
-  gscClicks            Int?     @map("gsc_clicks")
-  gscCtr               Decimal? @map("gsc_ctr") @db.Decimal(5, 2)
-  gscAvgPosition       Decimal? @map("gsc_avg_position") @db.Decimal(5, 2)
-  
+  gscImpressions Int?     @map("gsc_impressions")
+  gscClicks      Int?     @map("gsc_clicks")
+  gscCtr         Decimal? @map("gsc_ctr") @db.Decimal(5, 2)
+  gscAvgPosition Decimal? @map("gsc_avg_position") @db.Decimal(5, 2)
+
+  // SEO Rankings
+  seoKeywordsTop3   Int?     @map("seo_keywords_top3")
+  seoKeywordsTop10  Int?     @map("seo_keywords_top10")
+  seoKeywordsTop100 Int?     @map("seo_keywords_top100")
+  seoBacklinks      Int?     @map("seo_backlinks")
+  seoDomainRating   Decimal? @map("seo_domain_rating") @db.Decimal(5, 2)
+
+  // AEO
+  aeoVisibilityScore Decimal? @map("aeo_visibility_score") @db.Decimal(5, 2)
+  aeoCitations       Int?     @map("aeo_citations")
+  aeoBrandMentions   Int?     @map("aeo_brand_mentions")
+
   // META Ads
-  metaSpend            Decimal? @map("meta_spend") @db.Decimal(10, 2)
-  metaImpressions      Int?     @map("meta_impressions")
-  metaClicks           Int?     @map("meta_clicks")
-  metaConversions      Int?     @map("meta_conversions")
-  metaCtr              Decimal? @map("meta_ctr") @db.Decimal(5, 2)
-  metaCpc              Decimal? @map("meta_cpc") @db.Decimal(10, 2)
-  metaRoas             Decimal? @map("meta_roas") @db.Decimal(5, 2)
-  
-  notes                String?
-  
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  metaSpend       Decimal? @map("meta_spend") @db.Decimal(10, 2)
+  metaImpressions Int?     @map("meta_impressions")
+  metaClicks      Int?     @map("meta_clicks")
+  metaConversions Int?     @map("meta_conversions")
+  metaCtr         Decimal? @map("meta_ctr") @db.Decimal(5, 2)
+  metaCpc         Decimal? @map("meta_cpc") @db.Decimal(10, 2)
+  metaRoas        Decimal? @map("meta_roas") @db.Decimal(5, 2)
+
+  // Google Ads
+  googleAdsSpend       Decimal? @map("google_ads_spend") @db.Decimal(10, 2)
+  googleAdsImpressions Int?     @map("google_ads_impressions")
+  googleAdsClicks      Int?     @map("google_ads_clicks")
+  googleAdsConversions Int?     @map("google_ads_conversions")
+  googleAdsCtr         Decimal? @map("google_ads_ctr") @db.Decimal(5, 2)
+  googleAdsCpc         Decimal? @map("google_ads_cpc") @db.Decimal(10, 2)
+  googleAdsRoas        Decimal? @map("google_ads_roas") @db.Decimal(5, 2)
+
+  // LinkedIn Ads
+  linkedinAdsSpend       Decimal? @map("linkedin_ads_spend") @db.Decimal(10, 2)
+  linkedinAdsImpressions Int?     @map("linkedin_ads_impressions")
+  linkedinAdsClicks      Int?     @map("linkedin_ads_clicks")
+  linkedinAdsConversions Int?     @map("linkedin_ads_conversions")
+  linkedinAdsCtr         Decimal? @map("linkedin_ads_ctr") @db.Decimal(5, 2)
+  linkedinAdsCpc         Decimal? @map("linkedin_ads_cpc") @db.Decimal(10, 2)
+
+  // TikTok Ads
+  tiktokAdsSpend       Decimal? @map("tiktok_ads_spend") @db.Decimal(10, 2)
+  tiktokAdsImpressions Int?     @map("tiktok_ads_impressions")
+  tiktokAdsClicks      Int?     @map("tiktok_ads_clicks")
+  tiktokAdsConversions Int?     @map("tiktok_ads_conversions")
+  tiktokAdsCtr         Decimal? @map("tiktok_ads_ctr") @db.Decimal(5, 2)
+  tiktokAdsCpc         Decimal? @map("tiktok_ads_cpc") @db.Decimal(10, 2)
+
+  // Instagram
+  igFollowers      Int?     @map("ig_followers")
+  igFollowing      Int?     @map("ig_following")
+  igPosts          Int?     @map("ig_posts")
+  igReach          Int?     @map("ig_reach")
+  igEngagementRate Decimal? @map("ig_engagement_rate") @db.Decimal(5, 2)
+
+  // Facebook
+  fbFollowers      Int?     @map("fb_followers")
+  fbPosts          Int?     @map("fb_posts")
+  fbReach          Int?     @map("fb_reach")
+  fbEngagementRate Decimal? @map("fb_engagement_rate") @db.Decimal(5, 2)
+
+  // LinkedIn Organic
+  liFollowers      Int?     @map("li_followers")
+  liPosts          Int?     @map("li_posts")
+  liImpressions    Int?     @map("li_impressions")
+  liEngagementRate Decimal? @map("li_engagement_rate") @db.Decimal(5, 2)
+
+  // TikTok Organic
+  ttFollowers      Int?     @map("tt_followers")
+  ttVideos         Int?     @map("tt_videos")
+  ttViews          Int?     @map("tt_views")
+  ttEngagementRate Decimal? @map("tt_engagement_rate") @db.Decimal(5, 2)
+
+  // Twitter/X
+  twFollowers      Int?     @map("tw_followers")
+  twTweets         Int?     @map("tw_tweets")
+  twImpressions    Int?     @map("tw_impressions")
+  twEngagementRate Decimal? @map("tw_engagement_rate") @db.Decimal(5, 2)
+
+  // Content Deliverables
+  contentBlogPosts      Int? @map("content_blog_posts")
+  contentSocialPosts    Int? @map("content_social_posts")
+  contentEmailsSent     Int? @map("content_emails_sent")
+  contentVideosProduced Int? @map("content_videos_produced")
+  contentGraphicsCreated Int? @map("content_graphics_created")
+  contentLandingPages   Int? @map("content_landing_pages")
+
+  // Hours Worked
+  hoursSeo         Decimal? @map("hours_seo") @db.Decimal(5, 1)
+  hoursContent     Decimal? @map("hours_content") @db.Decimal(5, 1)
+  hoursPaidMedia   Decimal? @map("hours_paid_media") @db.Decimal(5, 1)
+  hoursSocial      Decimal? @map("hours_social") @db.Decimal(5, 1)
+  hoursDesign      Decimal? @map("hours_design") @db.Decimal(5, 1)
+  hoursMaintenance Decimal? @map("hours_maintenance") @db.Decimal(5, 1)
+  hoursStrategy    Decimal? @map("hours_strategy") @db.Decimal(5, 1)
+
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([clientId, month])
   @@map("client_metrics")
