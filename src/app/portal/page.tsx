@@ -66,11 +66,12 @@ export default async function PortalDashboard() {
       <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
           <span style={{ fontWeight: "bold", fontSize: 20, color: "#333" }}>Wick Portal</span>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <Link href="/portal" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Dashboard</Link>
-            <Link href="/portal/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-            <Link href="/portal/tasks" style={{ color: "#666", textDecoration: "none" }}>Tasks</Link>
-          </nav>
+<nav style={{ display: "flex", gap: 16 }}>
+  <Link href="/portal" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
+  <Link href="/portal/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
+  <Link href="/portal/tasks" style={{ color: "#666", textDecoration: "none" }}>Tasks</Link>
+  <Link href="/portal/metrics" style={{ color: "#666", textDecoration: "none" }}>Metrics</Link>
+</nav>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span style={{ color: "#666" }}>{user.name}</span>
