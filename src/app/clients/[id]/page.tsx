@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
 
 export const dynamic = "force-dynamic";
@@ -10,6 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function ClientViewPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+  const user = session.user as any;
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
@@ -23,32 +25,20 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
   }
 
-const onboardingForClient = client.onboardingItems.map(item => ({
-  id: item.id,
-  description: item.description,
-  name: item.name,
-  order: item.order,
-  isCompleted: item.isCompleted,
-  completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-  completedBy: item.completedBy,
-  notes: item.notes,
-}));
+  const onboardingForClient = client.onboardingItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    order: item.order,
+    isCompleted: item.isCompleted,
+    completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+    completedBy: item.completedBy,
+    notes: item.notes,
+  }));
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-            <Link href="/clients" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Clients</Link>
-            <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-            <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
-          </nav>
-        </div>
-        <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
-      </header>
+      <Header userName={user.name} userRole={user.role} />
 
       <main style={{ maxWidth: 900, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
@@ -66,17 +56,17 @@ const onboardingForClient = client.onboardingItems.map(item => ({
               {client.status}
             </span>
           </div>
-<div style={{ display: "flex", gap: 8 }}>
-  <Link href={`/clients/${client.id}/metrics`} style={{ background: "#2e7d32", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
-    📊 Metrics
-  </Link>
-  <Link href={`/clients/${client.id}/tasks`} style={{ background: "#1976d2", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
-    Weekly Tasks
-  </Link>
-  <Link href={`/clients/${client.id}/edit`} style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
-    Edit Client
-  </Link>
-</div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Link href={`/clients/${client.id}/metrics`} style={{ background: "#2e7d32", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
+              📊 Metrics
+            </Link>
+            <Link href={`/clients/${client.id}/tasks`} style={{ background: "#1976d2", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
+              Weekly Tasks
+            </Link>
+            <Link href={`/clients/${client.id}/edit`} style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, textDecoration: "none" }}>
+              Edit Client
+            </Link>
+          </div>
         </div>
 
         <OnboardingManager 
