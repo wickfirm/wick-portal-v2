@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 export const dynamic = "force-dynamic";
 
@@ -24,24 +25,7 @@ export default async function DashboardPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <Link href="/dashboard" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Dashboard</Link>
-            <Link href="/clients" style={{ color: "#666", textDecoration: "none" }}>Clients</Link>
-            <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-            <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
-            <Link href="/settings" style={{ color: "#666", textDecoration: "none" }}>Settings</Link>
-          </nav>
-        </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span>{user.name}</span>
-          <span style={{ background: "#eee", padding: "4px 8px", borderRadius: 4, fontSize: 12 }}>{user.role}</span>
-          <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
-        </div>
-      </header>
+      <Header userName={user.name} userRole={user.role} />
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
         <h2 style={{ marginTop: 0 }}>Welcome, {user.name}</h2>
