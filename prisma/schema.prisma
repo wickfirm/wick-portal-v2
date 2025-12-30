@@ -87,6 +87,7 @@ model Client {
   users           User[]
   projects        Project[]
   onboardingItems OnboardingItem[]
+  metrics         ClientMetrics[]
   tasks           ClientTask[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
