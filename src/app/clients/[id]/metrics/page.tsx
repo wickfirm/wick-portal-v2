@@ -5,8 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 
-type Section = "analytics" | "seo" | "aeo" | "meta" | "google" | "linkedin" | "tiktok" | "instagram" | "facebook" | "liOrganic" | "ttOrganic" | "twitter" | "content" | "hours";
-
 const emptyForm: any = {
   month: new Date().toISOString().slice(0, 7) + "-01",
   gaSessions: "", gaUsers: "", gaPageviews: "", gaBounceRate: "", gaAvgSessionDuration: "",
@@ -38,7 +36,7 @@ export default function ClientMetricsPage() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<Section>>(() => new Set(["analytics", "hours"] as Section[]));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["analytics", "hours"]));
 
   useEffect(() => { fetchData(); }, [clientId]);
 
@@ -53,7 +51,7 @@ export default function ClientMetricsPage() {
     setLoading(false);
   }
 
-  function toggleSection(section: Section) {
+  function toggleSection(section: string) {
     const newSet = new Set(expandedSections);
     if (newSet.has(section)) newSet.delete(section);
     else newSet.add(section);
@@ -94,7 +92,7 @@ export default function ClientMetricsPage() {
     setForm(newForm);
     setEditingId(m.id);
     setShowForm(true);
-    setExpandedSections(new Set(["analytics", "seo", "aeo", "meta", "google", "linkedin", "tiktok", "instagram", "facebook", "liOrganic", "ttOrganic", "twitter", "content", "hours"] as Section[]));
+    setExpandedSections(new Set(["analytics", "seo", "aeo", "meta", "google", "linkedin", "tiktok", "instagram", "facebook", "liOrganic", "ttOrganic", "twitter", "content", "hours"]));
   }
 
   async function deleteMetrics(m: any) {
@@ -107,7 +105,7 @@ export default function ClientMetricsPage() {
   const fmtDec = (n: any, suffix = "") => n === null || n === undefined ? "-" : Number(n).toFixed(2) + suffix;
   const fmtCur = (n: any) => n === null || n === undefined ? "-" : "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const SectionHeader = ({ title, section, color }: { title: string; section: Section; color: string }) => (
+  const SectionHeader = ({ title, section, color }: { title: string; section: string; color: string }) => (
     <div 
       onClick={() => toggleSection(section)}
       style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", cursor: "pointer", borderBottom: expandedSections.has(section) ? "1px solid #eee" : "none" }}
@@ -117,11 +115,11 @@ export default function ClientMetricsPage() {
     </div>
   );
 
-  const InputField = ({ label, field, type = "number", step }: { label: string; field: string; type?: string; step?: string }) => (
+  const InputField = ({ label, field, step }: { label: string; field: string; step?: string }) => (
     <div>
       <label style={{ display: "block", marginBottom: 4, fontSize: 13 }}>{label}</label>
       <input
-        type={type}
+        type="number"
         step={step}
         value={form[field]}
         onChange={(e) => setForm({ ...form, [field]: e.target.value })}
@@ -158,7 +156,6 @@ export default function ClientMetricsPage() {
                 <input type="date" value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} required style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }} />
               </div>
 
-              {/* Google Analytics */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="📊 Google Analytics" section="analytics" color="#1976d2" />
                 {expandedSections.has("analytics") && (
@@ -172,7 +169,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Search Console */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🔍 Google Search Console" section="seo" color="#2e7d32" />
                 {expandedSections.has("seo") && (
@@ -194,7 +190,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* AEO */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🤖 AEO (AI Engine Optimization)" section="aeo" color="#9c27b0" />
                 {expandedSections.has("aeo") && (
@@ -206,7 +201,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* META Ads */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="📱 META Ads (Facebook/Instagram)" section="meta" color="#1877f2" />
                 {expandedSections.has("meta") && (
@@ -222,7 +216,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Google Ads */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🔎 Google Ads" section="google" color="#ea4335" />
                 {expandedSections.has("google") && (
@@ -238,7 +231,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* LinkedIn Ads */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="💼 LinkedIn Ads" section="linkedin" color="#0a66c2" />
                 {expandedSections.has("linkedin") && (
@@ -253,7 +245,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* TikTok Ads */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🎵 TikTok Ads" section="tiktok" color="#000000" />
                 {expandedSections.has("tiktok") && (
@@ -268,7 +259,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Instagram Organic */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="📸 Instagram (Organic)" section="instagram" color="#e4405f" />
                 {expandedSections.has("instagram") && (
@@ -282,7 +272,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Facebook Organic */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="👤 Facebook (Organic)" section="facebook" color="#1877f2" />
                 {expandedSections.has("facebook") && (
@@ -295,7 +284,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* LinkedIn Organic */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="💼 LinkedIn (Organic)" section="liOrganic" color="#0a66c2" />
                 {expandedSections.has("liOrganic") && (
@@ -308,7 +296,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* TikTok Organic */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🎵 TikTok (Organic)" section="ttOrganic" color="#000000" />
                 {expandedSections.has("ttOrganic") && (
@@ -321,7 +308,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Twitter */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="🐦 Twitter / X" section="twitter" color="#1da1f2" />
                 {expandedSections.has("twitter") && (
@@ -334,7 +320,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Content Deliverables */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="📝 Content Deliverables" section="content" color="#ff5722" />
                 {expandedSections.has("content") && (
@@ -349,7 +334,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Hours Worked */}
               <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
                 <SectionHeader title="⏱️ Hours Worked" section="hours" color="#607d8b" />
                 {expandedSections.has("hours") && (
@@ -365,7 +349,6 @@ export default function ClientMetricsPage() {
                 )}
               </div>
 
-              {/* Notes */}
               <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Notes</label>
                 <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Monthly highlights, observations, etc." style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
@@ -383,7 +366,6 @@ export default function ClientMetricsPage() {
           </div>
         )}
 
-        {/* Summary Cards */}
         {metrics.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
             <div style={{ background: "white", padding: 20, borderRadius: 8, borderLeft: "4px solid #1976d2" }}>
@@ -409,7 +391,6 @@ export default function ClientMetricsPage() {
           </div>
         )}
 
-        {/* History Table */}
         <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
           <h3 style={{ margin: 0, padding: 24, borderBottom: "1px solid #eee" }}>Metrics History</h3>
           {metrics.length === 0 ? (
