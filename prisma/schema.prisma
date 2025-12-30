@@ -288,7 +288,8 @@ enum ClientStatus {
 }
 
 enum ProjectStatus {
-  NOT_STARTED
+  DRAFT
+  PENDING_APPROVAL
   IN_PROGRESS
   ON_HOLD
   COMPLETED
