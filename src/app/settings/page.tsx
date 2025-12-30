@@ -1,49 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
-  const [saving, setSaving] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  async function handlePasswordChange(e: React.FormEvent<HTMLFormElement>) {
+  async function handlePasswordChange(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
-    setMessage("");
-    setError("");
-
-    const formData = new FormData(e.currentTarget);
-    const currentPassword = formData.get("currentPassword");
-    const newPassword = formData.get("newPassword");
-    const confirmPassword = formData.get("confirmPassword");
-
     if (newPassword !== confirmPassword) {
-      setError("New passwords don't match");
-      setSaving(false);
+      setMessage("Passwords do not match");
       return;
     }
+    setSaving(true);
+    setMessage("");
 
     const res = await fetch("/api/settings/password", {
-      method: "POST",
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ currentPassword, newPassword }),
     });
 
     if (res.ok) {
       setMessage("Password updated successfully");
-      (e.target as HTMLFormElement).reset();
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } else {
-      const err = await res.json();
-      setError(err.error || "Failed to update password");
+      const data = await res.json();
+      setMessage(data.error || "Failed to update password");
     }
     setSaving(false);
   }
-
-  const user = session?.user as any;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
@@ -56,54 +50,98 @@ export default function SettingsPage() {
             <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
             <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
             <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
+            <Link href="/settings" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Settings</Link>
           </nav>
         </div>
         <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
       </header>
 
-      <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
         <h1 style={{ marginBottom: 24 }}>Settings</h1>
 
+        {/* Configuration Links */}
         <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Profile</h3>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#888" }}>Name</div>
-            <div>{user?.name}</div>
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 12, color: "#888" }}>Email</div>
-            <div>{user?.email}</div>
-          </div>
-          <div>
-            <div style={{ fontSize: 12, color: "#888" }}>Role</div>
-            <div>{user?.role}</div>
+          <h2 style={{ marginTop: 0, marginBottom: 16 }}>Configuration</h2>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            <Link href="/settings/stage-templates" style={{ textDecoration: "none" }}>
+              <div style={{ padding: 20, border: "1px solid #eee", borderRadius: 8, cursor: "pointer" }}>
+                <h3 style={{ margin: "0 0 8px", color: "#333" }}>📋 Stage Templates</h3>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Manage default project stages for each service type</p>
+              </div>
+            </Link>
+            <Link href="/settings/task-categories" style={{ textDecoration: "none" }}>
+              <div style={{ padding: 20, border: "1px solid #eee", borderRadius: 8, cursor: "pointer" }}>
+                <h3 style={{ margin: "0 0 8px", color: "#333" }}>📁 Task Categories</h3>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Manage categories for weekly client tasks</p>
+              </div>
+            </Link>
+            <Link href="/settings/onboarding" style={{ textDecoration: "none" }}>
+              <div style={{ padding: 20, border: "1px solid #eee", borderRadius: 8, cursor: "pointer" }}>
+                <h3 style={{ margin: "0 0 8px", color: "#333" }}>✅ Onboarding Checklist</h3>
+                <p style={{ margin: 0, fontSize: 14, color: "#666" }}>Manage default onboarding checklist items</p>
+              </div>
+            </Link>
           </div>
         </div>
 
+        {/* Profile */}
+        <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
+          <h2 style={{ marginTop: 0, marginBottom: 16 }}>Profile</h2>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, color: "#888" }}>Name</div>
+            <div style={{ fontWeight: 500 }}>{session?.user?.name || "-"}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: "#888" }}>Email</div>
+            <div style={{ fontWeight: 500 }}>{session?.user?.email || "-"}</div>
+          </div>
+        </div>
+
+        {/* Change Password */}
         <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h3 style={{ marginTop: 0, marginBottom: 16 }}>Change Password</h3>
-
-          {message && <div style={{ background: "#e8f5e9", color: "#2e7d32", padding: 12, borderRadius: 4, marginBottom: 16 }}>{message}</div>}
-          {error && <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 16 }}>{error}</div>}
-
+          <h2 style={{ marginTop: 0, marginBottom: 16 }}>Change Password</h2>
           <form onSubmit={handlePasswordChange}>
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Current Password</label>
-              <input name="currentPassword" type="password" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+              />
             </div>
-
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>New Password</label>
-              <input name="newPassword" type="password" required minLength={6} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+              />
             </div>
-
-            <div style={{ marginBottom: 24 }}>
+            <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Confirm New Password</label>
-              <input name="confirmPassword" type="password" required minLength={6} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+              />
             </div>
-
-            <button type="submit" disabled={saving} style={{ padding: "12px 24px", background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
-              {saving ? "Updating..." : "Update Password"}
+            {message && (
+              <div style={{ marginBottom: 16, padding: 12, borderRadius: 4, background: message.includes("success") ? "#e8f5e9" : "#ffebee", color: message.includes("success") ? "#2e7d32" : "#c62828" }}>
+                {message}
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={saving}
+              style={{ padding: "10px 20px", background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
+            >
+              {saving ? "Saving..." : "Update Password"}
             </button>
           </form>
         </div>
@@ -111,4 +149,3 @@ export default function SettingsPage() {
     </div>
   );
 }
-
