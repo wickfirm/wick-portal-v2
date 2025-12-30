@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 type OnboardingItem = {
   id: string;
   name: string;
-  description: string | null;
   order: number;
   isCompleted: boolean;
   completedAt: string | null;
