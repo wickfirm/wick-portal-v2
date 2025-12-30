@@ -24,20 +24,20 @@ export default async function PortalMetricsPage() {
     orderBy: { month: "desc" },
   });
 
-  function formatNumber(n: number | null): string {
-    if (n === null || n === undefined) return "-";
-    return n.toLocaleString();
-  }
+function formatNumber(n: any): string {
+  if (n === null || n === undefined) return "-";
+  return Number(n).toLocaleString();
+}
 
-  function formatDecimal(n: number | null, suffix = ""): string {
-    if (n === null || n === undefined) return "-";
-    return n.toFixed(2) + suffix;
-  }
+function formatDecimal(n: any, suffix = ""): string {
+  if (n === null || n === undefined) return "-";
+  return Number(n).toFixed(2) + suffix;
+}
 
-  function formatCurrency(n: number | null): string {
-    if (n === null || n === undefined) return "-";
-    return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
+function formatCurrency(n: any): string {
+  if (n === null || n === undefined) return "-";
+  return "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
