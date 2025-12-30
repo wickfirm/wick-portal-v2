@@ -28,7 +28,6 @@ export async function POST(req: NextRequest) {
     const template = await prisma.onboardingTemplate.create({
       data: {
         name: data.name,
-        description: data.description || null,
         order: (lastTemplate?.order ?? 0) + 1,
       },
     });
