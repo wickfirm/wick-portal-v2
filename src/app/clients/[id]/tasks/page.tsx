@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 type Task = {
   id: string;
@@ -48,13 +49,9 @@ export default function ClientTasksPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [clientName, setClientName] = useState("");
-
-  // New task form
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask] = useState({ name: "", categoryId: "", priority: "MEDIUM", status: "PENDING" });
   const [adding, setAdding] = useState(false);
-
-  // Edit modal
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [editForm, setEditForm] = useState<any>({});
 
@@ -133,7 +130,6 @@ export default function ClientTasksPage() {
     return new Date(dueDate) < new Date();
   }
 
-  // Group tasks by category
   const groupedTasks = categories.map(cat => ({
     category: cat,
     tasks: tasks.filter(t => t.categoryId === cat.id),
@@ -145,19 +141,7 @@ export default function ClientTasksPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-            <Link href="/clients" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Clients</Link>
-            <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-            <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
-          </nav>
-        </div>
-        <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
-      </header>
+      <Header />
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
@@ -228,7 +212,6 @@ export default function ClientTasksPage() {
           </div>
         )}
 
-        {/* Task Table */}
         <div style={{ background: "white", borderRadius: 8, overflow: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
             <thead>
@@ -418,7 +401,6 @@ export default function ClientTasksPage() {
         </div>
       </main>
 
-      {/* Edit Modal */}
       {editingTask && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
           <div style={{ background: "white", padding: 24, borderRadius: 8, width: 500, maxHeight: "90vh", overflow: "auto" }}>
@@ -529,7 +511,7 @@ export default function ClientTasksPage() {
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
               <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Internal Link (Kitchen)</label>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Internal Link</label>
                 <input
                   value={editForm.internalLink || ""}
                   onChange={(e) => setEditForm({ ...editForm, internalLink: e.target.value })}
