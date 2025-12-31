@@ -141,7 +141,7 @@ export default async function PortalMetricsPage() {
                           <td style={{ padding: 14, textAlign: "right" }}>{fmt(m.gscClicks)}</td>
                           <td style={{ padding: 14, textAlign: "right" }}>{fmt(m.gscImpressions)}</td>
                           <td style={{ padding: 14, textAlign: "right" }}>{fmtPct(m.gscCtr)}</td>
-                          <td style={{ padding: 14, textAlign: "right" }}>{fmtDec(m.gscPosition)}</td>
+                          <td style={{ padding: 14, textAlign: "right" }}>{fmtDec(m.gscAvgPosition)}</td>
                         </tr>
                       ))}
                     </tbody>
