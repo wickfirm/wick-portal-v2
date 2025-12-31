@@ -3,10 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 export default function EditProjectPage() {
   const router = useRouter();
   const params = useParams();
+  const projectId = params.id as string;
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -15,14 +18,14 @@ export default function EditProjectPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/projects/${params.id}`).then(res => res.json()),
-      fetch("/api/clients").then(res => res.json())
-    ]).then(([proj, cls]) => {
-      setProject(proj);
-      setClients(cls);
+      fetch(`/api/projects/${projectId}`).then(res => res.json()),
+      fetch("/api/clients").then(res => res.json()),
+    ]).then(([projectData, clientsData]) => {
+      setProject(projectData);
+      setClients(clientsData);
       setLoading(false);
-    }).catch(() => { setError("Failed to load"); setLoading(false); });
-  }, [params.id]);
+    });
+  }, [projectId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,30 +40,24 @@ export default function EditProjectPage() {
       serviceType: formData.get("serviceType"),
       status: formData.get("status"),
       startDate: formData.get("startDate") || null,
+      endDate: formData.get("endDate") || null,
       budget: formData.get("budget") ? parseFloat(formData.get("budget") as string) : null,
     };
 
-    const res = await fetch(`/api/projects/${params.id}`, {
+    const res = await fetch(`/api/projects/${projectId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (res.ok) {
-      router.push("/projects");
+      router.push(`/projects/${projectId}`);
       router.refresh();
     } else {
       const err = await res.json();
-      setError(err.error || "Failed to update");
+      setError(err.error || "Failed to update project");
       setSaving(false);
     }
-  }
-
-  async function handleDelete() {
-    if (!confirm("Delete this project and all its stages?")) return;
-    const res = await fetch(`/api/projects/${params.id}`, { method: "DELETE" });
-    if (res.ok) { router.push("/projects"); router.refresh(); }
-    else setError("Failed to delete");
   }
 
   if (loading) return <div style={{ padding: 48, textAlign: "center" }}>Loading...</div>;
@@ -68,19 +65,11 @@ export default function EditProjectPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", alignItems: "center", gap: 24 }}>
-        <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-        <nav style={{ display: "flex", gap: 16 }}>
-          <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-          <Link href="/clients" style={{ color: "#666", textDecoration: "none" }}>Clients</Link>
-          <Link href="/projects" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Projects</Link>
-          <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-        </nav>
-      </header>
+      <Header />
 
       <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>← Back to Projects</Link>
+          <Link href={`/projects/${projectId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {project.name}</Link>
         </div>
 
         <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
@@ -132,9 +121,15 @@ export default function EditProjectPage() {
               <textarea name="description" rows={3} defaultValue={project.description || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Start Date</label>
-              <input name="startDate" type="date" defaultValue={project.startDate?.split("T")[0] || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Start Date</label>
+                <input name="startDate" type="date" defaultValue={project.startDate?.split("T")[0] || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>End Date</label>
+                <input name="endDate" type="date" defaultValue={project.endDate?.split("T")[0] || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              </div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
@@ -146,16 +141,11 @@ export default function EditProjectPage() {
               <button type="submit" disabled={saving} style={{ flex: 1, padding: 12, background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <Link href="/projects" style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
+              <Link href={`/projects/${projectId}`} style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
                 Cancel
               </Link>
             </div>
           </form>
-
-          <hr style={{ margin: "24px 0", border: "none", borderTop: "1px solid #eee" }} />
-          <button onClick={handleDelete} style={{ width: "100%", padding: 12, background: "#fee", color: "#c00", border: "1px solid #fcc", borderRadius: 4, cursor: "pointer" }}>
-            Delete Project
-          </button>
         </div>
       </main>
     </div>
