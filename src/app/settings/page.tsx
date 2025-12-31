@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { theme } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
@@ -16,43 +17,43 @@ export default async function SettingsPage() {
       title: "Stage Templates",
       description: "Configure default project stages for each service type",
       href: "/settings/stage-templates",
-      icon: "📋",
-      color: "#e85a4f",
+      icon: "S",
+      color: theme.colors.primary,
     },
     {
       title: "Onboarding Templates",
       description: "Set up default onboarding checklists for new clients",
       href: "/settings/onboarding",
-      icon: "✓",
-      color: "#34a853",
+      icon: "O",
+      color: theme.colors.success,
     },
     {
       title: "Task Categories",
       description: "Manage categories for client tasks",
       href: "/settings/task-categories",
-      icon: "🏷️",
-      color: "#4285f4",
+      icon: "T",
+      color: theme.colors.info,
     },
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header userName={user.name} userRole={user.role} />
 
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Settings</h1>
-          <p style={{ color: "#5f6368", fontSize: 15 }}>Configure your agency portal</p>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Settings</h1>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Configure your agency portal</p>
         </div>
 
         <div style={{ display: "grid", gap: 16 }}>
           {settingsItems.map((item) => (
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
               <div style={{
-                background: "white",
+                background: theme.colors.bgSecondary,
                 padding: 24,
-                borderRadius: 12,
-                border: "1px solid #e8eaed",
+                borderRadius: theme.borderRadius.lg,
+                border: "1px solid " + theme.colors.borderLight,
                 display: "flex",
                 alignItems: "center",
                 gap: 20,
@@ -62,20 +63,22 @@ export default async function SettingsPage() {
                 <div style={{
                   width: 56,
                   height: 56,
-                  borderRadius: 12,
-                  background: `${item.color}15`,
+                  borderRadius: theme.borderRadius.lg,
+                  background: item.color + "15",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 24,
+                  fontWeight: 600,
+                  color: item.color,
                 }}>
                   {item.icon}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 14, color: "#5f6368" }}>{item.description}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>{item.title}</div>
+                  <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>{item.description}</div>
                 </div>
-                <div style={{ color: "#9aa0a6", fontSize: 20 }}>→</div>
+                <div style={{ color: theme.colors.textMuted, fontSize: 20 }}>→</div>
               </div>
             </Link>
           ))}
