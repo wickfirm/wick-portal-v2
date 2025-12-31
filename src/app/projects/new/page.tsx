@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { theme } from "@/lib/theme";
 
 export default function NewProjectPage() {
   const router = useRouter();
@@ -53,8 +54,8 @@ export default function NewProjectPage() {
   const inputStyle = {
     width: "100%",
     padding: "12px 16px",
-    border: "1px solid #dadce0",
-    borderRadius: 8,
+    border: "1px solid " + theme.colors.borderMedium,
+    borderRadius: theme.borderRadius.md,
     fontSize: 14,
     boxSizing: "border-box" as const,
     outline: "none",
@@ -65,26 +66,26 @@ export default function NewProjectPage() {
     marginBottom: 8,
     fontWeight: 500,
     fontSize: 14,
-    color: "#1a1a1a",
+    color: theme.colors.textPrimary,
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/projects" style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+          <Link href="/projects" style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
             ← Back to Projects
           </Link>
         </div>
 
-        <div style={{ background: "white", padding: 32, borderRadius: 12, border: "1px solid #e8eaed" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginTop: 0, marginBottom: 8 }}>New Project</h1>
-          <p style={{ color: "#5f6368", marginBottom: 32, fontSize: 14 }}>Create a new project for a client</p>
+        <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginTop: 0, marginBottom: 8 }}>New Project</h1>
+          <p style={{ color: theme.colors.textSecondary, marginBottom: 32, fontSize: 14 }}>Create a new project for a client</p>
 
           {error && (
-            <div style={{ background: "#fce8e6", color: "#ea4335", padding: "12px 16px", borderRadius: 8, marginBottom: 24, fontSize: 14 }}>
+            <div style={{ background: theme.colors.errorBg, color: theme.colors.error, padding: "12px 16px", borderRadius: theme.borderRadius.md, marginBottom: 24, fontSize: 14 }}>
               {error}
             </div>
           )}
@@ -150,10 +151,10 @@ export default function NewProjectPage() {
               <button type="submit" disabled={loading} style={{
                 flex: 1,
                 padding: 14,
-                background: loading ? "#f1f3f4" : "linear-gradient(135deg, #e85a4f, #d44a3f)",
-                color: loading ? "#9aa0a6" : "white",
+                background: loading ? theme.colors.bgTertiary : theme.gradients.primary,
+                color: loading ? theme.colors.textMuted : "white",
                 border: "none",
-                borderRadius: 8,
+                borderRadius: theme.borderRadius.md,
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: loading ? "not-allowed" : "pointer",
@@ -162,10 +163,10 @@ export default function NewProjectPage() {
               </button>
               <Link href="/projects" style={{
                 padding: "14px 24px",
-                border: "1px solid #dadce0",
-                borderRadius: 8,
+                border: "1px solid " + theme.colors.borderMedium,
+                borderRadius: theme.borderRadius.md,
                 textDecoration: "none",
-                color: "#5f6368",
+                color: theme.colors.textSecondary,
                 fontWeight: 500,
                 fontSize: 14,
                 display: "flex",
