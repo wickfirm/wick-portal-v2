@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Header from "@/components/Header";
+import { theme, ROLE_STYLES } from "@/lib/theme";
 
 type User = {
   id: string;
@@ -9,13 +10,6 @@ type User = {
   name: string | null;
   role: string;
   isActive: boolean;
-};
-
-const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
-  ADMIN: { bg: "#fce8e6", color: "#ea4335" },
-  MANAGER: { bg: "#fef7e0", color: "#f9ab00" },
-  SPECIALIST: { bg: "#e8f0fe", color: "#4285f4" },
-  CLIENT: { bg: "#e6f4ea", color: "#34a853" },
 };
 
 export default function TeamPage() {
@@ -57,7 +51,7 @@ export default function TeamPage() {
   }
 
   async function toggleActive(user: User) {
-    await fetch(`/api/team/${user.id}`, {
+    await fetch("/api/team/" + user.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !user.isActive }),
@@ -66,41 +60,41 @@ export default function TeamPage() {
   }
 
   async function deleteUser(user: User) {
-    if (!confirm(`Delete ${user.email}?`)) return;
-    await fetch(`/api/team/${user.id}`, { method: "DELETE" });
+    if (!confirm("Delete " + user.email + "?")) return;
+    await fetch("/api/team/" + user.id, { method: "DELETE" });
     fetchUsers();
   }
 
   const inputStyle = {
     width: "100%",
     padding: "12px 16px",
-    border: "1px solid #dadce0",
-    borderRadius: 8,
+    border: "1px solid " + theme.colors.borderMedium,
+    borderRadius: theme.borderRadius.md,
     fontSize: 14,
     boxSizing: "border-box" as const,
     outline: "none",
   };
 
-  if (loading) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Loading...</div>;
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {/* Page Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Team</h1>
-            <p style={{ color: "#5f6368", fontSize: 15 }}>Manage your team members</p>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Team</h1>
+            <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Manage your team members</p>
           </div>
           <button
             onClick={() => setShowForm(!showForm)}
             style={{
-              background: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+              background: theme.gradients.primary,
               color: "white",
               padding: "12px 24px",
-              borderRadius: 8,
+              borderRadius: theme.borderRadius.md,
               border: "none",
               fontWeight: 500,
               fontSize: 14,
@@ -108,7 +102,7 @@ export default function TeamPage() {
               display: "flex",
               alignItems: "center",
               gap: 8,
-              boxShadow: "0 2px 8px rgba(232, 90, 79, 0.3)"
+              boxShadow: theme.shadows.button
             }}
           >
             <span style={{ fontSize: 18 }}>+</span> Add User
@@ -117,7 +111,7 @@ export default function TeamPage() {
 
         {/* Add User Form */}
         {showForm && (
-          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed", marginBottom: 24 }}>
+          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Add New User</h3>
             <form onSubmit={addUser}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
@@ -149,7 +143,7 @@ export default function TeamPage() {
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     required
                     style={inputStyle}
-                    placeholder="••••••••"
+                    placeholder="********"
                   />
                 </div>
                 <div>
@@ -169,10 +163,10 @@ export default function TeamPage() {
               <div style={{ display: "flex", gap: 12 }}>
                 <button type="submit" disabled={adding} style={{
                   padding: "10px 20px",
-                  background: adding ? "#f1f3f4" : "#e85a4f",
-                  color: adding ? "#9aa0a6" : "white",
+                  background: adding ? theme.colors.bgTertiary : theme.colors.primary,
+                  color: adding ? theme.colors.textMuted : "white",
                   border: "none",
-                  borderRadius: 8,
+                  borderRadius: theme.borderRadius.md,
                   fontWeight: 500,
                   fontSize: 14,
                   cursor: adding ? "not-allowed" : "pointer"
@@ -181,10 +175,10 @@ export default function TeamPage() {
                 </button>
                 <button type="button" onClick={() => setShowForm(false)} style={{
                   padding: "10px 20px",
-                  background: "#f1f3f4",
-                  color: "#5f6368",
+                  background: theme.colors.bgTertiary,
+                  color: theme.colors.textSecondary,
                   border: "none",
-                  borderRadius: 8,
+                  borderRadius: theme.borderRadius.md,
                   fontWeight: 500,
                   fontSize: 14,
                   cursor: "pointer"
@@ -197,33 +191,33 @@ export default function TeamPage() {
         )}
 
         {/* Users Table */}
-        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+        <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {users.length === 0 ? (
             <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
-              <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>No team members yet</div>
-              <div style={{ color: "#5f6368" }}>Add your first team member to get started</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>U</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No team members yet</div>
+              <div style={{ color: theme.colors.textSecondary }}>Add your first team member to get started</div>
             </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8f9fa" }}>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>User</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Role</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Status</th>
-                  <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Actions</th>
+                <tr style={{ background: theme.colors.bgPrimary }}>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>User</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Role</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Status</th>
+                  <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                  <tr key={user.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
                     <td style={{ padding: 16 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{
                           width: 40,
                           height: 40,
                           borderRadius: 20,
-                          background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+                          background: theme.gradients.accent,
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
@@ -234,8 +228,8 @@ export default function TeamPage() {
                           {(user.name || user.email).charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{user.name || "—"}</div>
-                          <div style={{ fontSize: 13, color: "#9aa0a6" }}>{user.email}</div>
+                          <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{user.name || "-"}</div>
+                          <div style={{ fontSize: 13, color: theme.colors.textMuted }}>{user.email}</div>
                         </div>
                       </div>
                     </td>
@@ -245,8 +239,8 @@ export default function TeamPage() {
                         borderRadius: 20,
                         fontSize: 12,
                         fontWeight: 500,
-                        background: ROLE_STYLES[user.role]?.bg || "#f1f3f4",
-                        color: ROLE_STYLES[user.role]?.color || "#5f6368"
+                        background: ROLE_STYLES[user.role]?.bg || theme.colors.bgTertiary,
+                        color: ROLE_STYLES[user.role]?.color || theme.colors.textSecondary
                       }}>
                         {user.role}
                       </span>
@@ -257,8 +251,8 @@ export default function TeamPage() {
                         borderRadius: 20,
                         fontSize: 12,
                         fontWeight: 500,
-                        background: user.isActive ? "#e6f4ea" : "#fce8e6",
-                        color: user.isActive ? "#34a853" : "#ea4335"
+                        background: user.isActive ? theme.colors.successBg : theme.colors.errorBg,
+                        color: user.isActive ? theme.colors.success : theme.colors.error
                       }}>
                         {user.isActive ? "Active" : "Inactive"}
                       </span>
@@ -269,8 +263,8 @@ export default function TeamPage() {
                         style={{
                           padding: "6px 12px",
                           marginRight: 8,
-                          background: "#f1f3f4",
-                          color: "#5f6368",
+                          background: theme.colors.bgTertiary,
+                          color: theme.colors.textSecondary,
                           border: "none",
                           borderRadius: 6,
                           fontSize: 13,
@@ -284,8 +278,8 @@ export default function TeamPage() {
                         onClick={() => deleteUser(user)}
                         style={{
                           padding: "6px 12px",
-                          background: "#fce8e6",
-                          color: "#ea4335",
+                          background: theme.colors.errorBg,
+                          color: theme.colors.error,
                           border: "none",
                           borderRadius: 6,
                           fontSize: 13,
