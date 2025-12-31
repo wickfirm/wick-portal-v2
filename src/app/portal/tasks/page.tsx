@@ -89,7 +89,7 @@ export default async function PortalTasksPage() {
                       <td style={{ padding: 16 }}>
                         {task.category ? (
                           <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: task.category.color || "#5f6368" }} />
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: "#5f6368" }} />
                             <span style={{ fontSize: 13, color: "#5f6368" }}>{task.category.name}</span>
                           </span>
                         ) : (
