@@ -5,25 +5,9 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
+import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  ACTIVE: { bg: "#e6f4ea", color: "#34a853" },
-  ONBOARDING: { bg: "#e8f0fe", color: "#4285f4" },
-  LEAD: { bg: "#fef7e0", color: "#f9ab00" },
-  PAUSED: { bg: "#fce8e6", color: "#ea4335" },
-  CHURNED: { bg: "#f1f3f4", color: "#5f6368" },
-};
-
-const PROJECT_STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  DRAFT: { bg: "#f1f3f4", color: "#5f6368" },
-  PENDING_APPROVAL: { bg: "#fef7e0", color: "#f9ab00" },
-  IN_PROGRESS: { bg: "#e8f0fe", color: "#4285f4" },
-  ON_HOLD: { bg: "#fce8e6", color: "#ea4335" },
-  COMPLETED: { bg: "#e6f4ea", color: "#34a853" },
-  CANCELLED: { bg: "#f1f3f4", color: "#5f6368" },
-};
 
 export default async function ClientViewPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -49,186 +33,149 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     order: item.order,
     isCompleted: item.isCompleted,
     completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-    completedBy: item.completedBy,
-    notes: item.notes,
   }));
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header userName={user.name} userRole={user.role} />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Breadcrumb */}
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/clients" style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+          <Link href="/clients" style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
             ← Back to Clients
           </Link>
         </div>
 
         {/* Client Header */}
-        <div style={{
-          background: "white",
-          padding: 32,
-          borderRadius: 12,
-          border: "1px solid #e8eaed",
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "flex-start"
-        }}>
-          <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
-            <div style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              background: "linear-gradient(135deg, #e85a4f, #f8b739)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontWeight: 700,
-              fontSize: 24
-            }}>
-              {client.name.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-                <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", margin: 0 }}>{client.name}</h1>
-                <span style={{
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  background: STATUS_STYLES[client.status]?.bg || "#f1f3f4",
-                  color: STATUS_STYLES[client.status]?.color || "#5f6368"
-                }}>
-                  {client.status}
-                </span>
+        <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+              <div style={{
+                width: 72,
+                height: 72,
+                borderRadius: 16,
+                background: theme.gradients.accent,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontWeight: 700,
+                fontSize: 28
+              }}>
+                {client.name.charAt(0).toUpperCase()}
               </div>
-              <div style={{ color: "#5f6368", fontSize: 14 }}>
-                {client.industry && <span>{client.industry}</span>}
-                {client.industry && client.website && <span style={{ margin: "0 8px" }}>•</span>}
-                {client.website && (
-                  <a href={client.website} target="_blank" style={{ color: "#e85a4f" }}>
-                    {client.website.replace("https://", "").replace("http://", "")}
-                  </a>
-                )}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
+                  <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>{client.name}</h1>
+                  <span style={{
+                    padding: "4px 12px",
+                    borderRadius: 20,
+                    fontSize: 12,
+                    fontWeight: 500,
+                    background: STATUS_STYLES[client.status]?.bg || theme.colors.bgTertiary,
+                    color: STATUS_STYLES[client.status]?.color || theme.colors.textSecondary
+                  }}>
+                    {client.status}
+                  </span>
+                </div>
+                <div style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+                  {client.industry || "No industry"} {client.website && " • "} 
+                  {client.website && <a href={client.website} target="_blank" style={{ color: theme.colors.primary }}>{client.website.replace("https://", "").replace("http://", "")}</a>}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8 }}>
-            <Link href={`/clients/${client.id}/metrics`} style={{
-              padding: "10px 16px",
-              borderRadius: 8,
-              background: "#e6f4ea",
-              color: "#34a853",
-              textDecoration: "none",
-              fontWeight: 500,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}>
-              📊 Metrics
-            </Link>
-            <Link href={`/clients/${client.id}/tasks`} style={{
-              padding: "10px 16px",
-              borderRadius: 8,
-              background: "#e8f0fe",
-              color: "#4285f4",
-              textDecoration: "none",
-              fontWeight: 500,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 6
-            }}>
-              ✓ Tasks
-            </Link>
-            <Link href={`/clients/${client.id}/edit`} style={{
-              padding: "10px 16px",
-              borderRadius: 8,
-              background: "#f1f3f4",
-              color: "#5f6368",
-              textDecoration: "none",
-              fontWeight: 500,
-              fontSize: 13
-            }}>
-              Edit
-            </Link>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Link href={"/clients/" + client.id + "/metrics"} style={{
+                padding: "10px 16px",
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.successBg,
+                color: theme.colors.success,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>
+                Metrics
+              </Link>
+              <Link href={"/clients/" + client.id + "/tasks"} style={{
+                padding: "10px 16px",
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.infoBg,
+                color: theme.colors.info,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>
+                Tasks
+              </Link>
+              <Link href={"/clients/" + client.id + "/edit"} style={{
+                padding: "10px 16px",
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.bgTertiary,
+                color: theme.colors.textSecondary,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>
+                Edit
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Content Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-          {/* Client Details */}
-          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
-              Client Details
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          {/* Contact & Details */}
+          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
+              Contact Details
             </h3>
             <div style={{ display: "grid", gap: 16 }}>
               <div>
-                <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Industry</div>
-                <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{client.industry || "—"}</div>
+                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Primary Contact</div>
+                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryContact || "—"}</div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Website</div>
-                <div style={{ fontWeight: 500, color: "#1a1a1a" }}>
-                  {client.website ? (
-                    <a href={client.website} target="_blank" style={{ color: "#e85a4f" }}>{client.website}</a>
-                  ) : "—"}
+                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Email</div>
+                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryEmail || "—"}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Monthly Retainer</div>
+                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
+                  {client.monthlyRetainer ? "$" + Number(client.monthlyRetainer).toLocaleString() : "—"}
                 </div>
               </div>
               <div>
-                <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Monthly Retainer</div>
-                <div style={{ fontWeight: 500, color: "#1a1a1a" }}>
-                  {client.monthlyRetainer ? `$${Number(client.monthlyRetainer).toLocaleString()}` : "—"}
+                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Client Since</div>
+                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
+                  {new Date(client.createdAt).toLocaleDateString()}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Contact Details */}
-          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
-              Primary Contact
-            </h3>
-            <div style={{ display: "grid", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Name</div>
-                <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{client.primaryContact || "—"}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Email</div>
-                <div style={{ fontWeight: 500, color: "#1a1a1a" }}>
-                  {client.primaryEmail ? (
-                    <a href={`mailto:${client.primaryEmail}`} style={{ color: "#e85a4f" }}>{client.primaryEmail}</a>
-                  ) : "—"}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Onboarding */}
+          <OnboardingManager clientId={client.id} initialItems={onboardingForClient} />
         </div>
 
-        {/* Onboarding */}
-        <OnboardingManager
-          clientId={client.id}
-          clientStatus={client.status}
-          initialItems={onboardingForClient}
-        />
-
         {/* Projects */}
-        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden", marginTop: 24 }}>
-          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ marginTop: 24, background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Projects ({client.projects.length})</h2>
-            <Link href={`/projects/new?clientId=${client.id}`} style={{ fontSize: 13, color: "#e85a4f", textDecoration: "none", fontWeight: 500 }}>
+            <Link href={"/projects/new?clientId=" + client.id} style={{
+              background: theme.colors.primary,
+              color: "white",
+              padding: "8px 16px",
+              borderRadius: 6,
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 13
+            }}>
               + Add Project
             </Link>
           </div>
 
           {client.projects.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6" }}>
+            <div style={{ padding: 48, textAlign: "center", color: theme.colors.textMuted }}>
               No projects yet
             </div>
           ) : (
@@ -239,39 +186,37 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                 const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
                 return (
-                  <Link key={project.id} href={`/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                  <Link key={project.id} href={"/projects/" + project.id} style={{ textDecoration: "none", color: "inherit" }}>
                     <div style={{
                       padding: "16px 24px",
-                      borderBottom: idx < client.projects.length - 1 ? "1px solid #f1f3f4" : "none",
-                      cursor: "pointer",
-                      transition: "background 150ms ease"
+                      borderBottom: idx < client.projects.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
                     }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                         <div>
-                          <div style={{ fontWeight: 500, color: "#1a1a1a", marginBottom: 2 }}>{project.name}</div>
-                          <div style={{ fontSize: 12, color: "#9aa0a6" }}>{project.serviceType.replace("_", " ")}</div>
+                          <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{project.name}</div>
+                          <div style={{ fontSize: 13, color: theme.colors.textMuted }}>{project.serviceType.replace("_", " ")}</div>
                         </div>
                         <span style={{
                           fontSize: 11,
                           fontWeight: 500,
                           padding: "4px 10px",
                           borderRadius: 20,
-                          background: PROJECT_STATUS_STYLES[project.status]?.bg || "#f1f3f4",
-                          color: PROJECT_STATUS_STYLES[project.status]?.color || "#5f6368"
+                          background: STATUS_STYLES[project.status]?.bg || theme.colors.bgTertiary,
+                          color: STATUS_STYLES[project.status]?.color || theme.colors.textSecondary
                         }}>
                           {project.status.replace("_", " ")}
                         </span>
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ flex: 1, height: 6, background: "#f1f3f4", borderRadius: 3 }}>
+                        <div style={{ flex: 1, height: 6, background: theme.colors.bgTertiary, borderRadius: 3 }}>
                           <div style={{
                             height: "100%",
-                            width: `${pct}%`,
-                            background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                            width: pct + "%",
+                            background: theme.gradients.progress,
                             borderRadius: 3
                           }} />
                         </div>
-                        <span style={{ fontSize: 12, color: "#5f6368", fontWeight: 500 }}>{pct}%</span>
+                        <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500 }}>{pct}%</span>
                       </div>
                     </div>
                   </Link>
