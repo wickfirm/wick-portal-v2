@@ -11,6 +11,13 @@ type User = {
   isActive: boolean;
 };
 
+const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
+  ADMIN: { bg: "#fce8e6", color: "#ea4335" },
+  MANAGER: { bg: "#fef7e0", color: "#f9ab00" },
+  SPECIALIST: { bg: "#e8f0fe", color: "#4285f4" },
+  CLIENT: { bg: "#e6f4ea", color: "#34a853" },
+};
+
 export default function TeamPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +39,7 @@ export default function TeamPage() {
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
     setAdding(true);
-    
+
     const res = await fetch("/api/team", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -64,62 +71,93 @@ export default function TeamPage() {
     fetchUsers();
   }
 
-  if (loading) return <div style={{ padding: 48, textAlign: "center" }}>Loading...</div>;
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #dadce0",
+    borderRadius: 8,
+    fontSize: 14,
+    boxSizing: "border-box" as const,
+    outline: "none",
+  };
+
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h1 style={{ margin: 0 }}>Team</h1>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Page Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Team</h1>
+            <p style={{ color: "#5f6368", fontSize: 15 }}>Manage your team members</p>
+          </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, border: "none", cursor: "pointer" }}
+            style={{
+              background: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+              color: "white",
+              padding: "12px 24px",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: 500,
+              fontSize: 14,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: "0 2px 8px rgba(232, 90, 79, 0.3)"
+            }}
           >
-            + Add User
+            <span style={{ fontSize: 18 }}>+</span> Add User
           </button>
         </div>
 
+        {/* Add User Form */}
         {showForm && (
-          <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
-            <h3 style={{ marginTop: 0 }}>Add New User</h3>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed", marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Add New User</h3>
             <form onSubmit={addUser}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                 <div>
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Email</label>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email *</label>
                   <input
                     type="email"
                     value={newUser.email}
                     onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
                     required
-                    style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+                    style={inputStyle}
+                    placeholder="user@example.com"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Name</label>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
                   <input
                     value={newUser.name}
                     onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                    style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+                    style={inputStyle}
+                    placeholder="John Smith"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Password</label>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Password *</label>
                   <input
                     type="password"
                     value={newUser.password}
                     onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                     required
-                    style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
+                    style={inputStyle}
+                    placeholder="••••••••"
                   />
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Role</label>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
                   <select
                     value={newUser.role}
                     onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
-                    style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
+                    style={{ ...inputStyle, cursor: "pointer" }}
                   >
                     <option value="ADMIN">Admin</option>
                     <option value="MANAGER">Manager</option>
@@ -128,11 +166,29 @@ export default function TeamPage() {
                   </select>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={adding} style={{ padding: "10px 20px", background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" disabled={adding} style={{
+                  padding: "10px 20px",
+                  background: adding ? "#f1f3f4" : "#e85a4f",
+                  color: adding ? "#9aa0a6" : "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: adding ? "not-allowed" : "pointer"
+                }}>
                   {adding ? "Adding..." : "Add User"}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 20px", background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                <button type="button" onClick={() => setShowForm(false)} style={{
+                  padding: "10px 20px",
+                  background: "#f1f3f4",
+                  color: "#5f6368",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: "pointer"
+                }}>
                   Cancel
                 </button>
               </div>
@@ -140,53 +196,102 @@ export default function TeamPage() {
           </div>
         )}
 
-        <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
+        {/* Users Table */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
           {users.length === 0 ? (
-            <p style={{ padding: 48, textAlign: "center", color: "#888" }}>No team members yet</p>
+            <div style={{ padding: 64, textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>No team members yet</div>
+              <div style={{ color: "#5f6368" }}>Add your first team member to get started</div>
+            </div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f9f9f9", textAlign: "left" }}>
-                  <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Name</th>
-                  <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Email</th>
-                  <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Role</th>
-                  <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Status</th>
-                  <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Actions</th>
+                <tr style={{ background: "#f8f9fa" }}>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>User</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Role</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Status</th>
+                  <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: "1px solid #eee" }}>
-                    <td style={{ padding: 12, fontWeight: 500 }}>{user.name || "-"}</td>
-                    <td style={{ padding: 12, color: "#666" }}>{user.email}</td>
-                    <td style={{ padding: 12 }}>
-                      <span style={{ 
-                        padding: "4px 8px", borderRadius: 4, fontSize: 12,
-                        background: user.role === "ADMIN" ? "#e3f2fd" : user.role === "MANAGER" ? "#fff3e0" : "#f5f5f5",
-                        color: user.role === "ADMIN" ? "#1976d2" : user.role === "MANAGER" ? "#ef6c00" : "#666"
+                  <tr key={user.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                    <td style={{ padding: 16 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: 20,
+                          background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          color: "white",
+                          fontWeight: 600,
+                          fontSize: 14
+                        }}>
+                          {(user.name || user.email).charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{user.name || "—"}</div>
+                          <div style={{ fontSize: 13, color: "#9aa0a6" }}>{user.email}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: 16 }}>
+                      <span style={{
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        background: ROLE_STYLES[user.role]?.bg || "#f1f3f4",
+                        color: ROLE_STYLES[user.role]?.color || "#5f6368"
                       }}>
                         {user.role}
                       </span>
                     </td>
-                    <td style={{ padding: 12 }}>
-                      <span style={{ 
-                        padding: "4px 8px", borderRadius: 4, fontSize: 12,
-                        background: user.isActive ? "#e8f5e9" : "#ffebee",
-                        color: user.isActive ? "#2e7d32" : "#c62828"
+                    <td style={{ padding: 16 }}>
+                      <span style={{
+                        padding: "4px 12px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                        fontWeight: 500,
+                        background: user.isActive ? "#e6f4ea" : "#fce8e6",
+                        color: user.isActive ? "#34a853" : "#ea4335"
                       }}>
                         {user.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td style={{ padding: 12 }}>
+                    <td style={{ padding: 16, textAlign: "right" }}>
                       <button
                         onClick={() => toggleActive(user)}
-                        style={{ padding: "4px 8px", marginRight: 8, background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}
+                        style={{
+                          padding: "6px 12px",
+                          marginRight: 8,
+                          background: "#f1f3f4",
+                          color: "#5f6368",
+                          border: "none",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: "pointer"
+                        }}
                       >
                         {user.isActive ? "Deactivate" : "Activate"}
                       </button>
                       <button
                         onClick={() => deleteUser(user)}
-                        style={{ padding: "4px 8px", background: "#fee", color: "#c00", border: "none", borderRadius: 4, cursor: "pointer" }}
+                        style={{
+                          padding: "6px 12px",
+                          background: "#fce8e6",
+                          color: "#ea4335",
+                          border: "none",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: "pointer"
+                        }}
                       >
                         Delete
                       </button>
