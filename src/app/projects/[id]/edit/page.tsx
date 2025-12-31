@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { theme } from "@/lib/theme";
 
 export default function EditProjectPage() {
   const router = useRouter();
@@ -18,7 +19,7 @@ export default function EditProjectPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch(`/api/projects/${projectId}`).then(res => res.json()),
+      fetch("/api/projects/" + projectId).then(res => res.json()),
       fetch("/api/clients").then(res => res.json()),
     ]).then(([projectData, clientsData]) => {
       setProject(projectData);
@@ -44,14 +45,14 @@ export default function EditProjectPage() {
       budget: formData.get("budget") ? parseFloat(formData.get("budget") as string) : null,
     };
 
-    const res = await fetch(`/api/projects/${projectId}`, {
+    const res = await fetch("/api/projects/" + projectId, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (res.ok) {
-      router.push(`/projects/${projectId}`);
+      router.push("/projects/" + projectId);
       router.refresh();
     } else {
       const err = await res.json();
@@ -63,8 +64,8 @@ export default function EditProjectPage() {
   const inputStyle = {
     width: "100%",
     padding: "12px 16px",
-    border: "1px solid #dadce0",
-    borderRadius: 8,
+    border: "1px solid " + theme.colors.borderMedium,
+    borderRadius: theme.borderRadius.md,
     fontSize: 14,
     boxSizing: "border-box" as const,
     outline: "none",
@@ -75,29 +76,29 @@ export default function EditProjectPage() {
     marginBottom: 8,
     fontWeight: 500,
     fontSize: 14,
-    color: "#1a1a1a",
+    color: theme.colors.textPrimary,
   };
 
-  if (loading) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Loading...</div>;
-  if (!project) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Project not found</div>;
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
+  if (!project) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Project not found</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href={`/projects/${projectId}`} style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+          <Link href={"/projects/" + projectId} style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
             ← Back to {project.name}
           </Link>
         </div>
 
-        <div style={{ background: "white", padding: 32, borderRadius: 12, border: "1px solid #e8eaed" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginTop: 0, marginBottom: 8 }}>Edit Project</h1>
-          <p style={{ color: "#5f6368", marginBottom: 32, fontSize: 14 }}>Update project details</p>
+        <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginTop: 0, marginBottom: 8 }}>Edit Project</h1>
+          <p style={{ color: theme.colors.textSecondary, marginBottom: 32, fontSize: 14 }}>Update project details</p>
 
           {error && (
-            <div style={{ background: "#fce8e6", color: "#ea4335", padding: "12px 16px", borderRadius: 8, marginBottom: 24, fontSize: 14 }}>
+            <div style={{ background: theme.colors.errorBg, color: theme.colors.error, padding: "12px 16px", borderRadius: theme.borderRadius.md, marginBottom: 24, fontSize: 14 }}>
               {error}
             </div>
           )}
@@ -167,22 +168,22 @@ export default function EditProjectPage() {
               <button type="submit" disabled={saving} style={{
                 flex: 1,
                 padding: 14,
-                background: saving ? "#f1f3f4" : "linear-gradient(135deg, #e85a4f, #d44a3f)",
-                color: saving ? "#9aa0a6" : "white",
+                background: saving ? theme.colors.bgTertiary : theme.gradients.primary,
+                color: saving ? theme.colors.textMuted : "white",
                 border: "none",
-                borderRadius: 8,
+                borderRadius: theme.borderRadius.md,
                 fontSize: 14,
                 fontWeight: 600,
                 cursor: saving ? "not-allowed" : "pointer",
               }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <Link href={`/projects/${projectId}`} style={{
+              <Link href={"/projects/" + projectId} style={{
                 padding: "14px 24px",
-                border: "1px solid #dadce0",
-                borderRadius: 8,
+                border: "1px solid " + theme.colors.borderMedium,
+                borderRadius: theme.borderRadius.md,
                 textDecoration: "none",
-                color: "#5f6368",
+                color: theme.colors.textSecondary,
                 fontWeight: 500,
                 fontSize: 14,
                 display: "flex",
