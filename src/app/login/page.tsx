@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { theme } from "@/lib/theme";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -39,15 +40,15 @@ export default function LoginPage() {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      background: "linear-gradient(135deg, #f8f9fa 0%, #e8eaed 100%)",
+      background: `linear-gradient(135deg, ${theme.colors.bgPrimary} 0%, ${theme.colors.borderLight} 100%)`,
       padding: 24
     }}>
       <div style={{
         width: "100%",
         maxWidth: 420,
-        background: "white",
-        borderRadius: 16,
-        boxShadow: "0 10px 40px rgba(0,0,0,0.08)",
+        background: theme.colors.bgSecondary,
+        borderRadius: theme.borderRadius.xl,
+        boxShadow: theme.shadows.lg,
         padding: 40
       }}>
         {/* Logo */}
@@ -55,7 +56,7 @@ export default function LoginPage() {
           <div style={{
             width: 56,
             height: 56,
-            background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+            background: theme.gradients.accent,
             borderRadius: 14,
             display: "inline-flex",
             alignItems: "center",
@@ -64,16 +65,16 @@ export default function LoginPage() {
           }}>
             <span style={{ color: "white", fontWeight: "bold", fontSize: 24 }}>W</span>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Welcome back</h1>
-          <p style={{ color: "#5f6368", fontSize: 14 }}>Sign in to your Wick Portal account</p>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Welcome back</h1>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Sign in to your Wick Portal account</p>
         </div>
 
         {error && (
           <div style={{
-            background: "#fce8e6",
-            color: "#ea4335",
+            background: theme.colors.errorBg,
+            color: theme.colors.error,
             padding: "12px 16px",
-            borderRadius: 8,
+            borderRadius: theme.borderRadius.md,
             marginBottom: 20,
             fontSize: 14,
             display: "flex",
@@ -86,7 +87,7 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 20 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#1a1a1a" }}>
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
               Email address
             </label>
             <input
@@ -97,8 +98,8 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 padding: "14px 16px",
-                border: "1px solid #dadce0",
-                borderRadius: 8,
+                border: `1px solid ${theme.colors.borderMedium}`,
+                borderRadius: theme.borderRadius.md,
                 fontSize: 15,
                 boxSizing: "border-box",
                 transition: "border-color 150ms ease, box-shadow 150ms ease"
@@ -107,7 +108,7 @@ export default function LoginPage() {
           </div>
 
           <div style={{ marginBottom: 24 }}>
-            <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: "#1a1a1a" }}>
+            <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
               Password
             </label>
             <input
@@ -118,8 +119,8 @@ export default function LoginPage() {
               style={{
                 width: "100%",
                 padding: "14px 16px",
-                border: "1px solid #dadce0",
-                borderRadius: 8,
+                border: `1px solid ${theme.colors.borderMedium}`,
+                borderRadius: theme.borderRadius.md,
                 fontSize: 15,
                 boxSizing: "border-box",
                 transition: "border-color 150ms ease, box-shadow 150ms ease"
@@ -133,10 +134,10 @@ export default function LoginPage() {
             style={{
               width: "100%",
               padding: 14,
-              background: loading ? "#f1f3f4" : "linear-gradient(135deg, #e85a4f, #d44a3f)",
-              color: loading ? "#9aa0a6" : "white",
+              background: loading ? theme.colors.bgTertiary : theme.gradients.primary,
+              color: loading ? theme.colors.textMuted : "white",
               border: "none",
-              borderRadius: 8,
+              borderRadius: theme.borderRadius.md,
               fontSize: 15,
               fontWeight: 600,
               cursor: loading ? "not-allowed" : "pointer",
@@ -147,7 +148,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <div style={{ marginTop: 24, textAlign: "center", color: "#9aa0a6", fontSize: 13 }}>
+        <div style={{ marginTop: 24, textAlign: "center", color: theme.colors.textMuted, fontSize: 13 }}>
           © {new Date().getFullYear()} The Wick Firm. All rights reserved.
         </div>
       </div>
