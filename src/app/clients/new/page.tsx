@@ -42,39 +42,66 @@ export default function NewClientPage() {
     }
   }
 
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #dadce0",
+    borderRadius: 8,
+    fontSize: 14,
+    boxSizing: "border-box" as const,
+    transition: "border-color 150ms ease, box-shadow 150ms ease",
+    outline: "none",
+  };
+
+  const labelStyle = {
+    display: "block",
+    marginBottom: 8,
+    fontWeight: 500,
+    fontSize: 14,
+    color: "#1a1a1a",
+  };
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header />
 
-      <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/clients" style={{ color: "#666", textDecoration: "none" }}>← Back to Clients</Link>
+          <Link href="/clients" style={{ color: "#5f6368", textDecoration: "none", fontSize: 14, display: "flex", alignItems: "center", gap: 4 }}>
+            ← Back to Clients
+          </Link>
         </div>
 
-        <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h1 style={{ marginTop: 0, marginBottom: 24 }}>New Client</h1>
+        <div style={{ background: "white", padding: 32, borderRadius: 12, border: "1px solid #e8eaed" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginTop: 0, marginBottom: 8 }}>New Client</h1>
+          <p style={{ color: "#5f6368", marginBottom: 32, fontSize: 14 }}>Add a new client to your portfolio</p>
 
-          {error && <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 16 }}>{error}</div>}
+          {error && (
+            <div style={{ background: "#fce8e6", color: "#ea4335", padding: "12px 16px", borderRadius: 8, marginBottom: 24, fontSize: 14 }}>
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Client Name *</label>
-              <input name="name" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Client Name *</label>
+              <input name="name" required style={inputStyle} placeholder="Acme Corporation" />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Industry</label>
-              <input name="industry" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Industry</label>
+                <input name="industry" style={inputStyle} placeholder="Technology" />
+              </div>
+              <div>
+                <label style={labelStyle}>Website</label>
+                <input name="website" type="url" style={inputStyle} placeholder="https://example.com" />
+              </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Website</label>
-              <input name="website" type="url" placeholder="https://" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-              <select name="status" defaultValue="LEAD" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Status</label>
+              <select name="status" defaultValue="LEAD" style={{ ...inputStyle, cursor: "pointer" }}>
                 <option value="LEAD">Lead</option>
                 <option value="ONBOARDING">Onboarding</option>
                 <option value="ACTIVE">Active</option>
@@ -83,26 +110,47 @@ export default function NewClientPage() {
               </select>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Contact</label>
-              <input name="primaryContact" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Primary Contact</label>
+                <input name="primaryContact" style={inputStyle} placeholder="John Smith" />
+              </div>
+              <div>
+                <label style={labelStyle}>Primary Email</label>
+                <input name="primaryEmail" type="email" style={inputStyle} placeholder="john@example.com" />
+              </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Email</label>
-              <input name="primaryEmail" type="email" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Monthly Retainer (USD)</label>
-              <input name="monthlyRetainer" type="number" step="0.01" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ marginBottom: 32 }}>
+              <label style={labelStyle}>Monthly Retainer (USD)</label>
+              <input name="monthlyRetainer" type="number" step="0.01" style={inputStyle} placeholder="5000" />
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
-              <button type="submit" disabled={loading} style={{ flex: 1, padding: 12, background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+              <button type="submit" disabled={loading} style={{
+                flex: 1,
+                padding: 14,
+                background: loading ? "#f1f3f4" : "linear-gradient(135deg, #e85a4f, #d44a3f)",
+                color: loading ? "#9aa0a6" : "white",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}>
                 {loading ? "Creating..." : "Create Client"}
               </button>
-              <Link href="/clients" style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
+              <Link href="/clients" style={{
+                padding: "14px 24px",
+                border: "1px solid #dadce0",
+                borderRadius: 8,
+                textDecoration: "none",
+                color: "#5f6368",
+                fontWeight: 500,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+              }}>
                 Cancel
               </Link>
             </div>
