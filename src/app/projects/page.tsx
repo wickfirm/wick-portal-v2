@@ -4,17 +4,9 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import Header from "@/components/Header";
+import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
-  DRAFT: { bg: "#f1f3f4", color: "#5f6368" },
-  PENDING_APPROVAL: { bg: "#fef7e0", color: "#f9ab00" },
-  IN_PROGRESS: { bg: "#e8f0fe", color: "#4285f4" },
-  ON_HOLD: { bg: "#fce8e6", color: "#ea4335" },
-  COMPLETED: { bg: "#e6f4ea", color: "#34a853" },
-  CANCELLED: { bg: "#f1f3f4", color: "#5f6368" },
-};
 
 export default async function ProjectsPage() {
   const session = await getServerSession(authOptions);
@@ -34,28 +26,28 @@ export default async function ProjectsPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header userName={user.name} userRole={user.role} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {/* Page Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Projects</h1>
-            <p style={{ color: "#5f6368", fontSize: 15 }}>Track and manage all your projects</p>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Projects</h1>
+            <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Track and manage all your projects</p>
           </div>
           <Link href="/projects/new" style={{
-            background: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+            background: theme.gradients.primary,
             color: "white",
             padding: "12px 24px",
-            borderRadius: 8,
+            borderRadius: theme.borderRadius.md,
             textDecoration: "none",
             fontWeight: 500,
             fontSize: 14,
             display: "flex",
             alignItems: "center",
             gap: 8,
-            boxShadow: "0 2px 8px rgba(232, 90, 79, 0.3)"
+            boxShadow: theme.shadows.button
           }}>
             <span style={{ fontSize: 18 }}>+</span> New Project
           </Link>
@@ -63,33 +55,33 @@ export default async function ProjectsPage() {
 
         {/* Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
-          <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a" }}>{stats.total}</div>
-            <div style={{ fontSize: 13, color: "#5f6368" }}>Total Projects</div>
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{stats.total}</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Total Projects</div>
           </div>
-          <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#4285f4" }}>{stats.inProgress}</div>
-            <div style={{ fontSize: 13, color: "#5f6368" }}>In Progress</div>
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.info }}>{stats.inProgress}</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>In Progress</div>
           </div>
-          <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#34a853" }}>{stats.completed}</div>
-            <div style={{ fontSize: 13, color: "#5f6368" }}>Completed</div>
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.success }}>{stats.completed}</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Completed</div>
           </div>
-          <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed" }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: "#ea4335" }}>{stats.onHold}</div>
-            <div style={{ fontSize: 13, color: "#5f6368" }}>On Hold</div>
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.error }}>{stats.onHold}</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>On Hold</div>
           </div>
         </div>
 
         {/* Projects Table */}
-        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+        <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {projects.length === 0 ? (
             <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
-              <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>No projects yet</div>
-              <div style={{ color: "#5f6368", marginBottom: 24 }}>Get started by creating your first project</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>P</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects yet</div>
+              <div style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>Get started by creating your first project</div>
               <Link href="/projects/new" style={{
-                background: "#e85a4f",
+                background: theme.colors.primary,
                 color: "white",
                 padding: "10px 20px",
                 borderRadius: 6,
@@ -103,13 +95,13 @@ export default async function ProjectsPage() {
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: "#f8f9fa" }}>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Project</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Client</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Type</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Status</th>
-                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Progress</th>
-                  <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid #e8eaed" }}>Actions</th>
+                <tr style={{ background: theme.colors.bgPrimary }}>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Project</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Client</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Type</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Status</th>
+                  <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Progress</th>
+                  <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", borderBottom: "1px solid " + theme.colors.borderLight }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,18 +111,18 @@ export default async function ProjectsPage() {
                   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
                   return (
-                    <tr key={project.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                    <tr key={project.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
                       <td style={{ padding: 16 }}>
-                        <Link href={`/projects/${project.id}`} style={{ textDecoration: "none" }}>
-                          <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{project.name}</div>
+                        <Link href={"/projects/" + project.id} style={{ textDecoration: "none" }}>
+                          <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{project.name}</div>
                         </Link>
                       </td>
                       <td style={{ padding: 16 }}>
-                        <Link href={`/clients/${project.client.id}`} style={{ color: "#5f6368", textDecoration: "none" }}>
+                        <Link href={"/clients/" + project.client.id} style={{ color: theme.colors.textSecondary, textDecoration: "none" }}>
                           {project.client.name}
                         </Link>
                       </td>
-                      <td style={{ padding: 16, color: "#5f6368", fontSize: 13 }}>
+                      <td style={{ padding: 16, color: theme.colors.textSecondary, fontSize: 13 }}>
                         {project.serviceType.replace("_", " ")}
                       </td>
                       <td style={{ padding: 16 }}>
@@ -139,28 +131,28 @@ export default async function ProjectsPage() {
                           borderRadius: 20,
                           fontSize: 12,
                           fontWeight: 500,
-                          background: STATUS_STYLES[project.status]?.bg || "#f1f3f4",
-                          color: STATUS_STYLES[project.status]?.color || "#5f6368"
+                          background: STATUS_STYLES[project.status]?.bg || theme.colors.bgTertiary,
+                          color: STATUS_STYLES[project.status]?.color || theme.colors.textSecondary
                         }}>
                           {project.status.replace("_", " ")}
                         </span>
                       </td>
                       <td style={{ padding: 16 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 120 }}>
-                          <div style={{ flex: 1, height: 6, background: "#f1f3f4", borderRadius: 3 }}>
+                          <div style={{ flex: 1, height: 6, background: theme.colors.bgTertiary, borderRadius: 3 }}>
                             <div style={{
                               height: "100%",
-                              width: `${pct}%`,
-                              background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                              width: pct + "%",
+                              background: theme.gradients.progress,
                               borderRadius: 3
                             }} />
                           </div>
-                          <span style={{ fontSize: 12, color: "#5f6368", fontWeight: 500, minWidth: 32 }}>{pct}%</span>
+                          <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500, minWidth: 32 }}>{pct}%</span>
                         </div>
                       </td>
                       <td style={{ padding: 16, textAlign: "right" }}>
-                        <Link href={`/projects/${project.id}`} style={{
-                          color: "#e85a4f",
+                        <Link href={"/projects/" + project.id} style={{
+                          color: theme.colors.primary,
                           textDecoration: "none",
                           fontWeight: 500,
                           fontSize: 13,
@@ -168,8 +160,8 @@ export default async function ProjectsPage() {
                         }}>
                           View
                         </Link>
-                        <Link href={`/projects/${project.id}/edit`} style={{
-                          color: "#5f6368",
+                        <Link href={"/projects/" + project.id + "/edit"} style={{
+                          color: theme.colors.textSecondary,
                           textDecoration: "none",
                           fontWeight: 500,
                           fontSize: 13
