@@ -7,6 +7,15 @@ import PortalHeader from "@/components/PortalHeader";
 
 export const dynamic = "force-dynamic";
 
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
+  DRAFT: { bg: "#f1f3f4", color: "#5f6368" },
+  PENDING_APPROVAL: { bg: "#fef7e0", color: "#f9ab00" },
+  IN_PROGRESS: { bg: "#e8f0fe", color: "#4285f4" },
+  ON_HOLD: { bg: "#fce8e6", color: "#ea4335" },
+  COMPLETED: { bg: "#e6f4ea", color: "#34a853" },
+  CANCELLED: { bg: "#f1f3f4", color: "#5f6368" },
+};
+
 export default async function PortalProjectsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
@@ -29,47 +38,69 @@ export default async function PortalProjectsPage() {
   });
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <PortalHeader userName={user.name} />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <h1 style={{ marginTop: 0, marginBottom: 24 }}>Your Projects</h1>
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Your Projects</h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Track the progress of all your active projects.</p>
+        </div>
 
-        <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
           {projects.length === 0 ? (
-            <p style={{ padding: 48, textAlign: "center", color: "#888" }}>No projects yet</p>
+            <div style={{ padding: 64, textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>No projects yet</div>
+              <div style={{ color: "#5f6368" }}>Projects will appear here once they're started.</div>
+            </div>
           ) : (
-            projects.map(project => {
-              const completed = project.stages.filter(s => s.isCompleted).length;
-              const total = project.stages.length;
-              const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+            <div>
+              {projects.map((project, idx) => {
+                const completed = project.stages.filter(s => s.isCompleted).length;
+                const total = project.stages.length;
+                const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-              return (
-                <Link key={project.id} href={`/portal/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={{ padding: 20, borderBottom: "1px solid #eee", cursor: "pointer" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: 16, color: "#333" }}>{project.name}</div>
-                        <div style={{ fontSize: 13, color: "#888", marginTop: 2 }}>{project.serviceType.replace("_", " ")}</div>
+                return (
+                  <Link key={project.id} href={`/portal/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div style={{
+                      padding: 24,
+                      borderBottom: idx < projects.length - 1 ? "1px solid #f1f3f4" : "none",
+                      cursor: "pointer",
+                      transition: "background 150ms ease"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{project.name}</div>
+                          <div style={{ fontSize: 13, color: "#9aa0a6" }}>{project.serviceType.replace("_", " ")}</div>
+                        </div>
+                        <span style={{
+                          padding: "6px 14px",
+                          borderRadius: 20,
+                          fontSize: 12,
+                          fontWeight: 500,
+                          background: STATUS_STYLES[project.status]?.bg || "#f1f3f4",
+                          color: STATUS_STYLES[project.status]?.color || "#5f6368"
+                        }}>
+                          {project.status.replace("_", " ")}
+                        </span>
                       </div>
-                      <span style={{
-                        padding: "4px 12px", borderRadius: 4, fontSize: 12,
-                        background: project.status === "IN_PROGRESS" ? "#e3f2fd" : project.status === "COMPLETED" ? "#e8f5e9" : "#f5f5f5",
-                        color: project.status === "IN_PROGRESS" ? "#1976d2" : project.status === "COMPLETED" ? "#2e7d32" : "#666"
-                      }}>
-                        {project.status.replace("_", " ")}
-                      </span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ flex: 1, height: 6, background: "#eee", borderRadius: 3 }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: "#4caf50", borderRadius: 3 }} />
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ flex: 1, height: 8, background: "#f1f3f4", borderRadius: 4 }}>
+                          <div style={{
+                            height: "100%",
+                            width: `${pct}%`,
+                            background: pct === 100 ? "#34a853" : "linear-gradient(90deg, #e85a4f, #f8b739)",
+                            borderRadius: 4
+                          }} />
+                        </div>
+                        <span style={{ fontSize: 14, color: "#5f6368", fontWeight: 500, minWidth: 45 }}>{pct}%</span>
                       </div>
-                      <span style={{ fontSize: 13, color: "#666", minWidth: 40 }}>{pct}%</span>
                     </div>
-                  </div>
-                </Link>
-              );
-            })
+                  </Link>
+                );
+              })}
+            </div>
           )}
         </div>
       </main>
