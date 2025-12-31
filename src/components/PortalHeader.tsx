@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { theme } from "@/lib/theme";
 
 export default function PortalHeader({ userName }: { userName?: string }) {
   const pathname = usePathname();
@@ -20,9 +21,9 @@ export default function PortalHeader({ userName }: { userName?: string }) {
 
   return (
     <header style={{
-      background: "#ffffff",
+      background: theme.colors.bgSecondary,
       padding: "0 24px",
-      borderBottom: "1px solid #e8eaed",
+      borderBottom: `1px solid ${theme.colors.borderLight}`,
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
@@ -37,8 +38,8 @@ export default function PortalHeader({ userName }: { userName?: string }) {
           <div style={{
             width: 32,
             height: 32,
-            background: "linear-gradient(135deg, #e85a4f, #f8b739)",
-            borderRadius: 8,
+            background: theme.gradients.accent,
+            borderRadius: theme.borderRadius.md,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -48,7 +49,7 @@ export default function PortalHeader({ userName }: { userName?: string }) {
           }}>
             W
           </div>
-          <span style={{ fontWeight: 600, fontSize: 18, color: "#1a1a1a" }}>Client Portal</span>
+          <span style={{ fontWeight: 600, fontSize: 18, color: theme.colors.textPrimary }}>Client Portal</span>
         </div>
         
         <nav style={{ display: "flex", gap: 4 }}>
@@ -61,8 +62,8 @@ export default function PortalHeader({ userName }: { userName?: string }) {
                 borderRadius: 6,
                 fontSize: 14,
                 fontWeight: 500,
-                color: isActive(item.href) ? "#e85a4f" : "#5f6368",
-                background: isActive(item.href) ? "rgba(232, 90, 79, 0.08)" : "transparent",
+                color: isActive(item.href) ? theme.colors.primary : theme.colors.textSecondary,
+                background: isActive(item.href) ? `${theme.colors.primary}14` : "transparent",
                 textDecoration: "none",
                 transition: "all 150ms ease",
               }}
@@ -80,7 +81,7 @@ export default function PortalHeader({ userName }: { userName?: string }) {
               width: 36,
               height: 36,
               borderRadius: 18,
-              background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+              background: theme.gradients.accent,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -90,18 +91,18 @@ export default function PortalHeader({ userName }: { userName?: string }) {
             }}>
               {userName.charAt(0).toUpperCase()}
             </div>
-            <span style={{ fontSize: 14, fontWeight: 500, color: "#1a1a1a" }}>{userName}</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>{userName}</span>
           </div>
         )}
         <Link 
           href="/api/auth/signout" 
           style={{ 
-            color: "#5f6368", 
+            color: theme.colors.textSecondary, 
             textDecoration: "none", 
             fontSize: 14,
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #e8eaed"
+            border: `1px solid ${theme.colors.borderLight}`
           }}
         >
           Sign out
