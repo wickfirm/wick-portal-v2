@@ -35,72 +35,139 @@ export default async function AnalyticsPage() {
     _count: { serviceType: true },
   });
 
+  const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header userName={user.name} userRole={user.role} />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <h1 style={{ marginTop: 0, marginBottom: 24 }}>Analytics</h1>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Analytics</h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Overview of your agency performance</p>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>{totalClients}</div>
-            <div style={{ color: "#666" }}>Total Clients</div>
+        {/* Key Metrics */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 32 }}>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(232, 90, 79, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                👥
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{totalClients}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Total Clients</div>
           </div>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold", color: "#2e7d32" }}>{activeClients}</div>
-            <div style={{ color: "#666" }}>Active Clients</div>
+
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(52, 168, 83, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                ✓
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#34a853", marginBottom: 4 }}>{activeClients}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Active Clients</div>
           </div>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>{totalProjects}</div>
-            <div style={{ color: "#666" }}>Total Projects</div>
+
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(66, 133, 244, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                📁
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#4285f4", marginBottom: 4 }}>{inProgressProjects}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Active Projects</div>
           </div>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold", color: "#1976d2" }}>{inProgressProjects}</div>
-            <div style={{ color: "#666" }}>In Progress</div>
+
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(248, 183, 57, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                🎯
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#f9ab00", marginBottom: 4 }}>{completionRate}%</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Completion Rate</div>
           </div>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <h3 style={{ marginTop: 0 }}>Clients by Status</h3>
-            {clientsByStatus.map((item) => (
-              <div key={item.status} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #eee" }}>
-                <span>{item.status}</span>
-                <span style={{ fontWeight: "bold" }}>{item._count.status}</span>
-              </div>
-            ))}
+        {/* Charts Row */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+          {/* Clients by Status */}
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Clients by Status</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              {clientsByStatus.map((item) => {
+                const percentage = totalClients > 0 ? Math.round((item._count.status / totalClients) * 100) : 0;
+                return (
+                  <div key={item.status}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, color: "#1a1a1a" }}>{item.status}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: "#5f6368" }}>{item._count.status}</span>
+                    </div>
+                    <div style={{ height: 8, background: "#f1f3f4", borderRadius: 4 }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${percentage}%`,
+                        background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                        borderRadius: 4
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <h3 style={{ marginTop: 0 }}>Projects by Type</h3>
-            {projectsByType.map((item) => (
-              <div key={item.serviceType} style={{ display: "flex", justifyContent: "space-between", padding: "8px 0", borderBottom: "1px solid #eee" }}>
-                <span>{item.serviceType.replace("_", " ")}</span>
-                <span style={{ fontWeight: "bold" }}>{item._count.serviceType}</span>
-              </div>
-            ))}
+          {/* Projects by Type */}
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Service Type</h3>
+            <div style={{ display: "grid", gap: 12 }}>
+              {projectsByType.map((item) => {
+                const percentage = totalProjects > 0 ? Math.round((item._count.serviceType / totalProjects) * 100) : 0;
+                return (
+                  <div key={item.serviceType}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                      <span style={{ fontSize: 14, color: "#1a1a1a" }}>{item.serviceType.replace("_", " ")}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: "#5f6368" }}>{item._count.serviceType}</span>
+                    </div>
+                    <div style={{ height: 8, background: "#f1f3f4", borderRadius: 4 }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${percentage}%`,
+                        background: "linear-gradient(90deg, #4285f4, #34a853)",
+                        borderRadius: 4
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        <div style={{ background: "white", padding: 24, borderRadius: 8, marginTop: 24 }}>
-          <h3 style={{ marginTop: 0 }}>Project Completion</h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ flex: 1, height: 24, background: "#eee", borderRadius: 4, overflow: "hidden" }}>
-              <div style={{ 
-                height: "100%", 
-                width: totalProjects > 0 ? `${(completedProjects / totalProjects) * 100}%` : "0%",
-                background: "#4caf50",
+        {/* Project Completion */}
+        <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Project Completion</h3>
+          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
+            <div style={{ flex: 1, height: 24, background: "#f1f3f4", borderRadius: 12, overflow: "hidden" }}>
+              <div style={{
+                height: "100%",
+                width: `${completionRate}%`,
+                background: "linear-gradient(90deg, #34a853, #4285f4)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "white",
-                fontSize: 12
+                fontSize: 12,
+                fontWeight: 600
               }}>
-                {totalProjects > 0 ? `${Math.round((completedProjects / totalProjects) * 100)}%` : "0%"}
+                {completionRate > 10 && `${completionRate}%`}
               </div>
             </div>
-            <span style={{ color: "#666" }}>{completedProjects} / {totalProjects} completed</span>
+            <div style={{ textAlign: "right", minWidth: 120 }}>
+              <div style={{ fontSize: 14, color: "#1a1a1a", fontWeight: 500 }}>{completedProjects} / {totalProjects}</div>
+              <div style={{ fontSize: 12, color: "#9aa0a6" }}>projects completed</div>
+            </div>
           </div>
         </div>
       </main>
