@@ -31,12 +31,12 @@ export default async function DashboardPage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const statCards = [
-    { label: "Active Clients", value: clientCount, icon: "👥", color: theme.colors.primary, href: "/clients" },
-    { label: "Active Projects", value: activeProjects, icon: "📁", color: theme.colors.info, href: "/projects" },
-    { label: "Total Projects", value: projectCount, icon: "✓", color: theme.colors.success, href: null },
-    { label: "Team Members", value: teamCount, icon: "🧑‍💼", color: theme.colors.warning, href: "/team" },
-  ];
+const statCards = [
+  { label: "Active Clients", value: clientCount, icon: "👥", color: theme.colors.primary, href: "/clients" },
+  { label: "Active Projects", value: activeProjects, icon: "📁", color: theme.colors.info, href: "/projects" },
+  { label: "Total Projects", value: projectCount, icon: "✓", color: theme.colors.success, href: null },
+  { label: "Team Members", value: teamCount, icon: "👤", color: theme.colors.warning, href: "/team" },
+];
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
