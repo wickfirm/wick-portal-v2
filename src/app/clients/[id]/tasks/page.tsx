@@ -8,78 +8,70 @@ import Header from "@/components/Header";
 type Task = {
   id: string;
   name: string;
-  categoryId: string | null;
-  category: { id: string; name: string } | null;
-  dueDate: string | null;
-  priority: "HIGH" | "MEDIUM" | "LOW";
-  status: "PENDING" | "IN_PROGRESS" | "ONGOING" | "ON_HOLD" | "COMPLETED" | "FUTURE_PLAN";
   notes: string | null;
-  nextSteps: string | null;
-  externalLink: string | null;
-  externalLinkLabel: string | null;
-  internalLink: string | null;
-  internalLinkLabel: string | null;
+  status: string;
+  priority: string;
+  dueDate: string | null;
+  category: { id: string; name: string; color: string | null } | null;
 };
 
-type Category = {
+type TaskCategory = {
   id: string;
   name: string;
+  color: string | null;
 };
 
-const PRIORITY_COLORS = {
-  HIGH: { bg: "#ffebee", color: "#c62828" },
-  MEDIUM: { bg: "#fff3e0", color: "#ef6c00" },
-  LOW: { bg: "#e8f5e9", color: "#2e7d32" },
-};
+const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN"];
+const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
 
-const STATUS_COLORS = {
-  PENDING: { bg: "#fff3e0", color: "#ef6c00" },
-  IN_PROGRESS: { bg: "#e3f2fd", color: "#1976d2" },
-  ONGOING: { bg: "#e8f5e9", color: "#2e7d32" },
-  ON_HOLD: { bg: "#fce4ec", color: "#c2185b" },
-  COMPLETED: { bg: "#e8f5e9", color: "#2e7d32" },
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
+  PENDING: { bg: "#fef7e0", color: "#f9ab00" },
+  IN_PROGRESS: { bg: "#e8f0fe", color: "#4285f4" },
+  ONGOING: { bg: "#e6f4ea", color: "#34a853" },
+  ON_HOLD: { bg: "#fce8e6", color: "#ea4335" },
+  COMPLETED: { bg: "#e6f4ea", color: "#34a853" },
   FUTURE_PLAN: { bg: "#f3e5f5", color: "#7b1fa2" },
+};
+
+const PRIORITY_STYLES: Record<string, { bg: string; color: string }> = {
+  HIGH: { bg: "#fce8e6", color: "#ea4335" },
+  MEDIUM: { bg: "#fef7e0", color: "#f9ab00" },
+  LOW: { bg: "#e6f4ea", color: "#34a853" },
 };
 
 export default function ClientTasksPage() {
   const params = useParams();
   const clientId = params.id as string;
 
+  const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clientName, setClientName] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", categoryId: "", priority: "MEDIUM", status: "PENDING" });
+  const [newTask, setNewTask] = useState({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
   const [adding, setAdding] = useState(false);
-  const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [editForm, setEditForm] = useState<any>({});
 
   useEffect(() => {
-    fetchData();
+    Promise.all([
+      fetch(`/api/clients/${clientId}`).then(res => res.json()),
+      fetch(`/api/clients/${clientId}/tasks`).then(res => res.json()),
+      fetch("/api/task-categories").then(res => res.json()),
+    ]).then(([clientData, tasksData, categoriesData]) => {
+      setClient(clientData);
+      setTasks(tasksData);
+      setCategories(categoriesData);
+      setLoading(false);
+    });
   }, [clientId]);
 
-  async function fetchData() {
-    setLoading(true);
-    const [tasksRes, categoriesRes, clientRes] = await Promise.all([
-      fetch(`/api/clients/${clientId}/tasks`),
-      fetch("/api/task-categories"),
-      fetch(`/api/clients/${clientId}`),
-    ]);
-
-    const tasksData = await tasksRes.json();
-    const categoriesData = await categoriesRes.json();
-    const clientData = await clientRes.json();
-
-    setTasks(tasksData);
-    setCategories(categoriesData);
-    setClientName(clientData.name || "");
-    setLoading(false);
+  async function fetchTasks() {
+    const res = await fetch(`/api/clients/${clientId}/tasks`);
+    const data = await res.json();
+    setTasks(data);
   }
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
-    if (!newTask.name.trim()) return;
     setAdding(true);
 
     const res = await fetch(`/api/clients/${clientId}/tasks`, {
@@ -89,122 +81,171 @@ export default function ClientTasksPage() {
     });
 
     if (res.ok) {
-      setNewTask({ name: "", categoryId: "", priority: "MEDIUM", status: "PENDING" });
+      setNewTask({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
       setShowForm(false);
-      fetchData();
+      fetchTasks();
     }
     setAdding(false);
   }
 
-  async function updateTask() {
-    if (!editingTask) return;
-
-    await fetch(`/api/tasks/${editingTask.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-
-    setEditingTask(null);
-    fetchData();
-  }
-
-  async function deleteTask(task: Task) {
-    if (!confirm(`Delete "${task.name}"?`)) return;
-
-    await fetch(`/api/tasks/${task.id}`, { method: "DELETE" });
-    fetchData();
-  }
-
-  async function quickUpdateStatus(task: Task, status: string) {
-    await fetch(`/api/tasks/${task.id}`, {
+  async function updateTaskStatus(taskId: string, status: string) {
+    await fetch(`/api/clients/${clientId}/tasks/${taskId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    fetchData();
+    fetchTasks();
   }
 
-  function isOverdue(dueDate: string | null, status: string): boolean {
-    if (!dueDate || status === "COMPLETED") return false;
-    return new Date(dueDate) < new Date();
+  async function deleteTask(taskId: string) {
+    if (!confirm("Delete this task?")) return;
+    await fetch(`/api/clients/${clientId}/tasks/${taskId}`, { method: "DELETE" });
+    fetchTasks();
   }
 
-  const groupedTasks = categories.map(cat => ({
-    category: cat,
-    tasks: tasks.filter(t => t.categoryId === cat.id),
-  }));
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #dadce0",
+    borderRadius: 8,
+    fontSize: 14,
+    boxSizing: "border-box" as const,
+    outline: "none",
+  };
 
-  const uncategorizedTasks = tasks.filter(t => !t.categoryId);
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Loading...</div>;
 
-  if (loading) return <div style={{ padding: 48, textAlign: "center" }}>Loading...</div>;
+  const pendingTasks = tasks.filter(t => t.status !== "COMPLETED");
+  const completedTasks = tasks.filter(t => t.status === "COMPLETED");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header />
 
-      <main style={{ maxWidth: 1400, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href={`/clients/${clientId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {clientName}</Link>
+          <Link href={`/clients/${clientId}`} style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+            ← Back to {client?.name}
+          </Link>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h1 style={{ margin: 0 }}>Weekly Tasks - {clientName}</h1>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Tasks</h1>
+            <p style={{ color: "#5f6368", fontSize: 15 }}>Manage tasks for {client?.name}</p>
+          </div>
           <button
             onClick={() => setShowForm(!showForm)}
-            style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, border: "none", cursor: "pointer" }}
+            style={{
+              background: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+              color: "white",
+              padding: "12px 24px",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: 500,
+              fontSize: 14,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
           >
-            + Add Task
+            <span style={{ fontSize: 18 }}>+</span> Add Task
           </button>
         </div>
 
+        {/* Add Task Form */}
         {showForm && (
-          <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
-            <h3 style={{ marginTop: 0 }}>New Task</h3>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed", marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 16 }}>New Task</h3>
             <form onSubmit={addTask}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 12, marginBottom: 12 }}>
-                <input
-                  placeholder="Task name"
-                  value={newTask.name}
-                  onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-                  style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                  required
-                />
-                <select
-                  value={newTask.categoryId}
-                  onChange={(e) => setNewTask({ ...newTask, categoryId: e.target.value })}
-                  style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="">No Category</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <select
-                  value={newTask.priority}
-                  onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                  style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                </select>
-                <select
-                  value={newTask.status}
-                  onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
-                  style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="PENDING">Pending</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="ONGOING">Ongoing</option>
-                  <option value="ON_HOLD">On Hold</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="FUTURE_PLAN">Future Plan</option>
-                </select>
+              <div style={{ display: "grid", gap: 16, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Task Name *</label>
+                  <input
+                    value={newTask.name}
+                    onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                    required
+                    style={inputStyle}
+                    placeholder="Enter task name"
+                  />
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16 }}>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Status</label>
+                    <select
+                      value={newTask.status}
+                      onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Priority</label>
+                    <select
+                      value={newTask.priority}
+                      onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Category</label>
+                    <select
+                      value={newTask.categoryId}
+                      onChange={(e) => setNewTask({ ...newTask, categoryId: e.target.value })}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="">None</option>
+                      {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Due Date</label>
+                    <input
+                      type="date"
+                      value={newTask.dueDate}
+                      onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                      style={inputStyle}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Notes</label>
+                  <textarea
+                    value={newTask.notes}
+                    onChange={(e) => setNewTask({ ...newTask, notes: e.target.value })}
+                    rows={2}
+                    style={{ ...inputStyle, resize: "vertical" }}
+                    placeholder="Optional notes"
+                  />
+                </div>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={adding} style={{ padding: "10px 20px", background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" disabled={adding} style={{
+                  padding: "10px 20px",
+                  background: adding ? "#f1f3f4" : "#e85a4f",
+                  color: adding ? "#9aa0a6" : "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: adding ? "not-allowed" : "pointer"
+                }}>
                   {adding ? "Adding..." : "Add Task"}
                 </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 20px", background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                <button type="button" onClick={() => setShowForm(false)} style={{
+                  padding: "10px 20px",
+                  background: "#f1f3f4",
+                  color: "#5f6368",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: "pointer"
+                }}>
                   Cancel
                 </button>
               </div>
@@ -212,46 +253,58 @@ export default function ClientTasksPage() {
           </div>
         )}
 
-        <div style={{ background: "white", borderRadius: 8, overflow: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
-            <thead>
-              <tr style={{ background: "#f9f9f9", textAlign: "left" }}>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Category</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Task</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Due Date</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Priority</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Status</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Notes / Links</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Next Steps</th>
-                <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {groupedTasks.map(group => (
-                group.tasks.length > 0 && group.tasks.map((task, idx) => (
-                  <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
-                    {idx === 0 && (
-                      <td rowSpan={group.tasks.length} style={{ padding: 12, fontWeight: 600, background: "#f9f9f9", verticalAlign: "top" }}>
-                        {group.category.name}
-                      </td>
-                    )}
-                    <td style={{ padding: 12 }}>{task.name}</td>
-                    <td style={{ padding: 12, fontSize: 13 }}>
-                      {task.dueDate ? (
-                        <span style={{ 
-                          color: isOverdue(task.dueDate, task.status) ? "#c62828" : "#666",
-                          fontWeight: isOverdue(task.dueDate, task.status) ? 600 : 400
-                        }}>
-                          {new Date(task.dueDate).toLocaleDateString()}
-                          {isOverdue(task.dueDate, task.status) && " ⚠"}
-                        </span>
-                      ) : "-"}
+        {/* Active Tasks */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden", marginBottom: 24 }}>
+          <div style={{ padding: "16px 20px", background: "#f8f9fa", borderBottom: "1px solid #e8eaed" }}>
+            <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#1a1a1a" }}>
+              Active Tasks ({pendingTasks.length})
+            </h3>
+          </div>
+
+          {pendingTasks.length === 0 ? (
+            <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6", fontSize: 14 }}>
+              No active tasks
+            </div>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ background: "#fafafa" }}>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Task</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Category</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Due Date</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Priority</th>
+                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Status</th>
+                  <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingTasks.map((task) => (
+                  <tr key={task.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                    <td style={{ padding: 12 }}>
+                      <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{task.name}</div>
+                      {task.notes && <div style={{ fontSize: 12, color: "#9aa0a6", marginTop: 2 }}>{task.notes}</div>}
                     </td>
                     <td style={{ padding: 12 }}>
-                      <span style={{ 
-                        padding: "4px 8px", borderRadius: 4, fontSize: 12,
-                        background: PRIORITY_COLORS[task.priority].bg,
-                        color: PRIORITY_COLORS[task.priority].color
+                      {task.category ? (
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 2, background: task.category.color || "#5f6368" }} />
+                          <span style={{ fontSize: 13, color: "#5f6368" }}>{task.category.name}</span>
+                        </span>
+                      ) : (
+                        <span style={{ color: "#9aa0a6" }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: 12, fontSize: 13, color: "#5f6368" }}>
+                      {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
+                    </td>
+                    <td style={{ padding: 12 }}>
+                      <span style={{
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        background: PRIORITY_STYLES[task.priority]?.bg || "#f1f3f4",
+                        color: PRIORITY_STYLES[task.priority]?.color || "#5f6368"
                       }}>
                         {task.priority}
                       </span>
@@ -259,288 +312,81 @@ export default function ClientTasksPage() {
                     <td style={{ padding: 12 }}>
                       <select
                         value={task.status}
-                        onChange={(e) => quickUpdateStatus(task, e.target.value)}
-                        style={{ 
-                          padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "none", cursor: "pointer",
-                          background: STATUS_COLORS[task.status].bg,
-                          color: STATUS_COLORS[task.status].color
+                        onChange={(e) => updateTaskStatus(task.id, e.target.value)}
+                        style={{
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          border: "1px solid #e8eaed",
+                          fontSize: 12,
+                          background: STATUS_STYLES[task.status]?.bg || "#f1f3f4",
+                          color: STATUS_STYLES[task.status]?.color || "#5f6368",
+                          cursor: "pointer"
                         }}
                       >
-                        <option value="PENDING">Pending</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="ONGOING">Ongoing</option>
-                        <option value="ON_HOLD">On Hold</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="FUTURE_PLAN">Future Plan</option>
+                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
                       </select>
                     </td>
-                    <td style={{ padding: 12, fontSize: 13 }}>
-                      {task.notes && <div style={{ marginBottom: 4 }}>{task.notes}</div>}
-                      {task.externalLink && (
-                        <a href={task.externalLink} target="_blank" style={{ color: "#1976d2", marginRight: 8 }}>
-                          {task.externalLinkLabel || "Link"} ↗
-                        </a>
-                      )}
-                      {task.internalLink && (
-                        <a href={task.internalLink} target="_blank" style={{ color: "#7b1fa2" }}>
-                          {task.internalLinkLabel || "Internal"} ↗
-                        </a>
-                      )}
-                      {!task.notes && !task.externalLink && !task.internalLink && "-"}
-                    </td>
-                    <td style={{ padding: 12, fontSize: 13, color: "#666" }}>
-                      {task.nextSteps || "-"}
-                    </td>
-                    <td style={{ padding: 12 }}>
+                    <td style={{ padding: 12, textAlign: "right" }}>
                       <button
-                        onClick={() => { setEditingTask(task); setEditForm(task); }}
-                        style={{ padding: "4px 8px", marginRight: 4, background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}
+                        onClick={() => deleteTask(task.id)}
+                        style={{
+                          padding: "4px 10px",
+                          background: "#fce8e6",
+                          color: "#ea4335",
+                          border: "none",
+                          borderRadius: 4,
+                          fontSize: 12,
+                          cursor: "pointer"
+                        }}
                       >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => deleteTask(task)}
-                        style={{ padding: "4px 8px", background: "#fee", color: "#c00", border: "none", borderRadius: 4, cursor: "pointer" }}
-                      >
-                        ✕
+                        Delete
                       </button>
                     </td>
                   </tr>
-                ))
-              ))}
-
-              {uncategorizedTasks.length > 0 && uncategorizedTasks.map((task, idx) => (
-                <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
-                  {idx === 0 && (
-                    <td rowSpan={uncategorizedTasks.length} style={{ padding: 12, fontWeight: 600, background: "#f9f9f9", verticalAlign: "top", color: "#888" }}>
-                      Uncategorized
-                    </td>
-                  )}
-                  <td style={{ padding: 12 }}>{task.name}</td>
-                  <td style={{ padding: 12, fontSize: 13 }}>
-                    {task.dueDate ? (
-                      <span style={{ 
-                        color: isOverdue(task.dueDate, task.status) ? "#c62828" : "#666",
-                        fontWeight: isOverdue(task.dueDate, task.status) ? 600 : 400
-                      }}>
-                        {new Date(task.dueDate).toLocaleDateString()}
-                        {isOverdue(task.dueDate, task.status) && " ⚠"}
-                      </span>
-                    ) : "-"}
-                  </td>
-                  <td style={{ padding: 12 }}>
-                    <span style={{ 
-                      padding: "4px 8px", borderRadius: 4, fontSize: 12,
-                      background: PRIORITY_COLORS[task.priority].bg,
-                      color: PRIORITY_COLORS[task.priority].color
-                    }}>
-                      {task.priority}
-                    </span>
-                  </td>
-                  <td style={{ padding: 12 }}>
-                    <select
-                      value={task.status}
-                      onChange={(e) => quickUpdateStatus(task, e.target.value)}
-                      style={{ 
-                        padding: "4px 8px", borderRadius: 4, fontSize: 12, border: "none", cursor: "pointer",
-                        background: STATUS_COLORS[task.status].bg,
-                        color: STATUS_COLORS[task.status].color
-                      }}
-                    >
-                      <option value="PENDING">Pending</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="ONGOING">Ongoing</option>
-                      <option value="ON_HOLD">On Hold</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="FUTURE_PLAN">Future Plan</option>
-                    </select>
-                  </td>
-                  <td style={{ padding: 12, fontSize: 13 }}>
-                    {task.notes && <div style={{ marginBottom: 4 }}>{task.notes}</div>}
-                    {task.externalLink && (
-                      <a href={task.externalLink} target="_blank" style={{ color: "#1976d2", marginRight: 8 }}>
-                        {task.externalLinkLabel || "Link"} ↗
-                      </a>
-                    )}
-                    {task.internalLink && (
-                      <a href={task.internalLink} target="_blank" style={{ color: "#7b1fa2" }}>
-                        {task.internalLinkLabel || "Internal"} ↗
-                      </a>
-                    )}
-                    {!task.notes && !task.externalLink && !task.internalLink && "-"}
-                  </td>
-                  <td style={{ padding: 12, fontSize: 13, color: "#666" }}>
-                    {task.nextSteps || "-"}
-                  </td>
-                  <td style={{ padding: 12 }}>
-                    <button
-                      onClick={() => { setEditingTask(task); setEditForm(task); }}
-                      style={{ padding: "4px 8px", marginRight: 4, background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => deleteTask(task)}
-                      style={{ padding: "4px 8px", background: "#fee", color: "#c00", border: "none", borderRadius: 4, cursor: "pointer" }}
-                    >
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
-
-              {tasks.length === 0 && (
-                <tr>
-                  <td colSpan={8} style={{ padding: 48, textAlign: "center", color: "#888" }}>
-                    No tasks yet. Click "+ Add Task" to create one.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
-      </main>
 
-      {editingTask && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: "white", padding: 24, borderRadius: 8, width: 500, maxHeight: "90vh", overflow: "auto" }}>
-            <h2 style={{ marginTop: 0 }}>Edit Task</h2>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Task Name</label>
-              <input
-                value={editForm.name || ""}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-              />
+        {/* Completed Tasks */}
+        {completedTasks.length > 0 && (
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+            <div style={{ padding: "16px 20px", background: "#f8f9fa", borderBottom: "1px solid #e8eaed" }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#9aa0a6" }}>
+                Completed ({completedTasks.length})
+              </h3>
             </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Category</label>
-                <select
-                  value={editForm.categoryId || ""}
-                  onChange={(e) => setEditForm({ ...editForm, categoryId: e.target.value || null })}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="">No Category</option>
-                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Due Date</label>
-                <input
-                  type="date"
-                  value={editForm.dueDate?.split("T")[0] || ""}
-                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value || null })}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Priority</label>
-                <select
-                  value={editForm.priority || "MEDIUM"}
-                  onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-                <select
-                  value={editForm.status || "PENDING"}
-                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4 }}
-                >
-                  <option value="PENDING">Pending</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="ONGOING">Ongoing</option>
-                  <option value="ON_HOLD">On Hold</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="FUTURE_PLAN">Future Plan</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Notes</label>
-              <textarea
-                value={editForm.notes || ""}
-                onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                rows={2}
-                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Next Steps</label>
-              <textarea
-                value={editForm.nextSteps || ""}
-                onChange={(e) => setEditForm({ ...editForm, nextSteps: e.target.value })}
-                rows={2}
-                style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-              />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>External Link</label>
-                <input
-                  value={editForm.externalLink || ""}
-                  onChange={(e) => setEditForm({ ...editForm, externalLink: e.target.value })}
-                  placeholder="https://..."
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>External Link Label</label>
-                <input
-                  value={editForm.externalLinkLabel || ""}
-                  onChange={(e) => setEditForm({ ...editForm, externalLinkLabel: e.target.value })}
-                  placeholder="Client Sheet"
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Internal Link</label>
-                <input
-                  value={editForm.internalLink || ""}
-                  onChange={(e) => setEditForm({ ...editForm, internalLink: e.target.value })}
-                  placeholder="https://..."
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-                />
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Internal Link Label</label>
-                <input
-                  value={editForm.internalLinkLabel || ""}
-                  onChange={(e) => setEditForm({ ...editForm, internalLinkLabel: e.target.value })}
-                  placeholder="Kitchen Link"
-                  style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={updateTask} style={{ flex: 1, padding: 12, background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
-                Save Changes
-              </button>
-              <button onClick={() => setEditingTask(null)} style={{ padding: 12, background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}>
-                Cancel
-              </button>
+            <div>
+              {completedTasks.map((task, idx) => (
+                <div key={task.id} style={{
+                  padding: "12px 20px",
+                  borderBottom: idx < completedTasks.length - 1 ? "1px solid #f1f3f4" : "none",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center"
+                }}>
+                  <span style={{ color: "#9aa0a6", textDecoration: "line-through" }}>{task.name}</span>
+                  <button
+                    onClick={() => deleteTask(task.id)}
+                    style={{
+                      padding: "4px 10px",
+                      background: "#f1f3f4",
+                      color: "#9aa0a6",
+                      border: "none",
+                      borderRadius: 4,
+                      fontSize: 12,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </main>
     </div>
   );
 }
