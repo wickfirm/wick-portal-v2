@@ -11,53 +11,71 @@ export default async function SettingsPage() {
   if (!session) redirect("/login");
   const user = session.user as any;
 
-  const configItems = [
+  const settingsItems = [
     {
       title: "Stage Templates",
-      description: "Configure project stages for each service type",
+      description: "Configure default project stages for each service type",
       href: "/settings/stage-templates",
       icon: "📋",
+      color: "#e85a4f",
     },
     {
       title: "Onboarding Templates",
-      description: "Configure default onboarding checklist items",
+      description: "Set up default onboarding checklists for new clients",
       href: "/settings/onboarding",
-      icon: "✅",
+      icon: "✓",
+      color: "#34a853",
     },
     {
       title: "Task Categories",
-      description: "Manage categories for weekly task tracking",
+      description: "Manage categories for client tasks",
       href: "/settings/task-categories",
-      icon: "📁",
+      icon: "🏷️",
+      color: "#4285f4",
     },
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header userName={user.name} userRole={user.role} />
 
-      <main style={{ maxWidth: 800, margin: "0 auto", padding: 24 }}>
-        <h1 style={{ marginTop: 0, marginBottom: 24 }}>Settings</h1>
+      <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Settings</h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Configure your agency portal</p>
+        </div>
 
         <div style={{ display: "grid", gap: 16 }}>
-          {configItems.map((item) => (
+          {settingsItems.map((item) => (
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
-              <div style={{ 
-                background: "white", 
-                padding: 24, 
-                borderRadius: 8, 
-                display: "flex", 
-                alignItems: "center", 
-                gap: 16,
+              <div style={{
+                background: "white",
+                padding: 24,
+                borderRadius: 12,
+                border: "1px solid #e8eaed",
+                display: "flex",
+                alignItems: "center",
+                gap: 20,
+                transition: "all 150ms ease",
                 cursor: "pointer",
-                transition: "box-shadow 0.2s",
               }}>
-                <div style={{ fontSize: 32 }}>{item.icon}</div>
-                <div>
-                  <h3 style={{ margin: 0, color: "#333" }}>{item.title}</h3>
-                  <p style={{ margin: "4px 0 0", color: "#666", fontSize: 14 }}>{item.description}</p>
+                <div style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 12,
+                  background: `${item.color}15`,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 24,
+                }}>
+                  {item.icon}
                 </div>
-                <div style={{ marginLeft: "auto", color: "#888" }}>→</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>{item.title}</div>
+                  <div style={{ fontSize: 14, color: "#5f6368" }}>{item.description}</div>
+                </div>
+                <div style={{ color: "#9aa0a6", fontSize: 20 }}>→</div>
               </div>
             </Link>
           ))}
