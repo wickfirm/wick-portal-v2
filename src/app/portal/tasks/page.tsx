@@ -6,19 +6,19 @@ import PortalHeader from "@/components/PortalHeader";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_COLORS: Record<string, { bg: string; color: string }> = {
-  PENDING: { bg: "#fff3e0", color: "#ef6c00" },
-  IN_PROGRESS: { bg: "#e3f2fd", color: "#1976d2" },
-  ONGOING: { bg: "#e8f5e9", color: "#2e7d32" },
-  ON_HOLD: { bg: "#fce4ec", color: "#c2185b" },
-  COMPLETED: { bg: "#e8f5e9", color: "#2e7d32" },
+const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
+  PENDING: { bg: "#fef7e0", color: "#f9ab00" },
+  IN_PROGRESS: { bg: "#e8f0fe", color: "#4285f4" },
+  ONGOING: { bg: "#e6f4ea", color: "#34a853" },
+  ON_HOLD: { bg: "#fce8e6", color: "#ea4335" },
+  COMPLETED: { bg: "#e6f4ea", color: "#34a853" },
   FUTURE_PLAN: { bg: "#f3e5f5", color: "#7b1fa2" },
 };
 
-const PRIORITY_COLORS: Record<string, { bg: string; color: string }> = {
-  HIGH: { bg: "#ffebee", color: "#c62828" },
-  MEDIUM: { bg: "#fff3e0", color: "#ef6c00" },
-  LOW: { bg: "#e8f5e9", color: "#2e7d32" },
+const PRIORITY_STYLES: Record<string, { bg: string; color: string }> = {
+  HIGH: { bg: "#fce8e6", color: "#ea4335" },
+  MEDIUM: { bg: "#fef7e0", color: "#f9ab00" },
+  LOW: { bg: "#e6f4ea", color: "#34a853" },
 };
 
 export default async function PortalTasksPage() {
@@ -46,57 +46,79 @@ export default async function PortalTasksPage() {
   const completedTasks = tasks.filter(t => t.status === "COMPLETED");
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <PortalHeader userName={user.name} />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <h1 style={{ marginTop: 0, marginBottom: 24 }}>Your Tasks</h1>
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Your Tasks</h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Track tasks assigned to you by the team.</p>
+        </div>
 
-        <div style={{ background: "white", borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
-          <h3 style={{ margin: 0, padding: 20, borderBottom: "1px solid #eee" }}>Active Tasks ({pendingTasks.length})</h3>
+        {/* Active Tasks */}
+        <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden", marginBottom: 24 }}>
+          <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed" }}>
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Active Tasks ({pendingTasks.length})</h2>
+          </div>
+
           {pendingTasks.length === 0 ? (
-            <p style={{ padding: 48, textAlign: "center", color: "#888" }}>No active tasks</p>
+            <div style={{ padding: 64, textAlign: "center" }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>✅</div>
+              <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>All caught up!</div>
+              <div style={{ color: "#5f6368" }}>No pending tasks at the moment.</div>
+            </div>
           ) : (
             <div style={{ overflowX: "auto" }}>
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
-                  <tr style={{ background: "#f9f9f9", textAlign: "left" }}>
-                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Task</th>
-                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Category</th>
-                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Due Date</th>
-                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Priority</th>
-                    <th style={{ padding: 12, borderBottom: "1px solid #eee" }}>Status</th>
+                  <tr style={{ background: "#f8f9fa" }}>
+                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Task</th>
+                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Category</th>
+                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Due Date</th>
+                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Priority</th>
+                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368", textTransform: "uppercase" }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pendingTasks.map(task => (
-                    <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: 12 }}>
-                        <div style={{ fontWeight: 500 }}>{task.name}</div>
-                        {task.notes && <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>{task.notes}</div>}
+                  {pendingTasks.map((task) => (
+                    <tr key={task.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                      <td style={{ padding: 16 }}>
+                        <div style={{ fontWeight: 500, color: "#1a1a1a" }}>{task.name}</div>
+                        {task.notes && <div style={{ fontSize: 12, color: "#9aa0a6", marginTop: 2 }}>{task.notes}</div>}
                       </td>
-                      <td style={{ padding: 12, color: "#666" }}>{task.category?.name || "-"}</td>
-                      <td style={{ padding: 12, fontSize: 13 }}>
-                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}
+                      <td style={{ padding: 16 }}>
+                        {task.category ? (
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ width: 8, height: 8, borderRadius: 2, background: task.category.color || "#5f6368" }} />
+                            <span style={{ fontSize: 13, color: "#5f6368" }}>{task.category.name}</span>
+                          </span>
+                        ) : (
+                          <span style={{ color: "#9aa0a6" }}>—</span>
+                        )}
                       </td>
-                      <td style={{ padding: 12 }}>
+                      <td style={{ padding: 16, fontSize: 13, color: "#5f6368" }}>
+                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
+                      </td>
+                      <td style={{ padding: 16 }}>
                         <span style={{
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontSize: 12,
-                          background: PRIORITY_COLORS[task.priority]?.bg || "#f5f5f5",
-                          color: PRIORITY_COLORS[task.priority]?.color || "#666"
+                          padding: "4px 10px",
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          background: PRIORITY_STYLES[task.priority]?.bg || "#f1f3f4",
+                          color: PRIORITY_STYLES[task.priority]?.color || "#5f6368"
                         }}>
                           {task.priority}
                         </span>
                       </td>
-                      <td style={{ padding: 12 }}>
+                      <td style={{ padding: 16 }}>
                         <span style={{
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontSize: 12,
-                          background: STATUS_COLORS[task.status]?.bg || "#f5f5f5",
-                          color: STATUS_COLORS[task.status]?.color || "#666"
+                          padding: "4px 10px",
+                          borderRadius: 20,
+                          fontSize: 11,
+                          fontWeight: 500,
+                          background: STATUS_STYLES[task.status]?.bg || "#f1f3f4",
+                          color: STATUS_STYLES[task.status]?.color || "#5f6368"
                         }}>
                           {task.status.replace("_", " ")}
                         </span>
@@ -109,20 +131,25 @@ export default async function PortalTasksPage() {
           )}
         </div>
 
+        {/* Completed Tasks */}
         {completedTasks.length > 0 && (
-          <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
-            <h3 style={{ margin: 0, padding: 20, borderBottom: "1px solid #eee", color: "#888" }}>Completed ({completedTasks.length})</h3>
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <tbody>
-                  {completedTasks.map(task => (
-                    <tr key={task.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: 12, color: "#888", textDecoration: "line-through" }}>{task.name}</td>
-                      <td style={{ padding: 12, color: "#aaa" }}>{task.category?.name || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed" }}>
+              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#9aa0a6" }}>Completed ({completedTasks.length})</h2>
+            </div>
+            <div>
+              {completedTasks.map((task, idx) => (
+                <div key={task.id} style={{
+                  padding: "16px 24px",
+                  borderBottom: idx < completedTasks.length - 1 ? "1px solid #f1f3f4" : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12
+                }}>
+                  <span style={{ color: "#34a853", fontSize: 16 }}>✓</span>
+                  <span style={{ color: "#9aa0a6", textDecoration: "line-through" }}>{task.name}</span>
+                </div>
+              ))}
             </div>
           </div>
         )}
