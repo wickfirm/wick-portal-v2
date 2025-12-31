@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -17,10 +18,9 @@ export default function NewClientPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get("name"),
-      slug: formData.get("slug"),
-      website: formData.get("website") || null,
       industry: formData.get("industry") || null,
-      status: formData.get("status"),
+      website: formData.get("website") || null,
+      status: formData.get("status") || "LEAD",
       primaryContact: formData.get("primaryContact") || null,
       primaryEmail: formData.get("primaryEmail") || null,
       monthlyRetainer: formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null,
@@ -44,15 +44,7 @@ export default function NewClientPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", alignItems: "center", gap: 24 }}>
-        <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-        <nav style={{ display: "flex", gap: 16 }}>
-          <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-          <Link href="/clients" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Clients</Link>
-          <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-          <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-        </nav>
-      </header>
+      <Header />
 
       <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
@@ -60,7 +52,7 @@ export default function NewClientPage() {
         </div>
 
         <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h1 style={{ marginTop: 0, marginBottom: 24 }}>Add New Client</h1>
+          <h1 style={{ marginTop: 0, marginBottom: 24 }}>New Client</h1>
 
           {error && <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 16 }}>{error}</div>}
 
@@ -71,18 +63,13 @@ export default function NewClientPage() {
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Slug * <span style={{ fontWeight: 400, color: "#888" }}>(URL-friendly name)</span></label>
-              <input name="slug" required placeholder="vintage-vaults" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Industry</label>
+              <input name="industry" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Website</label>
-              <input name="website" type="url" placeholder="https://example.com" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Industry</label>
-              <input name="industry" placeholder="Real Estate, Hospitality, etc." style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input name="website" type="url" placeholder="https://" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 16 }}>
@@ -98,17 +85,17 @@ export default function NewClientPage() {
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Contact</label>
-              <input name="primaryContact" placeholder="John Smith" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input name="primaryContact" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Email</label>
-              <input name="primaryEmail" type="email" placeholder="john@example.com" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input name="primaryEmail" type="email" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Monthly Retainer (USD)</label>
-              <input name="monthlyRetainer" type="number" step="0.01" placeholder="5000" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <input name="monthlyRetainer" type="number" step="0.01" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
@@ -125,5 +112,3 @@ export default function NewClientPage() {
     </div>
   );
 }
-
-//force commit
