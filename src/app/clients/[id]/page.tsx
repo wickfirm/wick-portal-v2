@@ -26,7 +26,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
   }
 
-const onboardingForClient = client.onboardingItems.map(item => ({
+  const onboardingForClient = client.onboardingItems.map(item => ({
     id: item.id,
     name: item.name,
     description: item.description,
@@ -36,7 +36,7 @@ const onboardingForClient = client.onboardingItems.map(item => ({
     completedBy: item.completedBy,
     notes: item.notes,
   }));
-  
+
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header userName={user.name} userRole={user.role} />
