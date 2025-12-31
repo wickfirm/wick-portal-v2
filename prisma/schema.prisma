@@ -277,6 +277,8 @@ enum Role {
   MANAGER
   SPECIALIST
   CLIENT
+
+  @@map("UserRole")  // Maps to database enum name
 }
 
 enum ClientStatus {
