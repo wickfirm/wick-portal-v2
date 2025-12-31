@@ -5,24 +5,27 @@ import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 
-export default function EditClientPage() {
+export default function EditProjectPage() {
   const router = useRouter();
   const params = useParams();
-  const clientId = params.id as string;
+  const projectId = params.id as string;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [client, setClient] = useState<any>(null);
+  const [project, setProject] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`/api/clients/${clientId}`)
-      .then(res => res.json())
-      .then(data => {
-        setClient(data);
-        setLoading(false);
-      });
-  }, [clientId]);
+    Promise.all([
+      fetch(`/api/projects/${projectId}`).then(res => res.json()),
+      fetch("/api/clients").then(res => res.json()),
+    ]).then(([projectData, clientsData]) => {
+      setProject(projectData);
+      setClients(clientsData);
+      setLoading(false);
+    });
+  }, [projectId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -32,32 +35,33 @@ export default function EditClientPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get("name"),
-      industry: formData.get("industry") || null,
-      website: formData.get("website") || null,
+      description: formData.get("description") || null,
+      clientId: formData.get("clientId"),
+      serviceType: formData.get("serviceType"),
       status: formData.get("status"),
-      primaryContact: formData.get("primaryContact") || null,
-      primaryEmail: formData.get("primaryEmail") || null,
-      monthlyRetainer: formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null,
+      startDate: formData.get("startDate") || null,
+      endDate: formData.get("endDate") || null,
+      budget: formData.get("budget") ? parseFloat(formData.get("budget") as string) : null,
     };
 
-    const res = await fetch(`/api/clients/${clientId}`, {
+    const res = await fetch(`/api/projects/${projectId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
 
     if (res.ok) {
-      router.push(`/clients/${clientId}`);
+      router.push(`/projects/${projectId}`);
       router.refresh();
     } else {
       const err = await res.json();
-      setError(err.error || "Failed to update client");
+      setError(err.error || "Failed to update project");
       setSaving(false);
     }
   }
 
   if (loading) return <div style={{ padding: 48, textAlign: "center" }}>Loading...</div>;
-  if (!client) return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
+  if (!project) return <div style={{ padding: 48, textAlign: "center" }}>Project not found</div>;
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
@@ -65,61 +69,79 @@ export default function EditClientPage() {
 
       <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href={`/clients/${clientId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {client.name}</Link>
+          <Link href={`/projects/${projectId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {project.name}</Link>
         </div>
 
         <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h1 style={{ marginTop: 0, marginBottom: 24 }}>Edit Client</h1>
+          <h1 style={{ marginTop: 0, marginBottom: 24 }}>Edit Project</h1>
 
           {error && <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 16 }}>{error}</div>}
 
           <form onSubmit={handleSubmit}>
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Client Name *</label>
-              <input name="name" required defaultValue={client.name} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Project Name *</label>
+              <input name="name" required defaultValue={project.name} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Industry</label>
-              <input name="industry" defaultValue={client.industry || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Website</label>
-              <input name="website" type="url" defaultValue={client.website || ""} placeholder="https://" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-              <select name="status" defaultValue={client.status} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-                <option value="LEAD">Lead</option>
-                <option value="ONBOARDING">Onboarding</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAUSED">Paused</option>
-                <option value="CHURNED">Churned</option>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Client *</label>
+              <select name="clientId" required defaultValue={project.clientId} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Contact</label>
-              <input name="primaryContact" defaultValue={client.primaryContact || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Service Type *</label>
+              <select name="serviceType" required defaultValue={project.serviceType} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+                <option value="SEO">SEO</option>
+                <option value="AEO">AEO</option>
+                <option value="WEB_DEVELOPMENT">Web Development</option>
+                <option value="PAID_MEDIA">Paid Media</option>
+                <option value="SOCIAL_MEDIA">Social Media</option>
+                <option value="CONTENT">Content</option>
+                <option value="BRANDING">Branding</option>
+                <option value="CONSULTING">Consulting</option>
+              </select>
             </div>
 
             <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Primary Email</label>
-              <input name="primaryEmail" type="email" defaultValue={client.primaryEmail || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
+              <select name="status" defaultValue={project.status} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+                <option value="DRAFT">Draft</option>
+                <option value="PENDING_APPROVAL">Pending Approval</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="ON_HOLD">On Hold</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="CANCELLED">Cancelled</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Description</label>
+              <textarea name="description" rows={3} defaultValue={project.description || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Start Date</label>
+                <input name="startDate" type="date" defaultValue={project.startDate?.split("T")[0] || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>End Date</label>
+                <input name="endDate" type="date" defaultValue={project.endDate?.split("T")[0] || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              </div>
             </div>
 
             <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Monthly Retainer (USD)</label>
-              <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Budget (USD)</label>
+              <input name="budget" type="number" step="0.01" defaultValue={project.budget || ""} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
               <button type="submit" disabled={saving} style={{ flex: 1, padding: 12, background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
                 {saving ? "Saving..." : "Save Changes"}
               </button>
-              <Link href={`/clients/${clientId}`} style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
+              <Link href={`/projects/${projectId}`} style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
                 Cancel
               </Link>
             </div>
