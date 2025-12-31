@@ -81,7 +81,12 @@ export default function ClientMetricsPage() {
     const payload: any = { month: form.month };
     Object.keys(form).forEach(key => {
       if (key !== "month" && form[key] !== "") {
-        payload[key] = isNaN(parseFloat(form[key])) ? form[key] : parseFloat(form[key]);
+        // Keep notes as string, convert others to numbers if possible
+        if (key === "notes") {
+          payload[key] = form[key];
+        } else {
+          payload[key] = isNaN(parseFloat(form[key])) ? form[key] : parseFloat(form[key]);
+        }
       }
     });
 
