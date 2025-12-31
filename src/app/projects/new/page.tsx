@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const preselectedClientId = searchParams.get("clientId");
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [clients, setClients] = useState<any[]>([]);
@@ -47,80 +50,127 @@ export default function NewProjectPage() {
     }
   }
 
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid #dadce0",
+    borderRadius: 8,
+    fontSize: 14,
+    boxSizing: "border-box" as const,
+    outline: "none",
+  };
+
+  const labelStyle = {
+    display: "block",
+    marginBottom: 8,
+    fontWeight: 500,
+    fontSize: 14,
+    color: "#1a1a1a",
+  };
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header />
 
-      <main style={{ maxWidth: 600, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>← Back to Projects</Link>
+          <Link href="/projects" style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+            ← Back to Projects
+          </Link>
         </div>
 
-        <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <h1 style={{ marginTop: 0, marginBottom: 24 }}>New Project</h1>
+        <div style={{ background: "white", padding: 32, borderRadius: 12, border: "1px solid #e8eaed" }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginTop: 0, marginBottom: 8 }}>New Project</h1>
+          <p style={{ color: "#5f6368", marginBottom: 32, fontSize: 14 }}>Create a new project for a client</p>
 
-          {error && <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 16 }}>{error}</div>}
+          {error && (
+            <div style={{ background: "#fce8e6", color: "#ea4335", padding: "12px 16px", borderRadius: 8, marginBottom: 24, fontSize: 14 }}>
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Project Name *</label>
-              <input name="name" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Project Name *</label>
+              <input name="name" required style={inputStyle} placeholder="Website Redesign" />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Client *</label>
-              <select name="clientId" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Client *</label>
+              <select name="clientId" required defaultValue={preselectedClientId || ""} style={{ ...inputStyle, cursor: "pointer" }}>
                 <option value="">Select a client</option>
                 {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
               </select>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Service Type *</label>
-              <select name="serviceType" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-                <option value="SEO">SEO</option>
-                <option value="AEO">AEO</option>
-                <option value="WEB_DEVELOPMENT">Web Development</option>
-                <option value="PAID_MEDIA">Paid Media</option>
-                <option value="SOCIAL_MEDIA">Social Media</option>
-                <option value="CONTENT">Content</option>
-                <option value="BRANDING">Branding</option>
-                <option value="CONSULTING">Consulting</option>
-              </select>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Service Type *</label>
+                <select name="serviceType" required style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="SEO">SEO</option>
+                  <option value="AEO">AEO</option>
+                  <option value="WEB_DEVELOPMENT">Web Development</option>
+                  <option value="PAID_MEDIA">Paid Media</option>
+                  <option value="SOCIAL_MEDIA">Social Media</option>
+                  <option value="CONTENT">Content</option>
+                  <option value="BRANDING">Branding</option>
+                  <option value="CONSULTING">Consulting</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select name="status" defaultValue="DRAFT" style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="DRAFT">Draft</option>
+                  <option value="PENDING_APPROVAL">Pending Approval</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="ON_HOLD">On Hold</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
+              </div>
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Status</label>
-<select name="status" defaultValue="DRAFT" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-  <option value="DRAFT">Draft</option>
-  <option value="PENDING_APPROVAL">Pending Approval</option>
-  <option value="IN_PROGRESS">In Progress</option>
-  <option value="ON_HOLD">On Hold</option>
-  <option value="COMPLETED">Completed</option>
-  <option value="CANCELLED">Cancelled</option>
-</select>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Description</label>
+              <textarea name="description" rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Brief project description..." />
             </div>
 
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Description</label>
-              <textarea name="description" rows={3} style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Start Date</label>
-              <input name="startDate" type="date" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Budget (USD)</label>
-              <input name="budget" type="number" step="0.01" style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 32 }}>
+              <div>
+                <label style={labelStyle}>Start Date</label>
+                <input name="startDate" type="date" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Budget (USD)</label>
+                <input name="budget" type="number" step="0.01" style={inputStyle} placeholder="5000" />
+              </div>
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
-              <button type="submit" disabled={loading} style={{ flex: 1, padding: 12, background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+              <button type="submit" disabled={loading} style={{
+                flex: 1,
+                padding: 14,
+                background: loading ? "#f1f3f4" : "linear-gradient(135deg, #e85a4f, #d44a3f)",
+                color: loading ? "#9aa0a6" : "white",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}>
                 {loading ? "Creating..." : "Create Project"}
               </button>
-              <Link href="/projects" style={{ padding: 12, border: "1px solid #ddd", borderRadius: 4, textDecoration: "none", color: "#333", textAlign: "center" }}>
+              <Link href="/projects" style={{
+                padding: "14px 24px",
+                border: "1px solid #dadce0",
+                borderRadius: 8,
+                textDecoration: "none",
+                color: "#5f6368",
+                fontWeight: 500,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+              }}>
                 Cancel
               </Link>
             </div>
