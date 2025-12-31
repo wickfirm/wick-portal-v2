@@ -156,7 +156,7 @@ const onboardingForClient = client.onboardingItems.map(item => ({
           </div>
 
           {/* Onboarding */}
-          <OnboardingManager clientId={client.id} initialItems={onboardingForClient} />
+          <OnboardingManager clientId={client.id} clientStatus={client.status} initialItems={onboardingForClient} />
         </div>
 
         {/* Projects */}
