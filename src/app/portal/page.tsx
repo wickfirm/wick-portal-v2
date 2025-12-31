@@ -13,7 +13,6 @@ export default async function PortalDashboard() {
 
   const user = session.user as any;
 
-  // Get client linked to this user
   const dbUser = await prisma.user.findUnique({
     where: { email: user.email },
     include: { client: true },
@@ -21,11 +20,12 @@ export default async function PortalDashboard() {
 
   if (!dbUser?.client) {
     return (
-      <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+      <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
         <PortalHeader userName={user.name} />
         <main style={{ maxWidth: 600, margin: "0 auto", padding: 48, textAlign: "center" }}>
-          <h1>No Client Linked</h1>
-          <p style={{ color: "#666" }}>Your account is not linked to a client. Please contact support.</p>
+          <div style={{ fontSize: 64, marginBottom: 24 }}>🔒</div>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: "#1a1a1a", marginBottom: 8 }}>No Client Linked</h1>
+          <p style={{ color: "#5f6368" }}>Your account is not linked to a client. Please contact support.</p>
         </main>
       </div>
     );
@@ -56,81 +56,134 @@ export default async function PortalDashboard() {
   const onboardingPct = totalOnboarding > 0 ? Math.round((completedOnboarding / totalOnboarding) * 100) : 0;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <PortalHeader userName={user.name} />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <h1 style={{ marginTop: 0, marginBottom: 24 }}>Welcome, {user.name}</h1>
+      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>
+            Welcome back, {user.name?.split(" ")[0]}
+          </h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Here's an overview of your projects and tasks.</p>
+        </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 24 }}>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>{projects.length}</div>
-            <div style={{ color: "#666" }}>Active Projects</div>
+        {/* Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 32 }}>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(66, 133, 244, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                📁
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{projects.length}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Active Projects</div>
           </div>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>{tasks.length}</div>
-            <div style={{ color: "#666" }}>Pending Tasks</div>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(232, 90, 79, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                ✓
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{tasks.length}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Pending Tasks</div>
           </div>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ fontSize: 32, fontWeight: "bold" }}>{onboardingPct}%</div>
-            <div style={{ color: "#666" }}>Onboarding Complete</div>
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 10, background: "rgba(52, 168, 83, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20 }}>
+                🚀
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{onboardingPct}%</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Onboarding Complete</div>
           </div>
         </div>
 
+        {/* Onboarding Progress */}
         {totalOnboarding > 0 && onboardingPct < 100 && (
-          <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
-            <h3 style={{ marginTop: 0 }}>Onboarding Progress</h3>
-            <div style={{ height: 8, background: "#eee", borderRadius: 4, marginBottom: 8 }}>
-              <div style={{ height: "100%", width: `${onboardingPct}%`, background: "#4caf50", borderRadius: 4 }} />
+          <div style={{ background: "white", padding: 24, borderRadius: 12, border: "1px solid #e8eaed", marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 16 }}>Onboarding Progress</h3>
+            <div style={{ height: 10, background: "#f1f3f4", borderRadius: 5, marginBottom: 8 }}>
+              <div style={{
+                height: "100%",
+                width: `${onboardingPct}%`,
+                background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                borderRadius: 5,
+                transition: "width 300ms ease"
+              }} />
             </div>
-            <div style={{ fontSize: 14, color: "#666" }}>{completedOnboarding} of {totalOnboarding} items completed</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>{completedOnboarding} of {totalOnboarding} items completed</div>
           </div>
         )}
 
+        {/* Content Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Recent Projects</h3>
-              <Link href="/portal/projects" style={{ color: "#1976d2", textDecoration: "none", fontSize: 14 }}>View all →</Link>
+          {/* Recent Projects */}
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Recent Projects</h3>
+              <Link href="/portal/projects" style={{ fontSize: 13, color: "#e85a4f", textDecoration: "none", fontWeight: 500 }}>
+                View all →
+              </Link>
             </div>
             {projects.length === 0 ? (
-              <p style={{ color: "#888" }}>No projects yet</p>
+              <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6" }}>No projects yet</div>
             ) : (
-              projects.map(project => {
-                const completed = project.stages.filter(s => s.isCompleted).length;
-                const total = project.stages.length;
-                const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                return (
-                  <div key={project.id} style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                    <div style={{ fontWeight: 500 }}>{project.name}</div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
-                      <div style={{ flex: 1, height: 4, background: "#eee", borderRadius: 2 }}>
-                        <div style={{ height: "100%", width: `${pct}%`, background: "#4caf50", borderRadius: 2 }} />
+              <div>
+                {projects.map((project, idx) => {
+                  const completed = project.stages.filter(s => s.isCompleted).length;
+                  const total = project.stages.length;
+                  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                  return (
+                    <Link key={project.id} href={`/portal/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <div style={{
+                        padding: "16px 24px",
+                        borderBottom: idx < projects.length - 1 ? "1px solid #f1f3f4" : "none",
+                        cursor: "pointer"
+                      }}>
+                        <div style={{ fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>{project.name}</div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <div style={{ flex: 1, height: 6, background: "#f1f3f4", borderRadius: 3 }}>
+                            <div style={{
+                              height: "100%",
+                              width: `${pct}%`,
+                              background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                              borderRadius: 3
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, color: "#5f6368", fontWeight: 500 }}>{pct}%</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: 12, color: "#666" }}>{pct}%</span>
-                    </div>
-                  </div>
-                );
-              })
+                    </Link>
+                  );
+                })}
+              </div>
             )}
           </div>
 
-          <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Upcoming Tasks</h3>
-              <Link href="/portal/tasks" style={{ color: "#1976d2", textDecoration: "none", fontSize: 14 }}>View all →</Link>
+          {/* Upcoming Tasks */}
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Upcoming Tasks</h3>
+              <Link href="/portal/tasks" style={{ fontSize: 13, color: "#e85a4f", textDecoration: "none", fontWeight: 500 }}>
+                View all →
+              </Link>
             </div>
             {tasks.length === 0 ? (
-              <p style={{ color: "#888" }}>No pending tasks</p>
+              <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6" }}>No pending tasks</div>
             ) : (
-              tasks.map(task => (
-                <div key={task.id} style={{ padding: 12, borderBottom: "1px solid #eee" }}>
-                  <div style={{ fontWeight: 500 }}>{task.name}</div>
-                  <div style={{ fontSize: 12, color: "#666", marginTop: 2 }}>
-                    {task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : "No due date"}
+              <div>
+                {tasks.map((task, idx) => (
+                  <div key={task.id} style={{
+                    padding: "16px 24px",
+                    borderBottom: idx < tasks.length - 1 ? "1px solid #f1f3f4" : "none",
+                  }}>
+                    <div style={{ fontWeight: 500, color: "#1a1a1a", marginBottom: 4 }}>{task.name}</div>
+                    <div style={{ fontSize: 12, color: "#9aa0a6" }}>
+                      {task.dueDate ? `Due: ${new Date(task.dueDate).toLocaleDateString()}` : "No due date"}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
         </div>
