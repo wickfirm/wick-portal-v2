@@ -5,67 +5,105 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 
-const emptyForm: any = {
-  month: new Date().toISOString().slice(0, 7) + "-01",
-  gaSessions: "", gaUsers: "", gaPageviews: "", gaBounceRate: "", gaAvgSessionDuration: "",
-  gscImpressions: "", gscClicks: "", gscCtr: "", gscAvgPosition: "",
-  seoKeywordsTop3: "", seoKeywordsTop10: "", seoKeywordsTop100: "", seoBacklinks: "", seoDomainRating: "",
-  aeoVisibilityScore: "", aeoCitations: "", aeoBrandMentions: "",
-  metaSpend: "", metaImpressions: "", metaClicks: "", metaConversions: "", metaCtr: "", metaCpc: "", metaRoas: "",
-  googleAdsSpend: "", googleAdsImpressions: "", googleAdsClicks: "", googleAdsConversions: "", googleAdsCtr: "", googleAdsCpc: "", googleAdsRoas: "",
-  linkedinAdsSpend: "", linkedinAdsImpressions: "", linkedinAdsClicks: "", linkedinAdsConversions: "", linkedinAdsCtr: "", linkedinAdsCpc: "",
-  tiktokAdsSpend: "", tiktokAdsImpressions: "", tiktokAdsClicks: "", tiktokAdsConversions: "", tiktokAdsCtr: "", tiktokAdsCpc: "",
-  igFollowers: "", igFollowing: "", igPosts: "", igReach: "", igEngagementRate: "",
-  fbFollowers: "", fbPosts: "", fbReach: "", fbEngagementRate: "",
-  liFollowers: "", liPosts: "", liImpressions: "", liEngagementRate: "",
-  ttFollowers: "", ttVideos: "", ttViews: "", ttEngagementRate: "",
-  twFollowers: "", twTweets: "", twImpressions: "", twEngagementRate: "",
-  contentBlogPosts: "", contentSocialPosts: "", contentEmailsSent: "", contentVideosProduced: "", contentGraphicsCreated: "", contentLandingPages: "",
-  hoursSeo: "", hoursContent: "", hoursPaidMedia: "", hoursSocial: "", hoursDesign: "", hoursMaintenance: "", hoursStrategy: "",
-  notes: "",
+type ClientMetrics = {
+  id: string;
+  month: string;
+  gaSessions: number | null;
+  gaUsers: number | null;
+  gaPageviews: number | null;
+  gaAvgSessionDuration: number | null;
+  gaBounceRate: number | null;
+  gaConversionRate: number | null;
+  gaTransactions: number | null;
+  gaRevenue: number | null;
+  gscClicks: number | null;
+  gscImpressions: number | null;
+  gscCtr: number | null;
+  gscPosition: number | null;
+  metaSpend: number | null;
+  metaImpressions: number | null;
+  metaClicks: number | null;
+  metaCtr: number | null;
+  metaCpc: number | null;
+  metaConversions: number | null;
+  metaCpa: number | null;
+  metaRoas: number | null;
+  googleAdsSpend: number | null;
+  googleAdsImpressions: number | null;
+  googleAdsClicks: number | null;
+  googleAdsCtr: number | null;
+  googleAdsCpc: number | null;
+  googleAdsConversions: number | null;
+  googleAdsCpa: number | null;
+  googleAdsRoas: number | null;
+  linkedinAdsSpend: number | null;
+  linkedinAdsImpressions: number | null;
+  linkedinAdsClicks: number | null;
+  linkedinAdsCtr: number | null;
+  linkedinAdsCpc: number | null;
+  linkedinAdsConversions: number | null;
+  tiktokAdsSpend: number | null;
+  tiktokAdsImpressions: number | null;
+  tiktokAdsClicks: number | null;
+  tiktokAdsCtr: number | null;
+  tiktokAdsCpc: number | null;
+  tiktokAdsConversions: number | null;
+  hoursSeo: number | null;
+  hoursContent: number | null;
+  hoursPaidMedia: number | null;
+  hoursSocial: number | null;
+  hoursDesign: number | null;
+  hoursMaintenance: number | null;
+  hoursStrategy: number | null;
 };
 
 export default function ClientMetricsPage() {
   const params = useParams();
   const clientId = params.id as string;
 
-  const [metrics, setMetrics] = useState<any[]>([]);
+  const [client, setClient] = useState<any>(null);
+  const [metrics, setMetrics] = useState<ClientMetrics[]>([]);
   const [loading, setLoading] = useState(true);
-  const [clientName, setClientName] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["analytics", "hours"]));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["analytics", "seo"]));
 
-  useEffect(() => { fetchData(); }, [clientId]);
+  const [formData, setFormData] = useState({
+    month: new Date().toISOString().slice(0, 7),
+    gaSessions: "", gaUsers: "", gaPageviews: "", gaAvgSessionDuration: "", gaBounceRate: "", gaConversionRate: "", gaTransactions: "", gaRevenue: "",
+    gscClicks: "", gscImpressions: "", gscCtr: "", gscPosition: "",
+    metaSpend: "", metaImpressions: "", metaClicks: "", metaCtr: "", metaCpc: "", metaConversions: "", metaCpa: "", metaRoas: "",
+    googleAdsSpend: "", googleAdsImpressions: "", googleAdsClicks: "", googleAdsCtr: "", googleAdsCpc: "", googleAdsConversions: "", googleAdsCpa: "", googleAdsRoas: "",
+    linkedinAdsSpend: "", linkedinAdsImpressions: "", linkedinAdsClicks: "", linkedinAdsCtr: "", linkedinAdsCpc: "", linkedinAdsConversions: "",
+    tiktokAdsSpend: "", tiktokAdsImpressions: "", tiktokAdsClicks: "", tiktokAdsCtr: "", tiktokAdsCpc: "", tiktokAdsConversions: "",
+    hoursSeo: "", hoursContent: "", hoursPaidMedia: "", hoursSocial: "", hoursDesign: "", hoursMaintenance: "", hoursStrategy: "",
+  });
 
-  async function fetchData() {
-    setLoading(true);
-    const [metricsRes, clientRes] = await Promise.all([
-      fetch(`/api/clients/${clientId}/metrics`),
-      fetch(`/api/clients/${clientId}`),
-    ]);
-    setMetrics(await metricsRes.json());
-    setClientName((await clientRes.json()).name || "");
-    setLoading(false);
-  }
+  useEffect(() => {
+    Promise.all([
+      fetch(`/api/clients/${clientId}`).then(res => res.json()),
+      fetch(`/api/clients/${clientId}/metrics`).then(res => res.json()),
+    ]).then(([clientData, metricsData]) => {
+      setClient(clientData);
+      setMetrics(metricsData);
+      setLoading(false);
+    });
+  }, [clientId]);
 
-  function toggleSection(section: string) {
-    const newSet = new Set(expandedSections);
-    if (newSet.has(section)) newSet.delete(section);
-    else newSet.add(section);
-    setExpandedSections(newSet);
+  async function fetchMetrics() {
+    const res = await fetch(`/api/clients/${clientId}/metrics`);
+    const data = await res.json();
+    setMetrics(data);
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
 
-    const payload: any = { month: form.month };
-    Object.keys(form).forEach(key => {
-      if (key !== "month" && form[key] !== "") {
-        payload[key] = isNaN(parseFloat(form[key])) ? form[key] : parseFloat(form[key]);
+    const payload: any = { month: formData.month + "-01" };
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key !== "month" && value !== "") {
+        payload[key] = parseFloat(value);
       }
     });
 
@@ -77,288 +115,267 @@ export default function ClientMetricsPage() {
 
     if (res.ok) {
       setShowForm(false);
-      setForm(emptyForm);
-      setEditingId(null);
-      fetchData();
+      fetchMetrics();
+      setFormData({
+        month: new Date().toISOString().slice(0, 7),
+        gaSessions: "", gaUsers: "", gaPageviews: "", gaAvgSessionDuration: "", gaBounceRate: "", gaConversionRate: "", gaTransactions: "", gaRevenue: "",
+        gscClicks: "", gscImpressions: "", gscCtr: "", gscPosition: "",
+        metaSpend: "", metaImpressions: "", metaClicks: "", metaCtr: "", metaCpc: "", metaConversions: "", metaCpa: "", metaRoas: "",
+        googleAdsSpend: "", googleAdsImpressions: "", googleAdsClicks: "", googleAdsCtr: "", googleAdsCpc: "", googleAdsConversions: "", googleAdsCpa: "", googleAdsRoas: "",
+        linkedinAdsSpend: "", linkedinAdsImpressions: "", linkedinAdsClicks: "", linkedinAdsCtr: "", linkedinAdsCpc: "", linkedinAdsConversions: "",
+        tiktokAdsSpend: "", tiktokAdsImpressions: "", tiktokAdsClicks: "", tiktokAdsCtr: "", tiktokAdsCpc: "", tiktokAdsConversions: "",
+        hoursSeo: "", hoursContent: "", hoursPaidMedia: "", hoursSocial: "", hoursDesign: "", hoursMaintenance: "", hoursStrategy: "",
+      });
     }
     setSaving(false);
   }
 
-  function editMetrics(m: any) {
-    const newForm: any = { month: m.month.split("T")[0] };
-    Object.keys(emptyForm).forEach(key => {
-      if (key !== "month") newForm[key] = m[key]?.toString() || "";
-    });
-    setForm(newForm);
-    setEditingId(m.id);
-    setShowForm(true);
-    setExpandedSections(new Set(["analytics", "seo", "aeo", "meta", "google", "linkedin", "tiktok", "instagram", "facebook", "liOrganic", "ttOrganic", "twitter", "content", "hours"]));
+  function toggleSection(section: string) {
+    const newSet = new Set(expandedSections);
+    if (newSet.has(section)) {
+      newSet.delete(section);
+    } else {
+      newSet.add(section);
+    }
+    setExpandedSections(newSet);
   }
 
-  async function deleteMetrics(m: any) {
-    if (!confirm(`Delete metrics for ${new Date(m.month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}?`)) return;
-    await fetch(`/api/metrics/${m.id}`, { method: "DELETE" });
-    fetchData();
-  }
+  const fmt = (n: any) => n === null || n === undefined ? "—" : Number(n).toLocaleString();
+  const fmtDec = (n: any) => n === null || n === undefined ? "—" : Number(n).toFixed(2);
+  const fmtPct = (n: any) => n === null || n === undefined ? "—" : Number(n).toFixed(2) + "%";
+  const fmtCur = (n: any) => n === null || n === undefined ? "—" : "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  const fmt = (n: any) => n === null || n === undefined ? "-" : Number(n).toLocaleString();
-  const fmtDec = (n: any, suffix = "") => n === null || n === undefined ? "-" : Number(n).toFixed(2) + suffix;
-  const fmtCur = (n: any) => n === null || n === undefined ? "-" : "$" + Number(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const inputStyle = {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #dadce0",
+    borderRadius: 6,
+    fontSize: 13,
+    boxSizing: "border-box" as const,
+    outline: "none",
+  };
 
-  const SectionHeader = ({ title, section, color }: { title: string; section: string; color: string }) => (
-    <div 
+  const labelStyle = {
+    display: "block",
+    marginBottom: 4,
+    fontWeight: 500,
+    fontSize: 12,
+    color: "#5f6368",
+  };
+
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: "#5f6368" }}>Loading...</div>;
+
+  const latest = metrics[0];
+
+  const SectionHeader = ({ title, section, icon, color }: { title: string; section: string; icon: string; color: string }) => (
+    <div
       onClick={() => toggleSection(section)}
-      style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 0", cursor: "pointer", borderBottom: expandedSections.has(section) ? "1px solid #eee" : "none" }}
+      style={{
+        padding: "16px 20px",
+        background: "#f8f9fa",
+        borderBottom: expandedSections.has(section) ? "1px solid #e8eaed" : "none",
+        display: "flex",
+        alignItems: "center",
+        gap: 12,
+        cursor: "pointer",
+      }}
     >
-      <h4 style={{ margin: 0, color }}>{title}</h4>
-      <span style={{ color: "#888" }}>{expandedSections.has(section) ? "▼" : "▶"}</span>
+      <div style={{
+        width: 32,
+        height: 32,
+        borderRadius: 8,
+        background: `${color}15`,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 16,
+      }}>
+        {icon}
+      </div>
+      <span style={{ fontWeight: 600, color: "#1a1a1a", flex: 1 }}>{title}</span>
+      <span style={{ color: "#9aa0a6", transform: expandedSections.has(section) ? "rotate(180deg)" : "rotate(0)", transition: "transform 150ms" }}>▼</span>
     </div>
   );
-
-  const InputField = ({ label, field, step }: { label: string; field: string; step?: string }) => (
-    <div>
-      <label style={{ display: "block", marginBottom: 4, fontSize: 13 }}>{label}</label>
-      <input
-        type="number"
-        step={step}
-        value={form[field]}
-        onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-        placeholder="0"
-        style={{ width: "100%", padding: 8, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}
-      />
-    </div>
-  );
-
-  if (loading) return <div style={{ padding: 48, textAlign: "center" }}>Loading...</div>;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href={`/clients/${clientId}`} style={{ color: "#666", textDecoration: "none" }}>← Back to {clientName}</Link>
+          <Link href={`/clients/${clientId}`} style={{ color: "#5f6368", textDecoration: "none", fontSize: 14 }}>
+            ← Back to {client?.name}
+          </Link>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h1 style={{ margin: 0 }}>Performance Metrics - {clientName}</h1>
-          <button onClick={() => { setShowForm(!showForm); setForm(emptyForm); setEditingId(null); }} style={{ background: "#333", color: "white", padding: "10px 20px", borderRadius: 6, border: "none", cursor: "pointer" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+          <div>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>Performance Metrics</h1>
+            <p style={{ color: "#5f6368", fontSize: 15 }}>Track KPIs for {client?.name}</p>
+          </div>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            style={{
+              background: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+              color: "white",
+              padding: "12px 24px",
+              borderRadius: 8,
+              border: "none",
+              fontWeight: 500,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
             + Add Metrics
           </button>
         </div>
 
+        {/* Summary Cards */}
+        {latest && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+            <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed", borderLeft: "4px solid #4285f4" }}>
+              <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Sessions</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a" }}>{fmt(latest.gaSessions)}</div>
+              <div style={{ fontSize: 12, color: "#4285f4" }}>Google Analytics</div>
+            </div>
+            <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed", borderLeft: "4px solid #34a853" }}>
+              <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>GSC Clicks</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a" }}>{fmt(latest.gscClicks)}</div>
+              <div style={{ fontSize: 12, color: "#34a853" }}>Search Console</div>
+            </div>
+            <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed", borderLeft: "4px solid #e85a4f" }}>
+              <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Total Ad Spend</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a" }}>
+                {fmtCur((Number(latest.metaSpend) || 0) + (Number(latest.googleAdsSpend) || 0) + (Number(latest.linkedinAdsSpend) || 0) + (Number(latest.tiktokAdsSpend) || 0))}
+              </div>
+              <div style={{ fontSize: 12, color: "#e85a4f" }}>All Platforms</div>
+            </div>
+            <div style={{ background: "white", padding: 20, borderRadius: 12, border: "1px solid #e8eaed", borderLeft: "4px solid #f9ab00" }}>
+              <div style={{ fontSize: 12, color: "#9aa0a6", marginBottom: 4 }}>Total Hours</div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: "#1a1a1a" }}>
+                {fmtDec((Number(latest.hoursSeo) || 0) + (Number(latest.hoursContent) || 0) + (Number(latest.hoursPaidMedia) || 0) + (Number(latest.hoursSocial) || 0) + (Number(latest.hoursDesign) || 0) + (Number(latest.hoursMaintenance) || 0) + (Number(latest.hoursStrategy) || 0))}
+              </div>
+              <div style={{ fontSize: 12, color: "#f9ab00" }}>This Month</div>
+            </div>
+          </div>
+        )}
+
+        {/* Add Metrics Form */}
         {showForm && (
-          <div style={{ background: "white", padding: 24, borderRadius: 8, marginBottom: 24 }}>
-            <h3 style={{ marginTop: 0 }}>{editingId ? "Edit Metrics" : "Add Monthly Metrics"}</h3>
-            <form onSubmit={handleSubmit}>
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", marginBottom: 32, overflow: "hidden" }}>
+            <div style={{ padding: "20px 24px", borderBottom: "1px solid #e8eaed" }}>
+              <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Add Monthly Metrics</h3>
+            </div>
+            <form onSubmit={handleSubmit} style={{ padding: 24 }}>
               <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Month</label>
-                <input type="date" value={form.month} onChange={(e) => setForm({ ...form, month: e.target.value })} required style={{ padding: 10, border: "1px solid #ddd", borderRadius: 4 }} />
+                <label style={labelStyle}>Month</label>
+                <input
+                  type="month"
+                  value={formData.month}
+                  onChange={(e) => setFormData({ ...formData, month: e.target.value })}
+                  required
+                  style={{ ...inputStyle, maxWidth: 200 }}
+                />
               </div>
 
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="📊 Google Analytics" section="analytics" color="#1976d2" />
-                {expandedSections.has("analytics") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Sessions" field="gaSessions" />
-                    <InputField label="Users" field="gaUsers" />
-                    <InputField label="Pageviews" field="gaPageviews" />
-                    <InputField label="Bounce Rate (%)" field="gaBounceRate" step="0.01" />
-                    <InputField label="Avg Duration (sec)" field="gaAvgSessionDuration" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🔍 Google Search Console" section="seo" color="#2e7d32" />
-                {expandedSections.has("seo") && (
-                  <>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, paddingTop: 12 }}>
-                      <InputField label="Impressions" field="gscImpressions" />
-                      <InputField label="Clicks" field="gscClicks" />
-                      <InputField label="CTR (%)" field="gscCtr" step="0.01" />
-                      <InputField label="Avg Position" field="gscAvgPosition" step="0.1" />
+              {/* Google Analytics */}
+              <div style={{ background: "#f8f9fa", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "#4285f4" }}>📊 Google Analytics</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[
+                    { key: "gaSessions", label: "Sessions" },
+                    { key: "gaUsers", label: "Users" },
+                    { key: "gaPageviews", label: "Pageviews" },
+                    { key: "gaBounceRate", label: "Bounce Rate %" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label style={labelStyle}>{f.label}</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={(formData as any)[f.key]}
+                        onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                        style={inputStyle}
+                      />
                     </div>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, marginTop: 12 }}>
-                      <InputField label="Keywords Top 3" field="seoKeywordsTop3" />
-                      <InputField label="Keywords Top 10" field="seoKeywordsTop10" />
-                      <InputField label="Keywords Top 100" field="seoKeywordsTop100" />
-                      <InputField label="Backlinks" field="seoBacklinks" />
-                      <InputField label="Domain Rating" field="seoDomainRating" step="0.1" />
+                  ))}
+                </div>
+              </div>
+
+              {/* Search Console */}
+              <div style={{ background: "#f8f9fa", borderRadius: 8, padding: 16, marginBottom: 16 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "#34a853" }}>🔍 Search Console</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[
+                    { key: "gscClicks", label: "Clicks" },
+                    { key: "gscImpressions", label: "Impressions" },
+                    { key: "gscCtr", label: "CTR %" },
+                    { key: "gscPosition", label: "Avg Position" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label style={labelStyle}>{f.label}</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={(formData as any)[f.key]}
+                        onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                        style={inputStyle}
+                      />
                     </div>
-                  </>
-                )}
+                  ))}
+                </div>
               </div>
 
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🤖 AEO (AI Engine Optimization)" section="aeo" color="#9c27b0" />
-                {expandedSections.has("aeo") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="AI Visibility Score" field="aeoVisibilityScore" step="0.01" />
-                    <InputField label="AI Citations" field="aeoCitations" />
-                    <InputField label="Brand Mentions" field="aeoBrandMentions" />
-                  </div>
-                )}
+              {/* Hours Tracking */}
+              <div style={{ background: "#f8f9fa", borderRadius: 8, padding: 16, marginBottom: 24 }}>
+                <h4 style={{ margin: "0 0 12px 0", fontSize: 14, color: "#f9ab00" }}>⏱️ Hours Tracking</h4>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+                  {[
+                    { key: "hoursSeo", label: "SEO" },
+                    { key: "hoursContent", label: "Content" },
+                    { key: "hoursPaidMedia", label: "Paid Media" },
+                    { key: "hoursSocial", label: "Social" },
+                    { key: "hoursDesign", label: "Design" },
+                    { key: "hoursMaintenance", label: "Maintenance" },
+                    { key: "hoursStrategy", label: "Strategy" },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <label style={labelStyle}>{f.label}</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={(formData as any)[f.key]}
+                        onChange={(e) => setFormData({ ...formData, [f.key]: e.target.value })}
+                        style={inputStyle}
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="📱 META Ads (Facebook/Instagram)" section="meta" color="#1877f2" />
-                {expandedSections.has("meta") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Spend ($)" field="metaSpend" step="0.01" />
-                    <InputField label="Impressions" field="metaImpressions" />
-                    <InputField label="Clicks" field="metaClicks" />
-                    <InputField label="Conversions" field="metaConversions" />
-                    <InputField label="CTR (%)" field="metaCtr" step="0.01" />
-                    <InputField label="CPC ($)" field="metaCpc" step="0.01" />
-                    <InputField label="ROAS" field="metaRoas" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🔎 Google Ads" section="google" color="#ea4335" />
-                {expandedSections.has("google") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Spend ($)" field="googleAdsSpend" step="0.01" />
-                    <InputField label="Impressions" field="googleAdsImpressions" />
-                    <InputField label="Clicks" field="googleAdsClicks" />
-                    <InputField label="Conversions" field="googleAdsConversions" />
-                    <InputField label="CTR (%)" field="googleAdsCtr" step="0.01" />
-                    <InputField label="CPC ($)" field="googleAdsCpc" step="0.01" />
-                    <InputField label="ROAS" field="googleAdsRoas" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="💼 LinkedIn Ads" section="linkedin" color="#0a66c2" />
-                {expandedSections.has("linkedin") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Spend ($)" field="linkedinAdsSpend" step="0.01" />
-                    <InputField label="Impressions" field="linkedinAdsImpressions" />
-                    <InputField label="Clicks" field="linkedinAdsClicks" />
-                    <InputField label="Conversions" field="linkedinAdsConversions" />
-                    <InputField label="CTR (%)" field="linkedinAdsCtr" step="0.01" />
-                    <InputField label="CPC ($)" field="linkedinAdsCpc" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🎵 TikTok Ads" section="tiktok" color="#000000" />
-                {expandedSections.has("tiktok") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Spend ($)" field="tiktokAdsSpend" step="0.01" />
-                    <InputField label="Impressions" field="tiktokAdsImpressions" />
-                    <InputField label="Clicks" field="tiktokAdsClicks" />
-                    <InputField label="Conversions" field="tiktokAdsConversions" />
-                    <InputField label="CTR (%)" field="tiktokAdsCtr" step="0.01" />
-                    <InputField label="CPC ($)" field="tiktokAdsCpc" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="📸 Instagram (Organic)" section="instagram" color="#e4405f" />
-                {expandedSections.has("instagram") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Followers" field="igFollowers" />
-                    <InputField label="Following" field="igFollowing" />
-                    <InputField label="Posts" field="igPosts" />
-                    <InputField label="Reach" field="igReach" />
-                    <InputField label="Engagement Rate (%)" field="igEngagementRate" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="👤 Facebook (Organic)" section="facebook" color="#1877f2" />
-                {expandedSections.has("facebook") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Followers" field="fbFollowers" />
-                    <InputField label="Posts" field="fbPosts" />
-                    <InputField label="Reach" field="fbReach" />
-                    <InputField label="Engagement Rate (%)" field="fbEngagementRate" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="💼 LinkedIn (Organic)" section="liOrganic" color="#0a66c2" />
-                {expandedSections.has("liOrganic") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Followers" field="liFollowers" />
-                    <InputField label="Posts" field="liPosts" />
-                    <InputField label="Impressions" field="liImpressions" />
-                    <InputField label="Engagement Rate (%)" field="liEngagementRate" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🎵 TikTok (Organic)" section="ttOrganic" color="#000000" />
-                {expandedSections.has("ttOrganic") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Followers" field="ttFollowers" />
-                    <InputField label="Videos" field="ttVideos" />
-                    <InputField label="Views" field="ttViews" />
-                    <InputField label="Engagement Rate (%)" field="ttEngagementRate" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="🐦 Twitter / X" section="twitter" color="#1da1f2" />
-                {expandedSections.has("twitter") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Followers" field="twFollowers" />
-                    <InputField label="Tweets" field="twTweets" />
-                    <InputField label="Impressions" field="twImpressions" />
-                    <InputField label="Engagement Rate (%)" field="twEngagementRate" step="0.01" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="📝 Content Deliverables" section="content" color="#ff5722" />
-                {expandedSections.has("content") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="Blog Posts" field="contentBlogPosts" />
-                    <InputField label="Social Posts" field="contentSocialPosts" />
-                    <InputField label="Emails Sent" field="contentEmailsSent" />
-                    <InputField label="Videos Produced" field="contentVideosProduced" />
-                    <InputField label="Graphics Created" field="contentGraphicsCreated" />
-                    <InputField label="Landing Pages" field="contentLandingPages" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 16, border: "1px solid #eee", borderRadius: 8, padding: 16 }}>
-                <SectionHeader title="⏱️ Hours Worked" section="hours" color="#607d8b" />
-                {expandedSections.has("hours") && (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 12, paddingTop: 12 }}>
-                    <InputField label="SEO" field="hoursSeo" step="0.5" />
-                    <InputField label="Content" field="hoursContent" step="0.5" />
-                    <InputField label="Paid Media" field="hoursPaidMedia" step="0.5" />
-                    <InputField label="Social" field="hoursSocial" step="0.5" />
-                    <InputField label="Design" field="hoursDesign" step="0.5" />
-                    <InputField label="Maintenance" field="hoursMaintenance" step="0.5" />
-                    <InputField label="Strategy" field="hoursStrategy" step="0.5" />
-                  </div>
-                )}
-              </div>
-
-              <div style={{ marginBottom: 24 }}>
-                <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Notes</label>
-                <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={3} placeholder="Monthly highlights, observations, etc." style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }} />
-              </div>
-
-              <div style={{ display: "flex", gap: 8 }}>
-                <button type="submit" disabled={saving} style={{ padding: "10px 20px", background: "#333", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
-                  {saving ? "Saving..." : editingId ? "Update Metrics" : "Save Metrics"}
+              <div style={{ display: "flex", gap: 12 }}>
+                <button type="submit" disabled={saving} style={{
+                  padding: "12px 24px",
+                  background: saving ? "#f1f3f4" : "#e85a4f",
+                  color: saving ? "#9aa0a6" : "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: saving ? "not-allowed" : "pointer"
+                }}>
+                  {saving ? "Saving..." : "Save Metrics"}
                 </button>
-                <button type="button" onClick={() => { setShowForm(false); setForm(emptyForm); setEditingId(null); }} style={{ padding: "10px 20px", background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                <button type="button" onClick={() => setShowForm(false)} style={{
+                  padding: "12px 24px",
+                  background: "#f1f3f4",
+                  color: "#5f6368",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  fontSize: 14,
+                  cursor: "pointer"
+                }}>
                   Cancel
                 </button>
               </div>
@@ -366,67 +383,72 @@ export default function ClientMetricsPage() {
           </div>
         )}
 
-        {metrics.length > 0 && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
-            <div style={{ background: "white", padding: 20, borderRadius: 8, borderLeft: "4px solid #1976d2" }}>
-              <div style={{ fontSize: 12, color: "#888" }}>Sessions</div>
-              <div style={{ fontSize: 28, fontWeight: "bold" }}>{fmt(metrics[0].gaSessions)}</div>
-              <div style={{ fontSize: 12, color: "#1976d2" }}>Google Analytics</div>
-            </div>
-            <div style={{ background: "white", padding: 20, borderRadius: 8, borderLeft: "4px solid #2e7d32" }}>
-              <div style={{ fontSize: 12, color: "#888" }}>GSC Clicks</div>
-              <div style={{ fontSize: 28, fontWeight: "bold" }}>{fmt(metrics[0].gscClicks)}</div>
-              <div style={{ fontSize: 12, color: "#2e7d32" }}>Search Console</div>
-            </div>
-            <div style={{ background: "white", padding: 20, borderRadius: 8, borderLeft: "4px solid #1877f2" }}>
-              <div style={{ fontSize: 12, color: "#888" }}>Total Ad Spend</div>
-              <div style={{ fontSize: 28, fontWeight: "bold" }}>{fmtCur((Number(metrics[0].metaSpend) || 0) + (Number(metrics[0].googleAdsSpend) || 0) + (Number(metrics[0].linkedinAdsSpend) || 0) + (Number(metrics[0].tiktokAdsSpend) || 0))}</div>
-              <div style={{ fontSize: 12, color: "#1877f2" }}>All Platforms</div>
-            </div>
-            <div style={{ background: "white", padding: 20, borderRadius: 8, borderLeft: "4px solid #607d8b" }}>
-              <div style={{ fontSize: 12, color: "#888" }}>Total Hours</div>
-              <div style={{ fontSize: 28, fontWeight: "bold" }}>{fmtDec((Number(metrics[0].hoursSeo) || 0) + (Number(metrics[0].hoursContent) || 0) + (Number(metrics[0].hoursPaidMedia) || 0) + (Number(metrics[0].hoursSocial) || 0) + (Number(metrics[0].hoursDesign) || 0) + (Number(metrics[0].hoursMaintenance) || 0) + (Number(metrics[0].hoursStrategy) || 0))}</div>
-              <div style={{ fontSize: 12, color: "#607d8b" }}>This Month</div>
-            </div>
+        {/* Metrics History */}
+        {metrics.length === 0 ? (
+          <div style={{ background: "white", padding: 64, borderRadius: 12, border: "1px solid #e8eaed", textAlign: "center" }}>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
+            <div style={{ fontSize: 18, fontWeight: 500, color: "#1a1a1a", marginBottom: 8 }}>No metrics recorded</div>
+            <div style={{ color: "#5f6368" }}>Add your first monthly metrics to start tracking</div>
+          </div>
+        ) : (
+          <div style={{ background: "white", borderRadius: 12, border: "1px solid #e8eaed", overflow: "hidden" }}>
+            <SectionHeader title="Google Analytics" section="analytics" icon="📊" color="#4285f4" />
+            {expandedSections.has("analytics") && (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                  <thead>
+                    <tr style={{ background: "#fafafa" }}>
+                      <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Month</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Sessions</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Users</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Pageviews</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Bounce Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.map((m) => (
+                      <tr key={m.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                        <td style={{ padding: 12, fontWeight: 500 }}>{new Date(m.month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmt(m.gaSessions)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmt(m.gaUsers)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmt(m.gaPageviews)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmtPct(m.gaBounceRate)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <SectionHeader title="Search Console" section="seo" icon="🔍" color="#34a853" />
+            {expandedSections.has("seo") && (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 600 }}>
+                  <thead>
+                    <tr style={{ background: "#fafafa" }}>
+                      <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Month</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Clicks</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Impressions</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>CTR</th>
+                      <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: "#5f6368" }}>Avg Position</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {metrics.map((m) => (
+                      <tr key={m.id} style={{ borderBottom: "1px solid #f1f3f4" }}>
+                        <td style={{ padding: 12, fontWeight: 500 }}>{new Date(m.month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmt(m.gscClicks)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmt(m.gscImpressions)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmtPct(m.gscCtr)}</td>
+                        <td style={{ padding: 12, textAlign: "right" }}>{fmtDec(m.gscPosition)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
-
-        <div style={{ background: "white", borderRadius: 8, overflow: "hidden" }}>
-          <h3 style={{ margin: 0, padding: 24, borderBottom: "1px solid #eee" }}>Metrics History</h3>
-          {metrics.length === 0 ? (
-            <div style={{ padding: 48, textAlign: "center", color: "#888" }}>No metrics recorded yet.</div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 800 }}>
-                <thead>
-                  <tr style={{ background: "#f9f9f9", textAlign: "left" }}>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Month</th>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Sessions</th>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>GSC Clicks</th>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Ad Spend</th>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Hours</th>
-                    <th style={{ padding: 12, borderBottom: "2px solid #eee" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {metrics.map((m) => (
-                    <tr key={m.id} style={{ borderBottom: "1px solid #eee" }}>
-                      <td style={{ padding: 12, fontWeight: 500 }}>{new Date(m.month).toLocaleDateString("en-US", { month: "long", year: "numeric" })}</td>
-                      <td style={{ padding: 12 }}>{fmt(m.gaSessions)}</td>
-                      <td style={{ padding: 12 }}>{fmt(m.gscClicks)}</td>
-                      <td style={{ padding: 12 }}>{fmtCur((Number(m.metaSpend) || 0) + (Number(m.googleAdsSpend) || 0) + (Number(m.linkedinAdsSpend) || 0) + (Number(m.tiktokAdsSpend) || 0))}</td>
-                      <td style={{ padding: 12 }}>{fmtDec((Number(m.hoursSeo) || 0) + (Number(m.hoursContent) || 0) + (Number(m.hoursPaidMedia) || 0) + (Number(m.hoursSocial) || 0) + (Number(m.hoursDesign) || 0) + (Number(m.hoursMaintenance) || 0) + (Number(m.hoursStrategy) || 0))}</td>
-                      <td style={{ padding: 12 }}>
-                        <button onClick={() => editMetrics(m)} style={{ padding: "4px 8px", marginRight: 4, background: "#eee", border: "none", borderRadius: 4, cursor: "pointer" }}>Edit</button>
-                        <button onClick={() => deleteMetrics(m)} style={{ padding: "4px 8px", background: "#fee", color: "#c00", border: "none", borderRadius: 4, cursor: "pointer" }}>✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </main>
     </div>
   );
