@@ -278,7 +278,7 @@ enum Role {
   SPECIALIST
   CLIENT
 
-  @@map("UserRole")  // Maps to database enum name
+  @@map("user_role")
 }
 
 enum ClientStatus {
@@ -287,6 +287,8 @@ enum ClientStatus {
   ACTIVE
   PAUSED
   CHURNED
+
+  @@map("client_status")
 }
 
 enum ProjectStatus {
@@ -296,6 +298,8 @@ enum ProjectStatus {
   ON_HOLD
   COMPLETED
   CANCELLED
+
+  @@map("project_status")
 }
 
 enum ServiceType {
@@ -307,12 +311,16 @@ enum ServiceType {
   CONTENT
   BRANDING
   CONSULTING
+
+  @@map("service_type")
 }
 
 enum TaskPriority {
   HIGH
   MEDIUM
   LOW
+
+  @@map("priority")
 }
 
 enum TaskStatus {
@@ -322,4 +330,6 @@ enum TaskStatus {
   ON_HOLD
   COMPLETED
   FUTURE_PLAN
+
+  @@map("task_status")
 }
