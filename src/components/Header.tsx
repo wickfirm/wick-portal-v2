@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { theme } from "@/lib/theme";
 
 export default function Header({ userName, userRole }: { userName?: string; userRole?: string }) {
   const pathname = usePathname();
@@ -22,9 +23,9 @@ export default function Header({ userName, userRole }: { userName?: string; user
 
   return (
     <header style={{
-      background: "#ffffff",
+      background: theme.colors.bgSecondary,
       padding: "0 24px",
-      borderBottom: "1px solid #e8eaed",
+      borderBottom: `1px solid ${theme.colors.borderLight}`,
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
@@ -39,8 +40,8 @@ export default function Header({ userName, userRole }: { userName?: string; user
           <div style={{
             width: 32,
             height: 32,
-            background: "linear-gradient(135deg, #e85a4f, #f8b739)",
-            borderRadius: 8,
+            background: theme.gradients.accent,
+            borderRadius: theme.borderRadius.md,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -50,7 +51,7 @@ export default function Header({ userName, userRole }: { userName?: string; user
           }}>
             W
           </div>
-          <span style={{ fontWeight: 600, fontSize: 18, color: "#1a1a1a" }}>Wick Portal</span>
+          <span style={{ fontWeight: 600, fontSize: 18, color: theme.colors.textPrimary }}>Wick Portal</span>
         </Link>
         
         <nav style={{ display: "flex", gap: 4 }}>
@@ -63,8 +64,8 @@ export default function Header({ userName, userRole }: { userName?: string; user
                 borderRadius: 6,
                 fontSize: 14,
                 fontWeight: 500,
-                color: isActive(item.href) ? "#e85a4f" : "#5f6368",
-                background: isActive(item.href) ? "rgba(232, 90, 79, 0.08)" : "transparent",
+                color: isActive(item.href) ? theme.colors.primary : theme.colors.textSecondary,
+                background: isActive(item.href) ? `${theme.colors.primary}14` : "transparent",
                 textDecoration: "none",
                 transition: "all 150ms ease",
               }}
@@ -82,7 +83,7 @@ export default function Header({ userName, userRole }: { userName?: string; user
               width: 36,
               height: 36,
               borderRadius: 18,
-              background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+              background: theme.gradients.accent,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -93,9 +94,9 @@ export default function Header({ userName, userRole }: { userName?: string; user
               {userName.charAt(0).toUpperCase()}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: "#1a1a1a" }}>{userName}</div>
+              <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>{userName}</div>
               {userRole && (
-                <div style={{ fontSize: 11, color: "#9aa0a6", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                <div style={{ fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
                   {userRole}
                 </div>
               )}
@@ -105,12 +106,12 @@ export default function Header({ userName, userRole }: { userName?: string; user
         <Link 
           href="/api/auth/signout" 
           style={{ 
-            color: "#5f6368", 
+            color: theme.colors.textSecondary, 
             textDecoration: "none", 
             fontSize: 14,
             padding: "8px 12px",
             borderRadius: 6,
-            border: "1px solid #e8eaed",
+            border: `1px solid ${theme.colors.borderLight}`,
             transition: "all 150ms ease"
           }}
         >
