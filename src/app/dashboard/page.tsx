@@ -11,10 +11,12 @@ export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
   const user = session.user as any;
-  
-  const [clientCount, projectCount] = await Promise.all([
+
+  const [clientCount, projectCount, activeProjects, teamCount] = await Promise.all([
     prisma.client.count({ where: { status: "ACTIVE" } }),
+    prisma.project.count(),
     prisma.project.count({ where: { status: "IN_PROGRESS" } }),
+    prisma.user.count({ where: { isActive: true } }),
   ]);
 
   const recentProjects = await prisma.project.findMany({
@@ -23,69 +25,281 @@ export default async function DashboardPage() {
     include: { client: true, stages: true },
   });
 
+  const recentClients = await prisma.client.findMany({
+    take: 5,
+    orderBy: { createdAt: "desc" },
+  });
+
   return (
-    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+    <div style={{ minHeight: "100vh", background: "#f8f9fa" }}>
       <Header userName={user.name} userRole={user.role} />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: 24 }}>
-        <h2 style={{ marginTop: 0 }}>Welcome, {user.name}</h2>
-        
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, margin: "24px 0" }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Welcome Section */}
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: "#1a1a1a", marginBottom: 4 }}>
+            Welcome back, {user.name?.split(" ")[0]}
+          </h1>
+          <p style={{ color: "#5f6368", fontSize: 15 }}>Here's what's happening with your agency today.</p>
+        </div>
+
+        {/* Stats Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 32 }}>
           <Link href="/clients" style={{ textDecoration: "none" }}>
-            <div style={{ background: "white", padding: 24, borderRadius: 8, cursor: "pointer" }}>
-              <div style={{ fontSize: 32, fontWeight: "bold", color: "#333" }}>{clientCount}</div>
-              <div style={{ color: "#666" }}>Active Clients</div>
+            <div style={{
+              background: "white",
+              padding: 24,
+              borderRadius: 12,
+              border: "1px solid #e8eaed",
+              transition: "all 150ms ease",
+              cursor: "pointer"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: "rgba(232, 90, 79, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20
+                }}>
+                  👥
+                </div>
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{clientCount}</div>
+              <div style={{ fontSize: 14, color: "#5f6368" }}>Active Clients</div>
             </div>
           </Link>
+
           <Link href="/projects" style={{ textDecoration: "none" }}>
-            <div style={{ background: "white", padding: 24, borderRadius: 8, cursor: "pointer" }}>
-              <div style={{ fontSize: 32, fontWeight: "bold", color: "#333" }}>{projectCount}</div>
-              <div style={{ color: "#666" }}>Active Projects</div>
+            <div style={{
+              background: "white",
+              padding: 24,
+              borderRadius: 12,
+              border: "1px solid #e8eaed",
+              transition: "all 150ms ease",
+              cursor: "pointer"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: "rgba(66, 133, 244, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20
+                }}>
+                  📁
+                </div>
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{activeProjects}</div>
+              <div style={{ fontSize: 14, color: "#5f6368" }}>Active Projects</div>
+            </div>
+          </Link>
+
+          <div style={{
+            background: "white",
+            padding: 24,
+            borderRadius: 12,
+            border: "1px solid #e8eaed"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+              <div style={{
+                width: 44,
+                height: 44,
+                borderRadius: 10,
+                background: "rgba(52, 168, 83, 0.1)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 20
+              }}>
+                ✓
+              </div>
+            </div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{projectCount}</div>
+            <div style={{ fontSize: 14, color: "#5f6368" }}>Total Projects</div>
+          </div>
+
+          <Link href="/team" style={{ textDecoration: "none" }}>
+            <div style={{
+              background: "white",
+              padding: 24,
+              borderRadius: 12,
+              border: "1px solid #e8eaed",
+              transition: "all 150ms ease",
+              cursor: "pointer"
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
+                <div style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 10,
+                  background: "rgba(248, 183, 57, 0.1)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20
+                }}>
+                  🧑‍💼
+                </div>
+              </div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: "#1a1a1a", marginBottom: 4 }}>{teamCount}</div>
+              <div style={{ fontSize: 14, color: "#5f6368" }}>Team Members</div>
             </div>
           </Link>
         </div>
 
-        <div style={{ background: "white", padding: 24, borderRadius: 8 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-            <h3 style={{ margin: 0 }}>Recent Projects</h3>
-            <Link href="/projects" style={{ color: "#1976d2", textDecoration: "none", fontSize: 14 }}>View all →</Link>
-          </div>
-          
-          {recentProjects.length === 0 ? (
-            <p style={{ color: "#888", textAlign: "center", padding: 24 }}>No projects yet</p>
-          ) : (
-            recentProjects.map((project) => {
-              const completed = project.stages.filter((s) => s.isCompleted).length;
-              const total = project.stages.length;
-              const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-              return (
-                <Link key={project.id} href={`/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={{ padding: 16, borderBottom: "1px solid #eee", cursor: "pointer" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between" }}>
-                      <div>
-                        <strong style={{ color: "#333" }}>{project.name}</strong>
-                        <div style={{ color: "#666", fontSize: 14 }}>{project.client.name}</div>
-                      </div>
-                      <span style={{ 
-                        fontSize: 12, 
-                        background: project.status === "IN_PROGRESS" ? "#e3f2fd" : project.status === "COMPLETED" ? "#e8f5e9" : "#f5f5f5",
-                        color: project.status === "IN_PROGRESS" ? "#1976d2" : project.status === "COMPLETED" ? "#2e7d32" : "#666",
-                        padding: "4px 8px", 
-                        borderRadius: 4,
-                        height: "fit-content"
+        {/* Content Grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
+          {/* Recent Projects */}
+          <div style={{
+            background: "white",
+            borderRadius: 12,
+            border: "1px solid #e8eaed",
+            overflow: "hidden"
+          }}>
+            <div style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid #e8eaed",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Recent Projects</h2>
+              <Link href="/projects" style={{ fontSize: 13, color: "#e85a4f", textDecoration: "none", fontWeight: 500 }}>
+                View all →
+              </Link>
+            </div>
+
+            {recentProjects.length === 0 ? (
+              <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6" }}>
+                No projects yet
+              </div>
+            ) : (
+              <div>
+                {recentProjects.map((project, idx) => {
+                  const completed = project.stages.filter((s) => s.isCompleted).length;
+                  const total = project.stages.length;
+                  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+                  return (
+                    <Link key={project.id} href={`/projects/${project.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <div style={{
+                        padding: "16px 24px",
+                        borderBottom: idx < recentProjects.length - 1 ? "1px solid #f1f3f4" : "none",
+                        transition: "background 150ms ease",
+                        cursor: "pointer"
                       }}>
-                        {project.status.replace("_", " ")}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                          <div>
+                            <div style={{ fontWeight: 500, color: "#1a1a1a", marginBottom: 2 }}>{project.name}</div>
+                            <div style={{ fontSize: 13, color: "#9aa0a6" }}>{project.client.name}</div>
+                          </div>
+                          <span style={{
+                            fontSize: 11,
+                            fontWeight: 500,
+                            padding: "4px 10px",
+                            borderRadius: 20,
+                            background: project.status === "IN_PROGRESS" ? "#e8f0fe" : project.status === "COMPLETED" ? "#e6f4ea" : "#f1f3f4",
+                            color: project.status === "IN_PROGRESS" ? "#4285f4" : project.status === "COMPLETED" ? "#34a853" : "#5f6368"
+                          }}>
+                            {project.status.replace("_", " ")}
+                          </span>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <div style={{ flex: 1, height: 6, background: "#f1f3f4", borderRadius: 3 }}>
+                            <div style={{
+                              height: "100%",
+                              width: `${pct}%`,
+                              background: "linear-gradient(90deg, #e85a4f, #f8b739)",
+                              borderRadius: 3
+                            }} />
+                          </div>
+                          <span style={{ fontSize: 12, color: "#5f6368", fontWeight: 500 }}>{pct}%</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Recent Clients */}
+          <div style={{
+            background: "white",
+            borderRadius: 12,
+            border: "1px solid #e8eaed",
+            overflow: "hidden"
+          }}>
+            <div style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid #e8eaed",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center"
+            }}>
+              <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Recent Clients</h2>
+              <Link href="/clients" style={{ fontSize: 13, color: "#e85a4f", textDecoration: "none", fontWeight: 500 }}>
+                View all →
+              </Link>
+            </div>
+
+            {recentClients.length === 0 ? (
+              <div style={{ padding: 48, textAlign: "center", color: "#9aa0a6" }}>
+                No clients yet
+              </div>
+            ) : (
+              <div>
+                {recentClients.map((client, idx) => (
+                  <Link key={client.id} href={`/clients/${client.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                    <div style={{
+                      padding: "14px 24px",
+                      borderBottom: idx < recentClients.length - 1 ? "1px solid #f1f3f4" : "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      cursor: "pointer"
+                    }}>
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 10,
+                        background: "linear-gradient(135deg, #e85a4f, #f8b739)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: 600,
+                        fontSize: 14
+                      }}>
+                        {client.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontWeight: 500, color: "#1a1a1a", marginBottom: 2 }}>{client.name}</div>
+                        <div style={{ fontSize: 12, color: "#9aa0a6" }}>{client.industry || "No industry"}</div>
+                      </div>
+                      <span style={{
+                        fontSize: 11,
+                        fontWeight: 500,
+                        padding: "4px 10px",
+                        borderRadius: 20,
+                        background: client.status === "ACTIVE" ? "#e6f4ea" : client.status === "ONBOARDING" ? "#e8f0fe" : "#f1f3f4",
+                        color: client.status === "ACTIVE" ? "#34a853" : client.status === "ONBOARDING" ? "#4285f4" : "#5f6368"
+                      }}>
+                        {client.status}
                       </span>
                     </div>
-                    <div style={{ marginTop: 8, height: 6, background: "#eee", borderRadius: 3 }}>
-                      <div style={{ height: "100%", width: `${pct}%`, background: "#4caf50", borderRadius: 3 }} />
-                    </div>
-                    <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{pct}% complete</div>
-                  </div>
-                </Link>
-              );
-            })
-          )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
