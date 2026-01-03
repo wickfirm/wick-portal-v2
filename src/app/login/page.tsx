@@ -9,7 +9,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [testResult, setTestResult] = useState("");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -35,24 +34,6 @@ export default function LoginPage() {
     }
   }
 
-  async function testLogin() {
-    const email = (document.querySelector('input[name="email"]') as HTMLInputElement)?.value;
-    const password = (document.querySelector('input[name="password"]') as HTMLInputElement)?.value;
-    
-    setTestResult("Testing...");
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const data = await res.json();
-      setTestResult(JSON.stringify(data, null, 2));
-    } catch (err) {
-      setTestResult("Error: " + String(err));
-    }
-  }
-
   return (
     <div style={{
       minHeight: "100vh",
@@ -70,7 +51,6 @@ export default function LoginPage() {
         boxShadow: theme.shadows.lg,
         padding: 40
       }}>
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{
             width: 56,
@@ -85,7 +65,6 @@ export default function LoginPage() {
             <span style={{ color: "white", fontWeight: "bold", fontSize: 24 }}>W</span>
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Welcome back</h1>
-          <p style={{ color: theme.colors.primary, fontSize: 12 }}>Build: Jan 3 v3</p>
           <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Sign in to your Wick Portal account</p>
         </div>
 
@@ -105,21 +84,6 @@ export default function LoginPage() {
           </div>
         )}
 
-        {testResult && (
-          <div style={{
-            background: theme.colors.infoBg,
-            color: theme.colors.info,
-            padding: "12px 16px",
-            borderRadius: theme.borderRadius.md,
-            marginBottom: 20,
-            fontSize: 12,
-            whiteSpace: "pre-wrap",
-            fontFamily: "monospace"
-          }}>
-            {testResult}
-          </div>
-        )}
-
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 20 }}>
             <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
@@ -136,8 +100,7 @@ export default function LoginPage() {
                 border: `1px solid ${theme.colors.borderMedium}`,
                 borderRadius: theme.borderRadius.md,
                 fontSize: 15,
-                boxSizing: "border-box",
-                transition: "border-color 150ms ease, box-shadow 150ms ease"
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -157,8 +120,7 @@ export default function LoginPage() {
                 border: `1px solid ${theme.colors.borderMedium}`,
                 borderRadius: theme.borderRadius.md,
                 fontSize: 15,
-                boxSizing: "border-box",
-                transition: "border-color 150ms ease, box-shadow 150ms ease"
+                boxSizing: "border-box"
               }}
             />
           </div>
@@ -175,29 +137,10 @@ export default function LoginPage() {
               borderRadius: theme.borderRadius.md,
               fontSize: 15,
               fontWeight: 600,
-              cursor: loading ? "not-allowed" : "pointer",
-              transition: "all 150ms ease",
-              marginBottom: 12
+              cursor: loading ? "not-allowed" : "pointer"
             }}
           >
             {loading ? "Signing in..." : "Sign in"}
-          </button>
-
-          <button
-            type="button"
-            onClick={testLogin}
-            style={{
-              width: "100%",
-              padding: 14,
-              background: theme.colors.bgTertiary,
-              color: theme.colors.textSecondary,
-              border: `1px solid ${theme.colors.borderMedium}`,
-              borderRadius: theme.borderRadius.md,
-              fontSize: 14,
-              cursor: "pointer"
-            }}
-          >
-            Test Login (Debug)
           </button>
         </form>
 
