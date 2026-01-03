@@ -104,7 +104,7 @@ export default function Header({ userName, userRole }: { userName?: string; user
           </div>
         )}
         <Link 
-          href="/api/signout" 
+          href="/auth/signout" 
           style={{ 
             color: theme.colors.textSecondary, 
             textDecoration: "none", 
