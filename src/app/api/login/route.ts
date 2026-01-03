@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { compare, hash } from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,29 +19,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User not found", email }, { status: 401 });
     }
 
-    // First, let's just check if passwords match directly (for debugging)
-    const directMatch = password === user.password;
+    // Generate hash of entered password (for debugging)
+    const newHash = await hash(password, 10);
     
-    // Then try bcrypt
-    let bcryptMatch = false;
-    try {
-      const { compare } = await import("bcryptjs");
-      bcryptMatch = await compare(password, user.password);
-    } catch (bcryptError) {
-      return NextResponse.json({ 
-        error: "bcrypt error", 
-        details: String(bcryptError),
-        storedPasswordStart: user.password.substring(0, 10)
-      }, { status: 500 });
-    }
+    // Try bcrypt compare
+    const bcryptMatch = await compare(password, user.password);
 
     return NextResponse.json({ 
-      success: bcryptMatch || directMatch,
-      directMatch,
+      success: bcryptMatch,
       bcryptMatch,
       user: { id: user.id, email: user.email, name: user.name, role: user.role },
-      passwordLength: user.password.length,
-      passwordStart: user.password.substring(0, 15)
+      storedHash: user.password,
+      newHashForEnteredPassword: newHash,
+      tip: "Copy newHashForEnteredPassword to database if bcryptMatch is false"
     });
   } catch (error) {
     return NextResponse.json({ 
