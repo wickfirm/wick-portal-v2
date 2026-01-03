@@ -95,7 +95,7 @@ export default function PortalHeader({ userName }: { userName?: string }) {
           </div>
         )}
         <Link 
-          href="/api/auth/signout" 
+          href="/auth/signout" 
           style={{ 
             color: theme.colors.textSecondary, 
             textDecoration: "none", 
