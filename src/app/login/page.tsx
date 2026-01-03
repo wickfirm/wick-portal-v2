@@ -65,7 +65,7 @@ export default function LoginPage() {
           }}>
             <span style={{ color: "white", fontWeight: "bold", fontSize: 24 }}>W</span>
           </div>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Welcome back</h1>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Welcome back</h1> <p style={{ color: "red", fontSize: 12 }}>Build: Jan 3 v2</p>
           <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Sign in to your Wick Portal account</p>
         </div>
 
