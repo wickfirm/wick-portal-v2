@@ -28,18 +28,22 @@ export async function POST(req: NextRequest) {
     const client = await prisma.client.create({
       data: {
         name: data.name,
-        email: data.email,
-        phone: data.phone,
-        company: data.company,
-        website: data.website,
-        industry: data.industry,
+        email: data.email || null,
+        phone: data.phone || null,
+        company: data.company || null,
+        website: data.website || null,
+        industry: data.industry || null,
         status: data.status || "LEAD",
-        notes: data.notes,
+        notes: data.notes || null,
+        primaryContact: data.primaryContact || null,
+        primaryEmail: data.primaryEmail || null,
+        monthlyRetainer: data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null,
       },
     });
 
     return NextResponse.json(client);
   } catch (error) {
+    console.error("Failed to create client:", error);
     return NextResponse.json({ error: "Failed to create client" }, { status: 500 });
   }
 }
