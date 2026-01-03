@@ -14,6 +14,13 @@ export default async function SettingsPage() {
 
   const settingsItems = [
     {
+      title: "Account",
+      description: "Manage your profile and change your password",
+      href: "/settings/account",
+      icon: "A",
+      color: theme.colors.purple,
+    },
+    {
       title: "Stage Templates",
       description: "Configure default project stages for each service type",
       href: "/settings/stage-templates",
