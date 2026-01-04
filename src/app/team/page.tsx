@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import Header from "@/components/Header";
 import { theme, ROLE_STYLES } from "@/lib/theme";
 
@@ -13,6 +14,9 @@ type User = {
 };
 
 export default function TeamPage() {
+  const { data: session } = useSession();
+  const currentUser = session?.user as any;
+  
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -76,7 +80,6 @@ export default function TeamPage() {
       role: editForm.role,
     };
     
-    // Only include password if it was changed
     if (editForm.password) {
       payload.password = editForm.password;
     }
@@ -126,7 +129,7 @@ export default function TeamPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header />
+      <Header userName={currentUser?.name} userRole={currentUser?.role} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {/* Page Header */}
@@ -352,7 +355,7 @@ export default function TeamPage() {
         <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {users.length === 0 ? (
             <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>U</div>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
               <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No team members yet</div>
               <div style={{ color: theme.colors.textSecondary }}>Add your first team member to get started</div>
             </div>
