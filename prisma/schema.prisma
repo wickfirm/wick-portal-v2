@@ -343,16 +343,6 @@ model TaskPriorityOption {
   @@map("task_priority_options")
 }
 
-
-enum Role {
-  ADMIN
-  MANAGER
-  SPECIALIST
-  CLIENT
-
-  @@map("user_role")
-}
-
 enum ClientStatus {
   LEAD
   ONBOARDING
