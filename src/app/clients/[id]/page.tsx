@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
+import ClientResources from "./client-resources";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     include: {
       projects: { include: { stages: true }, orderBy: { createdAt: "desc" } },
       onboardingItems: { orderBy: { order: "asc" } },
+      resources: { orderBy: { order: "asc" } },
     },
   });
 
@@ -38,6 +40,14 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     notes: item.notes,
     resourceUrl: item.resourceUrl,
     resourceLabel: item.resourceLabel,
+  }));
+
+  const resourcesForClient = client.resources.map(resource => ({
+    id: resource.id,
+    name: resource.name,
+    url: resource.url,
+    type: resource.type,
+    order: resource.order,
   }));
 
   return (
@@ -129,36 +139,42 @@ export default async function ClientViewPage({ params }: { params: { id: string 
 
         {/* Content Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          {/* Contact & Details */}
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
-              Contact Details
-            </h3>
-            <div style={{ display: "grid", gap: 16 }}>
-              <div>
-                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Primary Contact</div>
-                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryContact || "—"}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Email</div>
-                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryEmail || "—"}</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Monthly Retainer</div>
-                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                  {client.monthlyRetainer ? "$" + Number(client.monthlyRetainer).toLocaleString() : "—"}
+          {/* Left Column */}
+          <div>
+            {/* Contact Details */}
+            <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
+                Contact Details
+              </h3>
+              <div style={{ display: "grid", gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Primary Contact</div>
+                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryContact || "—"}</div>
                 </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Client Since</div>
-                <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                  {new Date(client.createdAt).toLocaleDateString()}
+                <div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Email</div>
+                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryEmail || "—"}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Monthly Retainer</div>
+                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
+                    {client.monthlyRetainer ? "$" + Number(client.monthlyRetainer).toLocaleString() : "—"}
+                  </div>
+                </div>
+                <div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Client Since</div>
+                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
+                    {new Date(client.createdAt).toLocaleDateString()}
+                  </div>
                 </div>
               </div>
             </div>
+
+            {/* Client Resources */}
+            <ClientResources clientId={client.id} initialResources={resourcesForClient} />
           </div>
 
-          {/* Onboarding */}
+          {/* Right Column - Onboarding */}
           <OnboardingManager clientId={client.id} clientStatus={client.status} initialItems={onboardingForClient} />
         </div>
 
