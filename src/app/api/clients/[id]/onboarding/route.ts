@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const items = await prisma.onboardingItem.findMany({
     where: { clientId: params.id },
-    orderBy: { order: "asc" },
+    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
   });
 
   return NextResponse.json(items);
@@ -69,6 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
           clientId: params.id,
           name: t.name,
           description: t.description,
+          serviceType: t.serviceType,
           order: ++currentOrder,
           isCompleted: false,
         })),
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     // Return all items
     const items = await prisma.onboardingItem.findMany({
       where: { clientId: params.id },
-      orderBy: { order: "asc" },
+      orderBy: [{ serviceType: "asc" }, { order: "asc" }],
     });
 
     return NextResponse.json(items);
