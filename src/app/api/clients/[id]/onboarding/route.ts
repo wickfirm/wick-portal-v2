@@ -27,7 +27,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     // Get unique service types from projects
-    const serviceTypes = Array.from(new Set(projects.map(p => p.serviceType)));
+    const serviceTypesSet = new Set(projects.map(p => p.serviceType));
+    const serviceTypes: string[] = [];
+    serviceTypesSet.forEach(s => serviceTypes.push(s));
 
     // Get existing onboarding item names for this client (to avoid duplicates)
     const existingItems = await prisma.onboardingItem.findMany({
@@ -53,15 +55,13 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     if (newTemplates.length > 0) {
       // Get max order of existing items
-      const maxOrder = existingItems.length > 0 
-        ? await prisma.onboardingItem.findFirst({
-            where: { clientId: params.id },
-            orderBy: { order: "desc" },
-            select: { order: true },
-          })
-        : null;
+      const maxOrderItem = await prisma.onboardingItem.findFirst({
+        where: { clientId: params.id },
+        orderBy: { order: "desc" },
+        select: { order: true },
+      });
 
-      let currentOrder = (maxOrder?.order ?? 0);
+      let currentOrder = maxOrderItem?.order ?? 0;
 
       // Create new onboarding items
       await prisma.onboardingItem.createMany({
