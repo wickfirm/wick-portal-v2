@@ -39,7 +39,6 @@ export default async function DashboardPage() {
       where: { status: { not: "COMPLETED" } },
       include: {
         client: { select: { id: true, name: true } },
-        assignee: { select: { id: true, name: true } },
       },
       orderBy: { dueDate: "asc" },
     }),
@@ -300,7 +299,6 @@ export default async function DashboardPage() {
                         <div style={{ fontWeight: 500, color: theme.colors.textPrimary, fontSize: 13 }}>{task.name}</div>
                         <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
                           {task.client.name}
-                          {task.assignee && <span> • {task.assignee.name}</span>}
                         </div>
                       </div>
                       <span style={{
