@@ -21,12 +21,20 @@ type Task = {
   category: { id: string; name: string } | null;
   categoryId?: string | null;
   projectId: string | null;
+  assigneeId?: string | null;
+  assignee?: { id: string; name: string } | null;
 };
 
 type TaskCategory = {
   id: string;
   name: string;
   order: number;
+};
+
+type TeamMember = {
+  id: string;
+  name: string;
+  email: string;
 };
 
 const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
@@ -39,12 +47,19 @@ export default function ClientTasksPage() {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   
+  // Filter state
+  const [filterStatus, setFilterStatus] = useState<string>("ALL");
+  const [filterPriority, setFilterPriority] = useState<string>("ALL");
+  const [filterAssignee, setFilterAssignee] = useState<string>("ALL");
+  const [hideCompleted, setHideCompleted] = useState(true);
+  
   // Side panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [editForm, setEditForm] = useState<Partial<Task>>({});
+  const [editForm, setEditForm] = useState<any>({});
   const [saving, setSaving] = useState(false);
 
   // Quick add state per category
@@ -56,10 +71,12 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId).then(res => res.json()),
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData]) => {
+      fetch("/api/users").then(res => res.json()),
+    ]).then(([clientData, tasksData, categoriesData, usersData]) => {
       setClient(clientData);
       setTasks(tasksData);
       setCategories(categoriesData);
+      setTeamMembers(usersData);
       setLoading(false);
     });
   }, [clientId]);
@@ -120,6 +137,7 @@ export default function ClientTasksPage() {
       internalLink: task.internalLink || "",
       internalLinkLabel: task.internalLinkLabel || "",
       categoryId: task.category?.id || "",
+      assigneeId: task.assigneeId || "",
     });
   }
 
@@ -145,11 +163,23 @@ export default function ClientTasksPage() {
     fetchTasks();
   }
 
+  // Filter tasks
+  const filteredTasks = tasks.filter(task => {
+    if (hideCompleted && task.status === "COMPLETED") return false;
+    if (filterStatus !== "ALL" && task.status !== filterStatus) return false;
+    if (filterPriority !== "ALL" && task.priority !== filterPriority) return false;
+    if (filterAssignee !== "ALL") {
+      if (filterAssignee === "UNASSIGNED" && task.assigneeId) return false;
+      if (filterAssignee !== "UNASSIGNED" && task.assigneeId !== filterAssignee) return false;
+    }
+    return true;
+  });
+
   // Group tasks by category
   const groupedTasks: Record<string, Task[]> = {};
   const uncategorized: Task[] = [];
   
-  tasks.forEach(task => {
+  filteredTasks.forEach(task => {
     if (task.category) {
       if (!groupedTasks[task.category.id]) {
         groupedTasks[task.category.id] = [];
@@ -162,6 +192,14 @@ export default function ClientTasksPage() {
 
   // Sort categories by order
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
+
+  // Count active filters
+  const activeFilterCount = [
+    filterStatus !== "ALL",
+    filterPriority !== "ALL",
+    filterAssignee !== "ALL",
+    !hideCompleted,
+  ].filter(Boolean).length;
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -178,7 +216,7 @@ export default function ClientTasksPage() {
   const renderTaskRow = (task: Task) => (
     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
       {/* Task Name */}
-      <td style={{ padding: "10px 12px", minWidth: 200 }}>
+      <td style={{ padding: "10px 12px", minWidth: 180 }}>
         <div 
           onClick={() => openTaskPanel(task)}
           style={{ 
@@ -190,6 +228,28 @@ export default function ClientTasksPage() {
         >
           {task.name}
         </div>
+      </td>
+
+      {/* Assignee */}
+      <td style={{ padding: "10px 12px", width: 120 }}>
+        <select
+          value={task.assigneeId || ""}
+          onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
+          style={{
+            padding: "4px 8px",
+            borderRadius: 6,
+            border: "1px solid " + theme.colors.borderLight,
+            fontSize: 11,
+            background: task.assigneeId ? theme.colors.infoBg : theme.colors.bgTertiary,
+            color: task.assigneeId ? theme.colors.info : theme.colors.textMuted,
+            cursor: "pointer",
+            outline: "none",
+            maxWidth: 100,
+          }}
+        >
+          <option value="">Unassigned</option>
+          {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+        </select>
       </td>
 
       {/* Due Date */}
@@ -205,7 +265,9 @@ export default function ClientTasksPage() {
             fontSize: 12,
             background: "transparent",
             cursor: "pointer",
-            color: theme.colors.textSecondary,
+            color: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED" 
+              ? theme.colors.error 
+              : theme.colors.textSecondary,
           }}
           onFocus={(e) => e.target.style.borderColor = theme.colors.borderMedium}
           onBlur={(e) => e.target.style.borderColor = "transparent"}
@@ -255,28 +317,28 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Notes/Links Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 200 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.notes || "-"}
         </div>
       </td>
 
       {/* Next Steps Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 120 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.nextSteps || "-"}
         </div>
       </td>
 
       {/* External Link */}
-      <td style={{ padding: "10px 12px", width: 80 }}>
+      <td style={{ padding: "10px 12px", width: 70 }}>
         {task.externalLink ? (
           <a href={task.externalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
             background: theme.colors.successBg,
             color: theme.colors.success,
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 10,
             textDecoration: "none",
             fontWeight: 500,
           }}>
@@ -288,14 +350,14 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Internal Link */}
-      <td style={{ padding: "10px 12px", width: 80 }}>
+      <td style={{ padding: "10px 12px", width: 70 }}>
         {task.internalLink ? (
           <a href={task.internalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
             background: theme.colors.infoBg,
             color: theme.colors.info,
             borderRadius: 4,
-            fontSize: 11,
+            fontSize: 10,
             textDecoration: "none",
             fontWeight: 500,
           }}>
@@ -307,7 +369,7 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Actions */}
-      <td style={{ padding: "10px 12px", width: 100, textAlign: "right" }}>
+      <td style={{ padding: "10px 12px", width: 90, textAlign: "right" }}>
         <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
           <button
             onClick={() => openTaskPanel(task)}
@@ -436,10 +498,11 @@ export default function ClientTasksPage() {
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
                   <thead>
                     <tr style={{ background: theme.colors.bgPrimary }}>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Task</th>
+                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Assignee</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Due Date</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Priority</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Status</th>
@@ -473,19 +536,122 @@ export default function ClientTasksPage() {
           </Link>
         </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Tasks</h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
-              {client?.name} • {tasks.length} tasks ({tasks.filter(t => t.status !== "COMPLETED").length} active)
+              {client?.name} • {filteredTasks.length} tasks shown ({tasks.filter(t => t.status !== "COMPLETED").length} active total)
             </p>
           </div>
+        </div>
+
+        {/* Filters */}
+        <div style={{ 
+          background: theme.colors.bgSecondary, 
+          padding: 16, 
+          borderRadius: 12, 
+          border: "1px solid " + theme.colors.borderLight,
+          marginBottom: 24,
+          display: "flex",
+          gap: 16,
+          alignItems: "center",
+          flexWrap: "wrap",
+        }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
+            Filters {activeFilterCount > 0 && `(${activeFilterCount})`}:
+          </span>
+
+          {/* Status Filter */}
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid " + theme.colors.borderMedium,
+              fontSize: 13,
+              cursor: "pointer",
+              background: filterStatus !== "ALL" ? theme.colors.infoBg : "white",
+            }}
+          >
+            <option value="ALL">All Statuses</option>
+            {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+          </select>
+
+          {/* Priority Filter */}
+          <select
+            value={filterPriority}
+            onChange={(e) => setFilterPriority(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid " + theme.colors.borderMedium,
+              fontSize: 13,
+              cursor: "pointer",
+              background: filterPriority !== "ALL" ? theme.colors.warningBg : "white",
+            }}
+          >
+            <option value="ALL">All Priorities</option>
+            {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+
+          {/* Assignee Filter */}
+          <select
+            value={filterAssignee}
+            onChange={(e) => setFilterAssignee(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid " + theme.colors.borderMedium,
+              fontSize: 13,
+              cursor: "pointer",
+              background: filterAssignee !== "ALL" ? theme.colors.successBg : "white",
+            }}
+          >
+            <option value="ALL">All Assignees</option>
+            <option value="UNASSIGNED">Unassigned</option>
+            {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+
+          {/* Hide Completed Toggle */}
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: theme.colors.textSecondary, cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={hideCompleted}
+              onChange={(e) => setHideCompleted(e.target.checked)}
+              style={{ cursor: "pointer" }}
+            />
+            Hide completed
+          </label>
+
+          {/* Clear Filters */}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => {
+                setFilterStatus("ALL");
+                setFilterPriority("ALL");
+                setFilterAssignee("ALL");
+                setHideCompleted(true);
+              }}
+              style={{
+                padding: "8px 12px",
+                background: theme.colors.bgTertiary,
+                color: theme.colors.textSecondary,
+                border: "none",
+                borderRadius: 6,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              Clear filters
+            </button>
+          )}
         </div>
 
         {/* Categories with Tasks */}
         {sortedCategories.map(category => {
           const categoryTasks = groupedTasks[category.id] || [];
-          if (categoryTasks.length === 0 && !quickAddCategory) return null;
+          if (categoryTasks.length === 0 && quickAddCategory !== category.id) return null;
           return renderCategorySection(category, categoryTasks);
         })}
 
@@ -495,6 +661,37 @@ export default function ClientTasksPage() {
         }
 
         {/* Empty State */}
+        {filteredTasks.length === 0 && tasks.length > 0 && (
+          <div style={{ 
+            background: theme.colors.bgSecondary, 
+            padding: 48, 
+            borderRadius: 12, 
+            textAlign: "center",
+            border: "1px solid " + theme.colors.borderLight 
+          }}>
+            <p style={{ color: theme.colors.textMuted, marginBottom: 16 }}>No tasks match your filters</p>
+            <button
+              onClick={() => {
+                setFilterStatus("ALL");
+                setFilterPriority("ALL");
+                setFilterAssignee("ALL");
+                setHideCompleted(false);
+              }}
+              style={{
+                padding: "12px 24px",
+                background: theme.colors.primary,
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              Clear all filters
+            </button>
+          </div>
+        )}
+
         {tasks.length === 0 && (
           <div style={{ 
             background: theme.colors.bgSecondary, 
@@ -608,7 +805,7 @@ export default function ClientTasksPage() {
                 />
               </div>
 
-              {/* Category & Due Date */}
+              {/* Category & Assignee */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Category</label>
@@ -622,14 +819,27 @@ export default function ClientTasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
-                  <input
-                    type="date"
-                    value={editForm.dueDate || ""}
-                    onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Assignee</label>
+                  <select
+                    value={editForm.assigneeId || ""}
+                    onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value })}
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    <option value="">Unassigned</option>
+                    {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
                 </div>
+              </div>
+
+              {/* Due Date */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
+                <input
+                  type="date"
+                  value={editForm.dueDate || ""}
+                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                  style={inputStyle}
+                />
               </div>
 
               {/* Notes */}
