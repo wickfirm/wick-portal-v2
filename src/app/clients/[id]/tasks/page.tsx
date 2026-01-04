@@ -307,21 +307,38 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Actions */}
-      <td style={{ padding: "10px 12px", width: 60, textAlign: "right" }}>
-        <button
-          onClick={() => deleteTask(task.id)}
-          style={{
-            padding: "4px 8px",
-            background: theme.colors.errorBg,
-            color: theme.colors.error,
-            border: "none",
-            borderRadius: 4,
-            fontSize: 11,
-            cursor: "pointer",
-          }}
-        >
-          ✕
-        </button>
+      <td style={{ padding: "10px 12px", width: 100, textAlign: "right" }}>
+        <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+          <button
+            onClick={() => openTaskPanel(task)}
+            style={{
+              padding: "4px 10px",
+              background: theme.colors.infoBg,
+              color: theme.colors.info,
+              border: "none",
+              borderRadius: 4,
+              fontSize: 11,
+              cursor: "pointer",
+              fontWeight: 500,
+            }}
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => deleteTask(task.id)}
+            style={{
+              padding: "4px 8px",
+              background: theme.colors.errorBg,
+              color: theme.colors.error,
+              border: "none",
+              borderRadius: 4,
+              fontSize: 11,
+              cursor: "pointer",
+            }}
+          >
+            ✕
+          </button>
+        </div>
       </td>
     </tr>
   );
