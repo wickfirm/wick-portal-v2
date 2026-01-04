@@ -59,6 +59,8 @@ model Project {
   clientId    String
   client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   stages      ProjectStage[]
+  tasks     ClientTask[]
+  resources ProjectResource[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -77,6 +79,20 @@ model ProjectStage {
   updatedAt   DateTime  @updatedAt
 
   @@map("project_stages")
+}
+
+model ProjectResource {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name      String
+  url       String
+  type      String   @default("LINK")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("project_resources")
 }
 
 model StageTemplate {
@@ -155,6 +171,8 @@ model ClientTask {
   order             Int          @default(0)
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
+  projectId         String?
+  project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
 
   @@map("client_tasks")
 }
