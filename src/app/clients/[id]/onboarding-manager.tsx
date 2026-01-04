@@ -8,6 +8,7 @@ type OnboardingItem = {
   id: string;
   name: string;
   description: string | null;
+  serviceType: string | null;
   order: number;
   isCompleted: boolean;
   completedAt: string | null;
@@ -15,6 +16,18 @@ type OnboardingItem = {
   notes: string | null;
   resourceUrl: string | null;
   resourceLabel: string | null;
+};
+
+const SERVICE_TYPE_LABELS: Record<string, string> = {
+  GENERAL: "General",
+  SEO: "SEO",
+  AEO: "AEO",
+  WEB_DEVELOPMENT: "Web Development",
+  PAID_MEDIA: "Paid Media",
+  SOCIAL_MEDIA: "Social Media",
+  CONTENT: "Content",
+  BRANDING: "Branding",
+  CONSULTING: "Consulting",
 };
 
 export default function OnboardingManager({ 
@@ -29,6 +42,7 @@ export default function OnboardingManager({
   const router = useRouter();
   const [items, setItems] = useState<OnboardingItem[]>(initialItems);
   const [initializing, setInitializing] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
@@ -41,9 +55,34 @@ export default function OnboardingManager({
   const total = items.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
+  // Group items by service type
+  const groupedItems = items.reduce((acc, item) => {
+    const key = item.serviceType || "GENERAL";
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(item);
+    return acc;
+  }, {} as Record<string, OnboardingItem[]>);
+
+  // Sort groups: GENERAL first, then alphabetically
+  const sortedGroups = Object.keys(groupedItems).sort((a, b) => {
+    if (a === "GENERAL") return -1;
+    if (b === "GENERAL") return 1;
+    return a.localeCompare(b);
+  });
+
+  function toggleSection(serviceType: string) {
+    const newCollapsed = new Set(collapsedSections);
+    if (newCollapsed.has(serviceType)) {
+      newCollapsed.delete(serviceType);
+    } else {
+      newCollapsed.add(serviceType);
+    }
+    setCollapsedSections(newCollapsed);
+  }
+
   async function initializeOnboarding() {
     setInitializing(true);
-    const res = await fetch(`/api/clients/${clientId}/onboarding`, {
+    const res = await fetch("/api/clients/" + clientId + "/onboarding", {
       method: "POST",
     });
 
@@ -56,7 +95,7 @@ export default function OnboardingManager({
   }
 
   async function toggleItem(item: OnboardingItem) {
-    const res = await fetch(`/api/onboarding-items/${item.id}`, {
+    const res = await fetch("/api/onboarding-items/" + item.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isCompleted: !item.isCompleted }),
@@ -74,7 +113,7 @@ export default function OnboardingManager({
   }
 
   async function saveNotes(item: OnboardingItem) {
-    const res = await fetch(`/api/onboarding-items/${item.id}`, {
+    const res = await fetch("/api/onboarding-items/" + item.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ notes: notesValue }),
@@ -88,7 +127,7 @@ export default function OnboardingManager({
   }
 
   async function saveResource(item: OnboardingItem) {
-    const res = await fetch(`/api/onboarding-items/${item.id}`, {
+    const res = await fetch("/api/onboarding-items/" + item.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
@@ -115,7 +154,7 @@ export default function OnboardingManager({
   }
 
   async function removeResource(item: OnboardingItem) {
-    const res = await fetch(`/api/onboarding-items/${item.id}`, {
+    const res = await fetch("/api/onboarding-items/" + item.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resourceUrl: null, resourceLabel: null }),
@@ -147,10 +186,6 @@ export default function OnboardingManager({
     return "Link";
   }
 
-  if (clientStatus !== "LEAD" && clientStatus !== "ONBOARDING") {
-    return null;
-  }
-
   const inputStyle: React.CSSProperties = {
     padding: "8px 12px",
     border: "1px solid " + theme.colors.borderMedium,
@@ -161,292 +196,233 @@ export default function OnboardingManager({
     boxSizing: "border-box",
   };
 
+  const renderItem = (item: OnboardingItem) => (
+    <div 
+      key={item.id} 
+      style={{ padding: "12px 16px", borderBottom: "1px solid " + theme.colors.bgTertiary }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+        <button
+          onClick={() => toggleItem(item)}
+          style={{ 
+            width: 22, 
+            height: 22, 
+            borderRadius: 6, 
+            border: item.isCompleted ? "none" : "2px solid " + theme.colors.borderMedium,
+            background: item.isCompleted ? theme.colors.success : "white",
+            color: "white", 
+            fontSize: 12, 
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+            marginTop: 2
+          }}
+        >
+          {item.isCompleted ? "✓" : ""}
+        </button>
+
+        <div style={{ flex: 1 }}>
+          <div style={{ 
+            fontWeight: 500, 
+            fontSize: 14,
+            textDecoration: item.isCompleted ? "line-through" : "none",
+            color: item.isCompleted ? theme.colors.textMuted : theme.colors.textPrimary
+          }}>
+            {item.name}
+          </div>
+          
+          {item.description && (
+            <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 }}>
+              {item.description}
+            </div>
+          )}
+
+          {item.completedAt && item.completedBy && (
+            <div style={{ fontSize: 11, color: theme.colors.success, marginTop: 4 }}>
+              Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
+            </div>
+          )}
+
+          {/* Resource Link Section */}
+          <div style={{ marginTop: 8 }}>
+            {editingResourceId === item.id ? (
+              <div style={{ 
+                background: theme.colors.bgPrimary, 
+                padding: 12, 
+                borderRadius: 8, 
+                border: "1px solid " + theme.colors.borderLight 
+              }}>
+                <div style={{ marginBottom: 8 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Resource URL</label>
+                  <input
+                    value={resourceUrl}
+                    onChange={(e) => {
+                      setResourceUrl(e.target.value);
+                      if (!resourceLabel && e.target.value) {
+                        setResourceLabel(guessLabelFromUrl(e.target.value));
+                      }
+                    }}
+                    placeholder="https://drive.google.com/..."
+                    style={inputStyle}
+                    autoFocus
+                  />
+                </div>
+                <div style={{ marginBottom: 10 }}>
+                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Label (optional)</label>
+                  <input
+                    value={resourceLabel}
+                    onChange={(e) => setResourceLabel(e.target.value)}
+                    placeholder="e.g., Brand Guidelines PDF"
+                    style={inputStyle}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button onClick={() => saveResource(item)} style={{ padding: "6px 14px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Save</button>
+                  <button onClick={() => setEditingResourceId(null)} style={{ padding: "6px 14px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+                </div>
+              </div>
+            ) : item.resourceUrl ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <a href={item.resourceUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", background: theme.colors.infoBg, color: theme.colors.info, borderRadius: 6, fontSize: 12, fontWeight: 500, textDecoration: "none" }}>
+                  {item.resourceLabel || "View Resource"}
+                </a>
+                <button onClick={() => startEditResource(item)} style={{ padding: "4px 8px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>Edit</button>
+                <button onClick={() => removeResource(item)} style={{ padding: "4px 8px", background: theme.colors.errorBg, color: theme.colors.error, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>Remove</button>
+              </div>
+            ) : (
+              <button onClick={() => startEditResource(item)} style={{ padding: "4px 10px", background: "transparent", color: theme.colors.textMuted, border: "1px dashed " + theme.colors.borderMedium, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>
+                + Add link
+              </button>
+            )}
+          </div>
+
+          {/* Notes section */}
+          <div style={{ marginTop: 6 }}>
+            {editingNotesId === item.id ? (
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="Add notes..."
+                  style={{ ...inputStyle, flex: 1, padding: "6px 10px", fontSize: 12 }}
+                  autoFocus
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") saveNotes(item);
+                    if (e.key === "Escape") setEditingNotesId(null);
+                  }}
+                />
+                <button onClick={() => saveNotes(item)} style={{ padding: "6px 12px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Save</button>
+                <button onClick={() => setEditingNotesId(null)} style={{ padding: "6px 12px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Cancel</button>
+              </div>
+            ) : (
+              <div 
+                onClick={() => { setEditingNotesId(item.id); setNotesValue(item.notes || ""); }}
+                style={{ fontSize: 12, color: item.notes ? theme.colors.textSecondary : theme.colors.textMuted, cursor: "pointer", fontStyle: item.notes ? "normal" : "italic" }}
+              >
+                {item.notes || "+ Add notes"}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+    <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24, overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "16px 20px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>Onboarding Checklist</h3>
-        {items.length > 0 && (
-          <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{completed}/{total} completed ({pct}%)</span>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {items.length > 0 && (
+            <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{completed}/{total} ({pct}%)</span>
+          )}
+          {items.length > 0 && (
+            <button
+              onClick={initializeOnboarding}
+              disabled={initializing}
+              style={{ padding: "6px 12px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
+            >
+              {initializing ? "..." : "Refresh"}
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* Progress bar */}
       {items.length > 0 && (
-        <div style={{ height: 8, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 16 }}>
-          <div style={{ 
-            height: "100%", 
-            width: pct + "%", 
-            background: pct === 100 ? theme.colors.success : theme.colors.primary, 
-            borderRadius: 4,
-            transition: "width 0.3s ease"
-          }} />
+        <div style={{ height: 4, background: theme.colors.bgTertiary }}>
+          <div style={{ height: "100%", width: pct + "%", background: pct === 100 ? theme.colors.success : theme.colors.primary, transition: "width 0.3s ease" }} />
         </div>
       )}
 
+      {/* Content */}
       {items.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 24 }}>
-          <p style={{ color: theme.colors.textMuted, marginBottom: 16 }}>No onboarding checklist initialized yet.</p>
+        <div style={{ textAlign: "center", padding: 32 }}>
+          <p style={{ color: theme.colors.textMuted, marginBottom: 16, fontSize: 14 }}>No onboarding checklist initialized yet.</p>
           <button
             onClick={initializeOnboarding}
             disabled={initializing}
-            style={{ 
-              padding: "12px 24px", 
-              background: theme.colors.primary, 
-              color: "white", 
-              border: "none", 
-              borderRadius: theme.borderRadius.md, 
-              cursor: "pointer",
-              fontWeight: 500,
-              fontSize: 14
-            }}
+            style={{ padding: "12px 24px", background: theme.colors.primary, color: "white", border: "none", borderRadius: theme.borderRadius.md, cursor: "pointer", fontWeight: 500, fontSize: 14 }}
           >
             {initializing ? "Initializing..." : "Start Onboarding"}
           </button>
         </div>
       ) : (
         <div>
-          {items.sort((a, b) => a.order - b.order).map((item) => (
-            <div 
-              key={item.id} 
-              style={{ padding: 16, borderBottom: "1px solid " + theme.colors.bgTertiary }}
-            >
-              <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <button
-                  onClick={() => toggleItem(item)}
+          {sortedGroups.map((serviceType) => {
+            const groupItems = groupedItems[serviceType].sort((a, b) => a.order - b.order);
+            const groupCompleted = groupItems.filter(i => i.isCompleted).length;
+            const isCollapsed = collapsedSections.has(serviceType);
+            
+            return (
+              <div key={serviceType}>
+                {/* Section Header */}
+                <div 
+                  onClick={() => toggleSection(serviceType)}
                   style={{ 
-                    width: 24, 
-                    height: 24, 
-                    borderRadius: 6, 
-                    border: item.isCompleted ? "none" : "2px solid " + theme.colors.borderMedium,
-                    background: item.isCompleted ? theme.colors.success : "white",
-                    color: "white", 
-                    fontSize: 14, 
-                    cursor: "pointer",
+                    padding: "12px 20px", 
+                    background: theme.colors.bgTertiary, 
+                    borderBottom: "1px solid " + theme.colors.borderLight,
                     display: "flex",
+                    justifyContent: "space-between",
                     alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                    marginTop: 2
+                    cursor: "pointer",
+                    userSelect: "none"
                   }}
                 >
-                  {item.isCompleted ? "✓" : ""}
-                </button>
-
-                <div style={{ flex: 1 }}>
-                  <div style={{ 
-                    fontWeight: 500, 
-                    textDecoration: item.isCompleted ? "line-through" : "none",
-                    color: item.isCompleted ? theme.colors.textMuted : theme.colors.textPrimary
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span style={{ fontSize: 12, color: theme.colors.textMuted, transition: "transform 0.2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>▼</span>
+                    <span style={{ fontWeight: 600, fontSize: 14, color: theme.colors.textPrimary }}>
+                      {SERVICE_TYPE_LABELS[serviceType] || serviceType}
+                    </span>
+                  </div>
+                  <span style={{ 
+                    fontSize: 12, 
+                    padding: "2px 8px", 
+                    borderRadius: 10, 
+                    background: groupCompleted === groupItems.length ? theme.colors.successBg : theme.colors.bgSecondary,
+                    color: groupCompleted === groupItems.length ? theme.colors.success : theme.colors.textSecondary
                   }}>
-                    {item.name}
-                  </div>
-                  
-                  {item.description && (
-                    <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
-                      {item.description}
-                    </div>
-                  )}
-
-                  {item.completedAt && item.completedBy && (
-                    <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>
-                      Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
-                    </div>
-                  )}
-
-                  {/* Resource Link Section */}
-                  <div style={{ marginTop: 10 }}>
-                    {editingResourceId === item.id ? (
-                      <div style={{ 
-                        background: theme.colors.bgPrimary, 
-                        padding: 12, 
-                        borderRadius: 8, 
-                        border: "1px solid " + theme.colors.borderLight 
-                      }}>
-                        <div style={{ marginBottom: 8 }}>
-                          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Resource URL</label>
-                          <input
-                            value={resourceUrl}
-                            onChange={(e) => {
-                              setResourceUrl(e.target.value);
-                              if (!resourceLabel && e.target.value) {
-                                setResourceLabel(guessLabelFromUrl(e.target.value));
-                              }
-                            }}
-                            placeholder="https://drive.google.com/..."
-                            style={inputStyle}
-                            autoFocus
-                          />
-                        </div>
-                        <div style={{ marginBottom: 10 }}>
-                          <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Label (optional)</label>
-                          <input
-                            value={resourceLabel}
-                            onChange={(e) => setResourceLabel(e.target.value)}
-                            placeholder="e.g., Brand Guidelines PDF"
-                            style={inputStyle}
-                          />
-                        </div>
-                        <div style={{ display: "flex", gap: 8 }}>
-                          <button
-                            onClick={() => saveResource(item)}
-                            style={{ 
-                              padding: "8px 16px", 
-                              background: theme.colors.primary, 
-                              color: "white", 
-                              border: "none", 
-                              borderRadius: 6, 
-                              fontSize: 13, 
-                              fontWeight: 500,
-                              cursor: "pointer" 
-                            }}
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={() => setEditingResourceId(null)}
-                            style={{ 
-                              padding: "8px 16px", 
-                              background: theme.colors.bgTertiary, 
-                              color: theme.colors.textSecondary, 
-                              border: "none", 
-                              borderRadius: 6, 
-                              fontSize: 13, 
-                              fontWeight: 500,
-                              cursor: "pointer" 
-                            }}
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : item.resourceUrl ? (
-                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        <a
-                          href={item.resourceUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 6,
-                            padding: "6px 12px",
-                            background: theme.colors.infoBg,
-                            color: theme.colors.info,
-                            borderRadius: 6,
-                            fontSize: 13,
-                            fontWeight: 500,
-                            textDecoration: "none",
-                          }}
-                        >
-                          {item.resourceLabel || "View Resource"}
-                        </a>
-                        <button
-                          onClick={() => startEditResource(item)}
-                          style={{
-                            padding: "6px 10px",
-                            background: theme.colors.bgTertiary,
-                            color: theme.colors.textSecondary,
-                            border: "none",
-                            borderRadius: 6,
-                            fontSize: 12,
-                            cursor: "pointer"
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => removeResource(item)}
-                          style={{
-                            padding: "6px 10px",
-                            background: theme.colors.errorBg,
-                            color: theme.colors.error,
-                            border: "none",
-                            borderRadius: 6,
-                            fontSize: 12,
-                            cursor: "pointer"
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => startEditResource(item)}
-                        style={{
-                          padding: "6px 12px",
-                          background: "transparent",
-                          color: theme.colors.textMuted,
-                          border: "1px dashed " + theme.colors.borderMedium,
-                          borderRadius: 6,
-                          fontSize: 13,
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 6
-                        }}
-                      >
-                        + Add resource link
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Notes section */}
-                  <div style={{ marginTop: 10 }}>
-                    {editingNotesId === item.id ? (
-                      <div style={{ display: "flex", gap: 8 }}>
-                        <input
-                          value={notesValue}
-                          onChange={(e) => setNotesValue(e.target.value)}
-                          placeholder="Add notes (e.g., N/A, pending, etc.)"
-                          style={{ ...inputStyle, flex: 1 }}
-                          autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveNotes(item);
-                            if (e.key === "Escape") setEditingNotesId(null);
-                          }}
-                        />
-                        <button
-                          onClick={() => saveNotes(item)}
-                          style={{ padding: "8px 12px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer" }}
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => setEditingNotesId(null)}
-                          style={{ padding: "8px 12px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 13, cursor: "pointer" }}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <div 
-                        onClick={() => { setEditingNotesId(item.id); setNotesValue(item.notes || ""); }}
-                        style={{ 
-                          fontSize: 13, 
-                          color: item.notes ? theme.colors.textSecondary : theme.colors.textMuted, 
-                          cursor: "pointer",
-                          fontStyle: item.notes ? "normal" : "italic",
-                          padding: "4px 0"
-                        }}
-                      >
-                        {item.notes || "+ Add notes"}
-                      </div>
-                    )}
-                  </div>
+                    {groupCompleted}/{groupItems.length}
+                  </span>
                 </div>
+                
+                {/* Section Items */}
+                {!isCollapsed && (
+                  <div>
+                    {groupItems.map(renderItem)}
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
 
           {pct === 100 && (
-            <div style={{ 
-              marginTop: 16, 
-              padding: 16, 
-              background: theme.colors.successBg, 
-              borderRadius: 8, 
-              textAlign: "center",
-              color: theme.colors.success
-            }}>
-              Onboarding complete! Consider changing client status to ACTIVE.
+            <div style={{ padding: 16, background: theme.colors.successBg, textAlign: "center", color: theme.colors.success, fontSize: 14 }}>
+              Onboarding complete!
             </div>
           )}
         </div>
