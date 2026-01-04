@@ -107,6 +107,7 @@ model OnboardingItem {
   id            String    @id @default(cuid())
   name          String
   description   String?
+  serviceType   String    @default("GENERAL")
   order         Int
   isCompleted   Boolean   @default(false)
   completedAt   DateTime?
