@@ -21,20 +21,12 @@ type Task = {
   category: { id: string; name: string } | null;
   categoryId?: string | null;
   projectId: string | null;
-  assigneeId?: string | null;
-  assignee?: { id: string; name: string } | null;
 };
 
 type TaskCategory = {
   id: string;
   name: string;
   order: number;
-};
-
-type TeamMember = {
-  id: string;
-  name: string;
-  email: string;
 };
 
 const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
@@ -47,14 +39,12 @@ export default function ClientTasksPage() {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   
   // Filter state
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
-  const [filterAssignee, setFilterAssignee] = useState<string>("ALL");
   const [hideCompleted, setHideCompleted] = useState(true);
   
   // Side panel state
@@ -71,12 +61,13 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId).then(res => res.json()),
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
-      fetch("/api/users").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData, usersData]) => {
+    ]).then(([clientData, tasksData, categoriesData]) => {
       setClient(clientData);
-      setTasks(tasksData);
-      setCategories(categoriesData);
-      setTeamMembers(usersData);
+      setTasks(Array.isArray(tasksData) ? tasksData : []);
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load data:", err);
       setLoading(false);
     });
   }, [clientId]);
@@ -84,7 +75,7 @@ export default function ClientTasksPage() {
   async function fetchTasks() {
     const res = await fetch("/api/clients/" + clientId + "/tasks");
     const data = await res.json();
-    setTasks(data);
+    setTasks(Array.isArray(data) ? data : []);
   }
 
   function toggleCategory(categoryId: string) {
@@ -137,7 +128,6 @@ export default function ClientTasksPage() {
       internalLink: task.internalLink || "",
       internalLinkLabel: task.internalLinkLabel || "",
       categoryId: task.category?.id || "",
-      assigneeId: task.assigneeId || "",
     });
   }
 
@@ -168,10 +158,6 @@ export default function ClientTasksPage() {
     if (hideCompleted && task.status === "COMPLETED") return false;
     if (filterStatus !== "ALL" && task.status !== filterStatus) return false;
     if (filterPriority !== "ALL" && task.priority !== filterPriority) return false;
-    if (filterAssignee !== "ALL") {
-      if (filterAssignee === "UNASSIGNED" && task.assigneeId) return false;
-      if (filterAssignee !== "UNASSIGNED" && task.assigneeId !== filterAssignee) return false;
-    }
     return true;
   });
 
@@ -197,7 +183,6 @@ export default function ClientTasksPage() {
   const activeFilterCount = [
     filterStatus !== "ALL",
     filterPriority !== "ALL",
-    filterAssignee !== "ALL",
     !hideCompleted,
   ].filter(Boolean).length;
 
@@ -216,7 +201,7 @@ export default function ClientTasksPage() {
   const renderTaskRow = (task: Task) => (
     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
       {/* Task Name */}
-      <td style={{ padding: "10px 12px", minWidth: 180 }}>
+      <td style={{ padding: "10px 12px", minWidth: 200 }}>
         <div 
           onClick={() => openTaskPanel(task)}
           style={{ 
@@ -230,30 +215,8 @@ export default function ClientTasksPage() {
         </div>
       </td>
 
-      {/* Assignee */}
-      <td style={{ padding: "10px 12px", width: 120 }}>
-        <select
-          value={task.assigneeId || ""}
-          onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
-          style={{
-            padding: "4px 8px",
-            borderRadius: 6,
-            border: "1px solid " + theme.colors.borderLight,
-            fontSize: 11,
-            background: task.assigneeId ? theme.colors.infoBg : theme.colors.bgTertiary,
-            color: task.assigneeId ? theme.colors.info : theme.colors.textMuted,
-            cursor: "pointer",
-            outline: "none",
-            maxWidth: 100,
-          }}
-        >
-          <option value="">Unassigned</option>
-          {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-        </select>
-      </td>
-
       {/* Due Date */}
-      <td style={{ padding: "10px 12px", width: 110 }}>
+      <td style={{ padding: "10px 12px", width: 120 }}>
         <input
           type="date"
           value={task.dueDate ? task.dueDate.split("T")[0] : ""}
@@ -296,7 +259,7 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Status */}
-      <td style={{ padding: "10px 12px", width: 120 }}>
+      <td style={{ padding: "10px 12px", width: 130 }}>
         <select
           value={task.status}
           onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
@@ -317,21 +280,21 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Notes/Links Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 180 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.notes || "-"}
         </div>
       </td>
 
       {/* Next Steps Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 120 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.nextSteps || "-"}
         </div>
       </td>
 
       {/* External Link */}
-      <td style={{ padding: "10px 12px", width: 70 }}>
+      <td style={{ padding: "10px 12px", width: 80 }}>
         {task.externalLink ? (
           <a href={task.externalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
@@ -350,7 +313,7 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Internal Link */}
-      <td style={{ padding: "10px 12px", width: 70 }}>
+      <td style={{ padding: "10px 12px", width: 80 }}>
         {task.internalLink ? (
           <a href={task.internalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
@@ -369,7 +332,7 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Actions */}
-      <td style={{ padding: "10px 12px", width: 90, textAlign: "right" }}>
+      <td style={{ padding: "10px 12px", width: 100, textAlign: "right" }}>
         <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
           <button
             onClick={() => openTaskPanel(task)}
@@ -498,11 +461,10 @@ export default function ClientTasksPage() {
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                   <thead>
                     <tr style={{ background: theme.colors.bgPrimary }}>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Task</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Assignee</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Due Date</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Priority</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Status</th>
@@ -595,24 +557,6 @@ export default function ClientTasksPage() {
             {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
 
-          {/* Assignee Filter */}
-          <select
-            value={filterAssignee}
-            onChange={(e) => setFilterAssignee(e.target.value)}
-            style={{
-              padding: "8px 12px",
-              borderRadius: 6,
-              border: "1px solid " + theme.colors.borderMedium,
-              fontSize: 13,
-              cursor: "pointer",
-              background: filterAssignee !== "ALL" ? theme.colors.successBg : "white",
-            }}
-          >
-            <option value="ALL">All Assignees</option>
-            <option value="UNASSIGNED">Unassigned</option>
-            {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-          </select>
-
           {/* Hide Completed Toggle */}
           <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: theme.colors.textSecondary, cursor: "pointer" }}>
             <input
@@ -630,7 +574,6 @@ export default function ClientTasksPage() {
               onClick={() => {
                 setFilterStatus("ALL");
                 setFilterPriority("ALL");
-                setFilterAssignee("ALL");
                 setHideCompleted(true);
               }}
               style={{
@@ -674,7 +617,6 @@ export default function ClientTasksPage() {
               onClick={() => {
                 setFilterStatus("ALL");
                 setFilterPriority("ALL");
-                setFilterAssignee("ALL");
                 setHideCompleted(false);
               }}
               style={{
@@ -718,7 +660,7 @@ export default function ClientTasksPage() {
           </div>
         )}
 
-        {/* Add New Category Section */}
+        {/* Add Uncategorized Task */}
         {tasks.length > 0 && (
           <div style={{ marginTop: 24 }}>
             <button
@@ -805,7 +747,7 @@ export default function ClientTasksPage() {
                 />
               </div>
 
-              {/* Category & Assignee */}
+              {/* Category & Due Date */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Category</label>
@@ -819,27 +761,14 @@ export default function ClientTasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Assignee</label>
-                  <select
-                    value={editForm.assigneeId || ""}
-                    onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value })}
-                    style={{ ...inputStyle, cursor: "pointer" }}
-                  >
-                    <option value="">Unassigned</option>
-                    {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
+                  <input
+                    type="date"
+                    value={editForm.dueDate || ""}
+                    onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                    style={inputStyle}
+                  />
                 </div>
-              </div>
-
-              {/* Due Date */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
-                <input
-                  type="date"
-                  value={editForm.dueDate || ""}
-                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                  style={inputStyle}
-                />
               </div>
 
               {/* Notes */}
