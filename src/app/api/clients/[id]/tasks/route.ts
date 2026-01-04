@@ -15,7 +15,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const tasks = await prisma.clientTask.findMany({
     where,
-    include: { category: true },
+    include: { 
+      category: true,
+      assignee: { select: { id: true, name: true } }
+    },
     orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
   });
 
@@ -40,6 +43,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         clientId: params.id,
         projectId: data.projectId || null,
         categoryId: data.categoryId || null,
+        assigneeId: data.assigneeId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
         status: data.status || "PENDING",
@@ -51,7 +55,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         internalLinkLabel: data.internalLinkLabel || null,
         order: (lastTask?.order ?? 0) + 1,
       },
-      include: { category: true },
+      include: { 
+        category: true,
+        assignee: { select: { id: true, name: true } }
+      },
     });
 
     return NextResponse.json(task);
