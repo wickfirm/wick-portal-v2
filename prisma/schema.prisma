@@ -43,8 +43,23 @@ model Client {
   onboardingItems OnboardingItem[]
   tasks           ClientTask[]
   metrics         ClientMetrics[]
+  resources ClientResource[]
 
   @@map("clients")
+}
+
+model ClientResource {
+  id        String   @id @default(cuid())
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name      String
+  url       String
+  type      String   @default("LINK")
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("client_resources")
 }
 
 model Project {
