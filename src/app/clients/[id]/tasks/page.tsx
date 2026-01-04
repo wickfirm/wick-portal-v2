@@ -19,6 +19,7 @@ type Task = {
   internalLink: string | null;
   internalLinkLabel: string | null;
   category: { id: string; name: string } | null;
+  categoryId?: string | null;
   projectId: string | null;
 };
 
