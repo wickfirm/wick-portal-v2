@@ -338,3 +338,27 @@ enum TaskStatus {
   FUTURE_PLAN
   @@map("task_status")
 }
+
+model TaskStatusOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_status_options")
+}
+
+model TaskPriorityOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_priority_options")
+}
