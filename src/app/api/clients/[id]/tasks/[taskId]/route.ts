@@ -9,7 +9,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string; 
 
   const task = await prisma.clientTask.findUnique({
     where: { id: params.taskId },
-    include: { category: true },
+    include: { 
+      category: true,
+      assignee: { select: { id: true, name: true, email: true } }
+    },
   });
 
   if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -31,6 +34,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
+    if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId || null;
     if (data.nextSteps !== undefined) updateData.nextSteps = data.nextSteps || null;
     if (data.order !== undefined) updateData.order = data.order;
 
@@ -39,7 +43,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string; 
     const task = await prisma.clientTask.update({
       where: { id: params.taskId },
       data: updateData,
-      include: { category: true },
+      include: { 
+        category: true,
+        assignee: { select: { id: true, name: true, email: true } }
+      },
     });
 
     return NextResponse.json(task);
