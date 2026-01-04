@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     });
 
     // Get unique service types from projects
-    const serviceTypes = [...new Set(projects.map(p => p.serviceType))];
+    const serviceTypes = Array.from(new Set(projects.map(p => p.serviceType)));
 
     // Get existing onboarding item names for this client (to avoid duplicates)
     const existingItems = await prisma.onboardingItem.findMany({
