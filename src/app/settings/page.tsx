@@ -35,25 +35,11 @@ export default async function SettingsPage() {
       color: theme.colors.success,
     },
     {
-      title: "Task Categories",
-      description: "Manage categories for client tasks",
-      href: "/settings/task-categories",
-      icon: "📁",
+      title: "Task Settings",
+      description: "Manage categories, statuses, and priorities for tasks",
+      href: "/settings/tasks",
+      icon: "📝",
       color: theme.colors.info,
-    },
-    {
-      title: "Task Statuses",
-      description: "Configure task status options and colors",
-      href: "/settings/task-statuses",
-      icon: "🔄",
-      color: theme.colors.warning,
-    },
-    {
-      title: "Task Priorities",
-      description: "Configure task priority levels and colors",
-      href: "/settings/task-priorities",
-      icon: "⚡",
-      color: theme.colors.error,
     },
   ];
 
