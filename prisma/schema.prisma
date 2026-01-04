@@ -104,18 +104,20 @@ model OnboardingTemplate {
 }
 
 model OnboardingItem {
-  id          String    @id @default(cuid())
-  name        String
-  description String?
-  order       Int
-  isCompleted Boolean   @default(false)
-  completedAt DateTime?
-  completedBy String?
-  notes       String?
-  clientId    String
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  order         Int
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime?
+  completedBy   String?
+  notes         String?
+  resourceUrl   String?
+  resourceLabel String?
+  clientId      String
+  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@map("onboarding_items")
 }
