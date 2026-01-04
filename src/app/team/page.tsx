@@ -18,6 +18,11 @@ export default function TeamPage() {
   const [showForm, setShowForm] = useState(false);
   const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "SPECIALIST" });
   const [adding, setAdding] = useState(false);
+  
+  // Edit state
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", email: "", role: "", password: "" });
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -48,6 +53,48 @@ export default function TeamPage() {
       alert("Failed to add user");
     }
     setAdding(false);
+  }
+
+  function startEdit(user: User) {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || "",
+      email: user.email,
+      role: user.role,
+      password: ""
+    });
+  }
+
+  async function saveEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingUser) return;
+    setSaving(true);
+
+    const payload: any = {
+      name: editForm.name,
+      email: editForm.email,
+      role: editForm.role,
+    };
+    
+    // Only include password if it was changed
+    if (editForm.password) {
+      payload.password = editForm.password;
+    }
+
+    const res = await fetch("/api/team/" + editingUser.id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      setEditingUser(null);
+      fetchUsers();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to update user");
+    }
+    setSaving(false);
   }
 
   async function toggleActive(user: User) {
@@ -190,6 +237,117 @@ export default function TeamPage() {
           </div>
         )}
 
+        {/* Edit User Modal */}
+        {editingUser && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000
+          }}>
+            <div style={{
+              background: theme.colors.bgSecondary,
+              padding: 32,
+              borderRadius: theme.borderRadius.xl,
+              width: "100%",
+              maxWidth: 500,
+              boxShadow: theme.shadows.lg
+            }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginTop: 0, marginBottom: 24, color: theme.colors.textPrimary }}>
+                Edit User
+              </h2>
+              <form onSubmit={saveEdit}>
+                <div style={{ display: "grid", gap: 16, marginBottom: 24 }}>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
+                    <input
+                      value={editForm.name}
+                      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                      style={inputStyle}
+                      placeholder="John Smith"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email</label>
+                    <input
+                      type="email"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                      required
+                      style={inputStyle}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
+                    <select
+                      value={editForm.role}
+                      onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                      style={{ ...inputStyle, cursor: "pointer" }}
+                    >
+                      <option value="ADMIN">Admin</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="SPECIALIST">Specialist</option>
+                      <option value="CLIENT">Client</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
+                      New Password <span style={{ color: theme.colors.textMuted, fontWeight: 400 }}>(leave blank to keep current)</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={editForm.password}
+                      onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                      style={inputStyle}
+                      placeholder="••••••••"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+                  <button
+                    type="button"
+                    onClick={() => setEditingUser(null)}
+                    style={{
+                      padding: "12px 24px",
+                      background: theme.colors.bgTertiary,
+                      color: theme.colors.textSecondary,
+                      border: "none",
+                      borderRadius: theme.borderRadius.md,
+                      fontWeight: 500,
+                      fontSize: 14,
+                      cursor: "pointer"
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    style={{
+                      padding: "12px 24px",
+                      background: saving ? theme.colors.bgTertiary : theme.colors.primary,
+                      color: saving ? theme.colors.textMuted : "white",
+                      border: "none",
+                      borderRadius: theme.borderRadius.md,
+                      fontWeight: 500,
+                      fontSize: 14,
+                      cursor: saving ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Users Table */}
         <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {users.length === 0 ? (
@@ -258,6 +416,22 @@ export default function TeamPage() {
                       </span>
                     </td>
                     <td style={{ padding: 16, textAlign: "right" }}>
+                      <button
+                        onClick={() => startEdit(user)}
+                        style={{
+                          padding: "6px 12px",
+                          marginRight: 8,
+                          background: theme.colors.infoBg,
+                          color: theme.colors.info,
+                          border: "none",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontWeight: 500,
+                          cursor: "pointer"
+                        }}
+                      >
+                        Edit
+                      </button>
                       <button
                         onClick={() => toggleActive(user)}
                         style={{
