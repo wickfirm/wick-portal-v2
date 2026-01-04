@@ -37,6 +37,8 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     completedAt: item.completedAt ? item.completedAt.toISOString() : null,
     completedBy: item.completedBy,
     notes: item.notes,
+    resourceUrl: item.resourceUrl,
+    resourceLabel: item.resourceLabel,    
   }));
 
   const linkedUsers = client.users.map(u => ({
