@@ -5,6 +5,8 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import Header from "@/components/Header";
 import StageManager from "./stage-manager";
+import ProjectTasks from "./project-tasks";
+import ProjectResources from "./project-resources";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -18,7 +20,12 @@ export default async function ProjectViewPage({ params }: { params: { id: string
     where: { id: params.id },
     include: {
       client: true,
-      stages: { orderBy: { order: "asc" } }
+      stages: { orderBy: { order: "asc" } },
+      tasks: { 
+        include: { category: true },
+        orderBy: { createdAt: "desc" }
+      },
+      resources: { orderBy: { order: "asc" } },
     },
   });
 
@@ -32,6 +39,23 @@ export default async function ProjectViewPage({ params }: { params: { id: string
     order: stage.order,
     isCompleted: stage.isCompleted,
     completedAt: stage.completedAt ? stage.completedAt.toISOString() : null,
+  }));
+
+  const tasksForProject = project.tasks.map(task => ({
+    id: task.id,
+    name: task.name,
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
+    category: task.category ? { name: task.category.name } : null,
+  }));
+
+  const resourcesForProject = project.resources.map(resource => ({
+    id: resource.id,
+    name: resource.name,
+    url: resource.url,
+    type: resource.type,
+    order: resource.order,
   }));
 
   const completed = project.stages.filter(s => s.isCompleted).length;
@@ -114,16 +138,30 @@ export default async function ProjectViewPage({ params }: { params: { id: string
 
         {/* Content Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-          {/* Stages */}
+          {/* Main Content */}
           <div>
+            {/* Stages */}
             <StageManager
               projectId={project.id}
               initialStages={stagesForClient}
+            />
+
+            {/* Tasks */}
+            <ProjectTasks
+              projectId={project.id}
+              clientId={project.clientId}
+              initialTasks={tasksForProject}
             />
           </div>
 
           {/* Sidebar */}
           <div>
+            {/* Resources */}
+            <ProjectResources
+              projectId={project.id}
+              initialResources={resourcesForProject}
+            />
+
             {/* Project Details */}
             <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
               <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
