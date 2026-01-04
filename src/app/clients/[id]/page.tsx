@@ -5,6 +5,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
+import LinkedUsersManager from "./linked-users-manager";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +20,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     include: {
       projects: { include: { stages: true }, orderBy: { createdAt: "desc" } },
       onboardingItems: { orderBy: { order: "asc" } },
+      users: { select: { id: true, name: true, email: true, role: true, isActive: true } },
     },
   });
 
@@ -35,6 +37,14 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     completedAt: item.completedAt ? item.completedAt.toISOString() : null,
     completedBy: item.completedBy,
     notes: item.notes,
+  }));
+
+  const linkedUsers = client.users.map(u => ({
+    id: u.id,
+    name: u.name,
+    email: u.email,
+    role: u.role,
+    isActive: u.isActive,
   }));
 
   return (
@@ -157,6 +167,11 @@ export default async function ClientViewPage({ params }: { params: { id: string 
 
           {/* Onboarding */}
           <OnboardingManager clientId={client.id} clientStatus={client.status} initialItems={onboardingForClient} />
+        </div>
+
+        {/* Linked Users */}
+        <div style={{ marginTop: 24 }}>
+          <LinkedUsersManager clientId={client.id} initialUsers={linkedUsers} />
         </div>
 
         {/* Projects */}
