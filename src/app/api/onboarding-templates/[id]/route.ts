@@ -12,8 +12,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     const updateData: any = { updatedAt: new Date() };
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.description !== undefined) updateData.description = data.description;
+    if (data.description !== undefined) updateData.description = data.description || null;
+    if (data.serviceType !== undefined) updateData.serviceType = data.serviceType;
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     const template = await prisma.onboardingTemplate.update({
       where: { id: params.id },
@@ -22,6 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json(template);
   } catch (error) {
+    console.error("Failed to update template:", error);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }
@@ -35,8 +38,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   await prisma.onboardingTemplate.delete({ where: { id: params.id } });
 
+  // Reorder remaining templates in same service type
   await prisma.onboardingTemplate.updateMany({
-    where: { order: { gt: template.order } },
+    where: { 
+      serviceType: template.serviceType,
+      order: { gt: template.order } 
+    },
     data: { order: { decrement: 1 } },
   });
 
