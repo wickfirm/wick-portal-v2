@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         categoryId: data.categoryId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
-        status: data.status || "PENDING",
+        status: data.status || "TODO",
         notes: data.notes || null,
         nextSteps: data.nextSteps || null,
         externalLink: data.externalLink || null,
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     return NextResponse.json(task);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    console.error("Failed to create task:", error);
+    return NextResponse.json({ error: "Failed to create task", details: String(error) }, { status: 500 });
   }
 }
