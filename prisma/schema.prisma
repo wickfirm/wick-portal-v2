@@ -94,7 +94,9 @@ model OnboardingTemplate {
   id          String   @id @default(cuid())
   name        String
   description String?
+  serviceType String   @default("GENERAL")
   order       Int
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
