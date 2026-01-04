@@ -6,17 +6,29 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // If user is CLIENT role
+    // CLIENT role - restrict to portal only
     if (token?.role === "CLIENT") {
-      // Allow access to portal routes
-      if (path.startsWith("/portal") || path.startsWith("/api") || path === "/login") {
+      if (path.startsWith("/portal") || path.startsWith("/api") || path === "/login" || path.startsWith("/auth")) {
         return NextResponse.next();
       }
-      // Redirect CLIENT users away from admin routes to portal
       return NextResponse.redirect(new URL("/portal", req.url));
     }
 
-    // If user is ADMIN/MANAGER/SPECIALIST trying to access portal, redirect to dashboard
+    // SPECIALIST role - no access to team management or settings (except account)
+    if (token?.role === "SPECIALIST") {
+      if (path.startsWith("/team") || (path.startsWith("/settings") && !path.startsWith("/settings/account"))) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+    }
+
+    // MANAGER role - no access to team management
+    if (token?.role === "MANAGER") {
+      if (path.startsWith("/team")) {
+        return NextResponse.redirect(new URL("/dashboard", req.url));
+      }
+    }
+
+    // Non-clients trying to access portal - redirect to dashboard
     if (path.startsWith("/portal") && token?.role !== "CLIENT") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
@@ -27,9 +39,7 @@ export default withAuth(
     callbacks: {
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
-        // Allow login page without auth
-        if (path === "/login") return true;
-        // Require auth for everything else
+        if (path === "/login" || path.startsWith("/auth")) return true;
         return !!token;
       },
     },
