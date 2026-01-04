@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const templates = await prisma.onboardingTemplate.findMany({
-    orderBy: { order: "asc" },
+    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
   });
 
   return NextResponse.json(templates);
@@ -21,19 +21,25 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
+    // Get last order for this service type
     const lastTemplate = await prisma.onboardingTemplate.findFirst({
+      where: { serviceType: data.serviceType || "GENERAL" },
       orderBy: { order: "desc" },
     });
 
     const template = await prisma.onboardingTemplate.create({
       data: {
         name: data.name,
+        description: data.description || null,
+        serviceType: data.serviceType || "GENERAL",
         order: (lastTemplate?.order ?? 0) + 1,
+        isActive: true,
       },
     });
 
     return NextResponse.json(template);
   } catch (error) {
+    console.error("Failed to create template:", error);
     return NextResponse.json({ error: "Failed to create template" }, { status: 500 });
   }
 }
