@@ -176,7 +176,7 @@ export default function ProjectTasks({
               />
               <div style={{ flex: 1 }}>
                 <Link
-                  href={"/tasks?id=" + task.id}
+                  href={"/clients/" + clientId + "/tasks"}
                   style={{
                     fontWeight: 500,
                     fontSize: 14,
@@ -274,7 +274,7 @@ export default function ProjectTasks({
       {tasks.length > 0 && (
         <div style={{ padding: "12px 20px", borderTop: "1px solid " + theme.colors.borderLight }}>
           <Link
-            href={"/tasks?projectId=" + projectId}
+            href={"/clients/" + clientId + "/tasks"}
             style={{
               fontSize: 13,
               color: theme.colors.primary,
