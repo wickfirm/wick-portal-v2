@@ -19,6 +19,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   assignedTasks     ClientTask[]
+  clientAssignments ClientTeamMember[]
 
   @@map("users")
 }
@@ -44,6 +45,10 @@ model Client {
   tasks           ClientTask[]
   metrics         ClientMetrics[]
   resources ClientResource[]
+  nickname    String?
+  agencyId    String?
+  agency      Agency?            @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  teamMembers ClientTeamMember[]
 
   @@map("clients")
 }
@@ -188,6 +193,7 @@ model ClientTask {
   updatedAt         DateTime     @updatedAt
   projectId         String?
   project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  ownerType   String   @default("AGENCY")
 
   @@map("client_tasks")
 }
@@ -313,6 +319,31 @@ model ClientMetrics {
   @@map("client_metrics")
 }
 
+model TaskStatusOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_status_options")
+}
+
+model TaskPriorityOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_priority_options")
+}
+
+
 enum Role {
   ADMIN
   MANAGER
@@ -377,26 +408,38 @@ enum TaskStatus {
   @@map("task_status")
 }
 
-model TaskStatusOption {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#6B7280")
-  order     Int      @default(0)
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Add new enum value to UserRole
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  MANAGER
+  MEMBER
+  CLIENT
 
-  @@map("task_status_options")
+  @@map("user_role")
 }
 
-model TaskPriorityOption {
+// Add new Agency model
+model Agency {
   id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#6B7280")
-  order     Int      @default(0)
+  name      String
   isDefault Boolean  @default(false)
+  clients   Client[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("task_priority_options")
+  @@map("agencies")
+}
+
+// Add new ClientTeamMember model
+model ClientTeamMember {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@unique([clientId, userId])
+  @@map("client_team_members")
 }
