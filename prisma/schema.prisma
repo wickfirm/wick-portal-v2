@@ -328,11 +328,13 @@ enum TaskPriority {
 
 enum TaskStatus {
   PENDING
+  TODO
   IN_PROGRESS
+  IN_REVIEW
   ONGOING
   ON_HOLD
   COMPLETED
+  BLOCKED
   FUTURE_PLAN
-
   @@map("task_status")
 }
