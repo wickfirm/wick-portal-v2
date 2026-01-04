@@ -4,17 +4,28 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { theme } from "@/lib/theme";
 
-export default function Header({ userName, userRole }: { userName?: string; userRole?: string }) {
+type HeaderProps = {
+  userName?: string;
+  userRole?: string;
+};
+
+export default function Header({ userName, userRole }: HeaderProps) {
   const pathname = usePathname();
 
-  const navItems = [
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/clients", label: "Clients" },
-    { href: "/projects", label: "Projects" },
-    { href: "/team", label: "Team" },
-    { href: "/analytics", label: "Analytics" },
-    { href: "/settings", label: "Settings" },
+  // Base nav items available to all internal users
+  const allNavItems = [
+    { href: "/dashboard", label: "Dashboard", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
+    { href: "/clients", label: "Clients", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
+    { href: "/projects", label: "Projects", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
+    { href: "/team", label: "Team", roles: ["ADMIN"] },
+    { href: "/analytics", label: "Analytics", roles: ["ADMIN", "MANAGER"] },
+    { href: "/settings", label: "Settings", roles: ["ADMIN", "MANAGER"] },
   ];
+
+  // Filter nav items based on user role
+  const navItems = allNavItems.filter(item => 
+    item.roles.includes(userRole || "SPECIALIST")
+  );
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
