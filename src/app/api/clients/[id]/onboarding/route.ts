@@ -20,31 +20,62 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    // Check if client already has onboarding items
-    const existingItems = await prisma.onboardingItem.findFirst({
+    // Get client's projects to determine which service types to include
+    const projects = await prisma.project.findMany({
       where: { clientId: params.id },
+      select: { serviceType: true },
     });
 
-    if (existingItems) {
-      return NextResponse.json({ error: "Onboarding already initialized" }, { status: 400 });
+    // Get unique service types from projects
+    const serviceTypes = [...new Set(projects.map(p => p.serviceType))];
+
+    // Get existing onboarding item names for this client (to avoid duplicates)
+    const existingItems = await prisma.onboardingItem.findMany({
+      where: { clientId: params.id },
+      select: { name: true },
+    });
+    const existingNames = new Set(existingItems.map(i => i.name));
+
+    // Get templates: GENERAL + service-specific (only active ones)
+    const templates = await prisma.onboardingTemplate.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { serviceType: "GENERAL" },
+          { serviceType: { in: serviceTypes } },
+        ],
+      },
+      orderBy: [{ serviceType: "asc" }, { order: "asc" }],
+    });
+
+    // Filter out templates that already exist as items
+    const newTemplates = templates.filter(t => !existingNames.has(t.name));
+
+    if (newTemplates.length > 0) {
+      // Get max order of existing items
+      const maxOrder = existingItems.length > 0 
+        ? await prisma.onboardingItem.findFirst({
+            where: { clientId: params.id },
+            orderBy: { order: "desc" },
+            select: { order: true },
+          })
+        : null;
+
+      let currentOrder = (maxOrder?.order ?? 0);
+
+      // Create new onboarding items
+      await prisma.onboardingItem.createMany({
+        data: newTemplates.map((t) => ({
+          clientId: params.id,
+          name: t.name,
+          description: t.description,
+          order: ++currentOrder,
+          isCompleted: false,
+        })),
+      });
     }
 
-    // Get all templates
-    const templates = await prisma.onboardingTemplate.findMany({
-      orderBy: { order: "asc" },
-    });
-
-    // Create onboarding items for this client
-    await prisma.onboardingItem.createMany({
-data: templates.map((t) => ({
-  clientId: params.id,
-  name: t.name,
-  description: t.description,
-  order: t.order,
-  isCompleted: false,
-})),
-    });
-
+    // Return all items
     const items = await prisma.onboardingItem.findMany({
       where: { clientId: params.id },
       orderBy: { order: "asc" },
@@ -52,6 +83,7 @@ data: templates.map((t) => ({
 
     return NextResponse.json(items);
   } catch (error) {
+    console.error("Failed to initialize onboarding:", error);
     return NextResponse.json({ error: "Failed to initialize onboarding" }, { status: 500 });
   }
 }
