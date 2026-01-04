@@ -15,14 +15,13 @@ type Task = {
   priority: string;
   dueDate: string | null;
   category: { id: string; name: string } | null;
+  assignee: { id: string; name: string | null; email: string } | null;
 };
 
-type TaskCategory = {
-  id: string;
-  name: string;
-};
+type TaskCategory = { id: string; name: string };
+type TeamMember = { id: string; name: string | null; email: string };
 
-const STATUS_OPTIONS = ["PENDING", "TODO", "IN_PROGRESS", "ONGOING", "ON_HOLD", "IN_REVIEW", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
+const STATUS_OPTIONS = ["TODO", "IN_PROGRESS", "IN_REVIEW", "COMPLETED", "BLOCKED"];
 const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
 
 export default function ClientTasksPage() {
@@ -34,14 +33,13 @@ export default function ClientTasksPage() {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
+  const [newTask, setNewTask] = useState({ name: "", notes: "", status: "TODO", priority: "MEDIUM", dueDate: "", categoryId: "", assigneeId: "" });
   const [adding, setAdding] = useState(false);
-
-  // Edit state
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", notes: "", status: "", priority: "", dueDate: "", categoryId: "" });
+  const [editForm, setEditForm] = useState({ name: "", notes: "", status: "", priority: "", dueDate: "", categoryId: "", assigneeId: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -49,37 +47,35 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId).then(res => res.json()),
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData]) => {
+      fetch("/api/team").then(res => res.json()),
+    ]).then(([clientData, tasksData, categoriesData, teamData]) => {
       setClient(clientData);
       setTasks(tasksData);
       setCategories(categoriesData);
+      setTeamMembers(teamData);
       setLoading(false);
     });
   }, [clientId]);
 
   async function fetchTasks() {
     const res = await fetch("/api/clients/" + clientId + "/tasks");
-    const data = await res.json();
-    setTasks(data);
+    setTasks(await res.json());
   }
 
   async function addTask(e: React.FormEvent) {
     e.preventDefault();
     setAdding(true);
-
     const res = await fetch("/api/clients/" + clientId + "/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newTask),
     });
-
     if (res.ok) {
-      setNewTask({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
+      setNewTask({ name: "", notes: "", status: "TODO", priority: "MEDIUM", dueDate: "", categoryId: "", assigneeId: "" });
       setShowForm(false);
       fetchTasks();
     } else {
-      const data = await res.json();
-      alert(data.error || "Failed to add task");
+      alert((await res.json()).error || "Failed to add task");
     }
     setAdding(false);
   }
@@ -92,7 +88,8 @@ export default function ClientTasksPage() {
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
-      categoryId: task.category?.id || ""
+      categoryId: task.category?.id || "",
+      assigneeId: task.assignee?.id || ""
     });
   }
 
@@ -100,19 +97,16 @@ export default function ClientTasksPage() {
     e.preventDefault();
     if (!editingTask) return;
     setSaving(true);
-
     const res = await fetch("/api/clients/" + clientId + "/tasks/" + editingTask.id, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(editForm),
     });
-
     if (res.ok) {
       setEditingTask(null);
       fetchTasks();
     } else {
-      const data = await res.json();
-      alert(data.error || "Failed to update task");
+      alert((await res.json()).error || "Failed to update task");
     }
     setSaving(false);
   }
@@ -130,7 +124,6 @@ export default function ClientTasksPage() {
     borderRadius: theme.borderRadius.md,
     fontSize: 14,
     boxSizing: "border-box" as const,
-    outline: "none",
   };
 
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
@@ -144,66 +137,43 @@ export default function ClientTasksPage() {
         <div style={{ fontWeight: 500, color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary, textDecoration: task.status === "COMPLETED" ? "line-through" : "none" }}>{task.name}</div>
         {task.notes && <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>{task.notes}</div>}
       </td>
+      <td style={{ padding: 12, fontSize: 13, color: theme.colors.textSecondary }}>{task.category?.name || "-"}</td>
       <td style={{ padding: 12 }}>
-        {task.category ? (
-          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{task.category.name}</span>
-        ) : (
-          <span style={{ color: theme.colors.textMuted }}>-</span>
-        )}
+        {task.assignee ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ width: 24, height: 24, borderRadius: 12, background: theme.gradients.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontSize: 10, fontWeight: 600 }}>
+              {(task.assignee.name || task.assignee.email).charAt(0).toUpperCase()}
+            </div>
+            <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{task.assignee.name || task.assignee.email}</span>
+          </div>
+        ) : <span style={{ color: theme.colors.textMuted }}>-</span>}
       </td>
-      <td style={{ padding: 12, fontSize: 13, color: theme.colors.textSecondary }}>
-        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}
-      </td>
+      <td style={{ padding: 12, fontSize: 13, color: theme.colors.textSecondary }}>{task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "-"}</td>
       <td style={{ padding: 12 }}>
-        <span style={{
-          padding: "4px 10px",
-          borderRadius: 20,
-          fontSize: 11,
-          fontWeight: 500,
-          background: PRIORITY_STYLES[task.priority]?.bg || theme.colors.bgTertiary,
-          color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textSecondary
-        }}>
-          {task.priority}
-        </span>
+        <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: PRIORITY_STYLES[task.priority]?.bg || theme.colors.bgTertiary, color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textSecondary }}>{task.priority}</span>
       </td>
       <td style={{ padding: 12 }}>
-        <span style={{
-          padding: "4px 10px",
-          borderRadius: 20,
-          fontSize: 11,
-          fontWeight: 500,
-          background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
-          color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary
-        }}>
-          {task.status.replace(/_/g, " ")}
-        </span>
+        <span style={{ padding: "4px 10px", borderRadius: 20, fontSize: 11, fontWeight: 500, background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary, color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary }}>{task.status.replace(/_/g, " ")}</span>
       </td>
       <td style={{ padding: 12, textAlign: "right" }}>
-        <button onClick={() => startEdit(task)} style={{
-          padding: "4px 10px",
-          background: theme.colors.infoBg,
-          color: theme.colors.info,
-          border: "none",
-          borderRadius: 4,
-          fontSize: 12,
-          cursor: "pointer",
-          marginRight: 8
-        }}>
-          Edit
-        </button>
-        <button onClick={() => deleteTask(task.id)} style={{
-          padding: "4px 10px",
-          background: theme.colors.errorBg,
-          color: theme.colors.error,
-          border: "none",
-          borderRadius: 4,
-          fontSize: 12,
-          cursor: "pointer"
-        }}>
-          Delete
-        </button>
+        <button onClick={() => startEdit(task)} style={{ padding: "4px 10px", background: theme.colors.infoBg, color: theme.colors.info, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer", marginRight: 8 }}>Edit</button>
+        <button onClick={() => deleteTask(task.id)} style={{ padding: "4px 10px", background: theme.colors.errorBg, color: theme.colors.error, border: "none", borderRadius: 4, fontSize: 12, cursor: "pointer" }}>Delete</button>
       </td>
     </tr>
+  );
+
+  const TableHeader = () => (
+    <thead>
+      <tr style={{ background: theme.colors.bgPrimary }}>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Task</th>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Category</th>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Assignee</th>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Due Date</th>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Priority</th>
+        <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Status</th>
+        <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Actions</th>
+      </tr>
+    </thead>
   );
 
   return (
@@ -212,9 +182,7 @@ export default function ClientTasksPage() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href={"/clients/" + clientId} style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
-            ← Back to {client?.name}
-          </Link>
+          <Link href={"/clients/" + clientId} style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>← Back to {client?.name}</Link>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
@@ -222,19 +190,7 @@ export default function ClientTasksPage() {
             <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Tasks</h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Manage tasks for {client?.name}</p>
           </div>
-          <button onClick={() => setShowForm(!showForm)} style={{
-            background: theme.gradients.primary,
-            color: "white",
-            padding: "12px 24px",
-            borderRadius: theme.borderRadius.md,
-            border: "none",
-            fontWeight: 500,
-            fontSize: 14,
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-          }}>
+          <button onClick={() => setShowForm(!showForm)} style={{ background: theme.gradients.primary, color: "white", padding: "12px 24px", borderRadius: theme.borderRadius.md, border: "none", fontWeight: 500, fontSize: 14, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 18 }}>+</span> Add Task
           </button>
         </div>
@@ -247,15 +203,9 @@ export default function ClientTasksPage() {
               <div style={{ display: "grid", gap: 16, marginBottom: 16 }}>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Task Name *</label>
-                  <input
-                    value={newTask.name}
-                    onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
-                    required
-                    style={inputStyle}
-                    placeholder="Enter task name"
-                  />
+                  <input value={newTask.name} onChange={(e) => setNewTask({ ...newTask, name: e.target.value })} required style={inputStyle} placeholder="Enter task name" />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 16 }}>
                   <div>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Status</label>
                     <select value={newTask.status} onChange={(e) => setNewTask({ ...newTask, status: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
@@ -276,6 +226,13 @@ export default function ClientTasksPage() {
                     </select>
                   </div>
                   <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assignee</label>
+                    <select value={newTask.assigneeId} onChange={(e) => setNewTask({ ...newTask, assigneeId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <option value="">Unassigned</option>
+                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Due Date</label>
                     <input type="date" value={newTask.dueDate} onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })} style={inputStyle} />
                   </div>
@@ -286,30 +243,8 @@ export default function ClientTasksPage() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 12 }}>
-                <button type="submit" disabled={adding} style={{
-                  padding: "10px 20px",
-                  background: adding ? theme.colors.bgTertiary : theme.colors.primary,
-                  color: adding ? theme.colors.textMuted : "white",
-                  border: "none",
-                  borderRadius: theme.borderRadius.md,
-                  fontWeight: 500,
-                  fontSize: 14,
-                  cursor: adding ? "not-allowed" : "pointer"
-                }}>
-                  {adding ? "Adding..." : "Add Task"}
-                </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{
-                  padding: "10px 20px",
-                  background: theme.colors.bgTertiary,
-                  color: theme.colors.textSecondary,
-                  border: "none",
-                  borderRadius: theme.borderRadius.md,
-                  fontWeight: 500,
-                  fontSize: 14,
-                  cursor: "pointer"
-                }}>
-                  Cancel
-                </button>
+                <button type="submit" disabled={adding} style={{ padding: "10px 20px", background: adding ? theme.colors.bgTertiary : theme.colors.primary, color: adding ? theme.colors.textMuted : "white", border: "none", borderRadius: theme.borderRadius.md, fontWeight: 500, fontSize: 14, cursor: adding ? "not-allowed" : "pointer" }}>{adding ? "Adding..." : "Add Task"}</button>
+                <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 20px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: theme.borderRadius.md, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Cancel</button>
               </div>
             </form>
           </div>
@@ -317,29 +252,9 @@ export default function ClientTasksPage() {
 
         {/* Edit Task Modal */}
         {editingTask && (
-          <div style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: "rgba(0,0,0,0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000
-          }}>
-            <div style={{
-              background: theme.colors.bgSecondary,
-              padding: 32,
-              borderRadius: theme.borderRadius.xl,
-              width: "100%",
-              maxWidth: 600,
-              boxShadow: theme.shadows.lg
-            }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, marginTop: 0, marginBottom: 24, color: theme.colors.textPrimary }}>
-                Edit Task
-              </h2>
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+            <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.xl, width: "100%", maxWidth: 600, boxShadow: theme.shadows.lg }}>
+              <h2 style={{ fontSize: 20, fontWeight: 600, marginTop: 0, marginBottom: 24, color: theme.colors.textPrimary }}>Edit Task</h2>
               <form onSubmit={saveEdit}>
                 <div style={{ display: "grid", gap: 16, marginBottom: 24 }}>
                   <div>
@@ -374,35 +289,20 @@ export default function ClientTasksPage() {
                     </div>
                   </div>
                   <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assignee</label>
+                    <select value={editForm.assigneeId} onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <option value="">Unassigned</option>
+                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
+                    </select>
+                  </div>
+                  <div>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Notes</label>
                     <textarea value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} rows={3} style={{ ...inputStyle, resize: "vertical" }} />
                   </div>
                 </div>
                 <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
-                  <button type="button" onClick={() => setEditingTask(null)} style={{
-                    padding: "12px 24px",
-                    background: theme.colors.bgTertiary,
-                    color: theme.colors.textSecondary,
-                    border: "none",
-                    borderRadius: theme.borderRadius.md,
-                    fontWeight: 500,
-                    fontSize: 14,
-                    cursor: "pointer"
-                  }}>
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={saving} style={{
-                    padding: "12px 24px",
-                    background: saving ? theme.colors.bgTertiary : theme.colors.primary,
-                    color: saving ? theme.colors.textMuted : "white",
-                    border: "none",
-                    borderRadius: theme.borderRadius.md,
-                    fontWeight: 500,
-                    fontSize: 14,
-                    cursor: saving ? "not-allowed" : "pointer"
-                  }}>
-                    {saving ? "Saving..." : "Save Changes"}
-                  </button>
+                  <button type="button" onClick={() => setEditingTask(null)} style={{ padding: "12px 24px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: theme.borderRadius.md, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+                  <button type="submit" disabled={saving} style={{ padding: "12px 24px", background: saving ? theme.colors.bgTertiary : theme.colors.primary, color: saving ? theme.colors.textMuted : "white", border: "none", borderRadius: theme.borderRadius.md, fontWeight: 500, fontSize: 14, cursor: saving ? "not-allowed" : "pointer" }}>{saving ? "Saving..." : "Save Changes"}</button>
                 </div>
               </form>
             </div>
@@ -414,24 +314,12 @@ export default function ClientTasksPage() {
           <div style={{ padding: "16px 20px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight }}>
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>Active Tasks ({pendingTasks.length})</h3>
           </div>
-
           {pendingTasks.length === 0 ? (
             <div style={{ padding: 48, textAlign: "center", color: theme.colors.textMuted, fontSize: 14 }}>No active tasks</div>
           ) : (
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: theme.colors.bgPrimary }}>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Task</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Category</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Due Date</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Priority</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Status</th>
-                  <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingTasks.map((task) => <TaskRow key={task.id} task={task} />)}
-              </tbody>
+              <TableHeader />
+              <tbody>{pendingTasks.map(task => <TaskRow key={task.id} task={task} />)}</tbody>
             </table>
           )}
         </div>
@@ -443,19 +331,8 @@ export default function ClientTasksPage() {
               <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: theme.colors.textMuted }}>Completed ({completedTasks.length})</h3>
             </div>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
-              <thead>
-                <tr style={{ background: theme.colors.bgPrimary }}>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Task</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Category</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Due Date</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Priority</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Status</th>
-                  <th style={{ padding: 12, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedTasks.map((task) => <TaskRow key={task.id} task={task} />)}
-              </tbody>
+              <TableHeader />
+              <tbody>{completedTasks.map(task => <TaskRow key={task.id} task={task} />)}</tbody>
             </table>
           </div>
         )}
