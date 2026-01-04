@@ -30,11 +30,9 @@ export default function OnboardingManager({
   const [items, setItems] = useState<OnboardingItem[]>(initialItems);
   const [initializing, setInitializing] = useState(false);
   
-  // Notes editing
   const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
   
-  // Resource editing
   const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [resourceUrl, setResourceUrl] = useState("");
   const [resourceLabel, setResourceLabel] = useState("");
@@ -116,25 +114,21 @@ export default function OnboardingManager({
     setResourceLabel(item.resourceLabel || "");
   }
 
-  function removeResource(item: OnboardingItem) {
-    setResourceUrl("");
-    setResourceLabel("");
-    fetch(`/api/onboarding-items/${item.id}`, {
+  async function removeResource(item: OnboardingItem) {
+    const res = await fetch(`/api/onboarding-items/${item.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ resourceUrl: null, resourceLabel: null }),
-    }).then(res => {
-      if (res.ok) {
-        setItems(items.map(i => i.id === item.id ? { 
-          ...i, 
-          resourceUrl: null,
-          resourceLabel: null 
-        } : i));
-      }
     });
+    if (res.ok) {
+      setItems(items.map(i => i.id === item.id ? { 
+        ...i, 
+        resourceUrl: null,
+        resourceLabel: null 
+      } : i));
+    }
   }
 
-  // Guess label from URL
   function guessLabelFromUrl(url: string): string {
     if (url.includes("drive.google.com")) return "Google Drive";
     if (url.includes("docs.google.com")) return "Google Docs";
@@ -153,19 +147,18 @@ export default function OnboardingManager({
     return "Link";
   }
 
-  // Only show for LEAD or ONBOARDING clients
   if (clientStatus !== "LEAD" && clientStatus !== "ONBOARDING") {
     return null;
   }
 
-  const inputStyle = {
+  const inputStyle: React.CSSProperties = {
     padding: "8px 12px",
     border: "1px solid " + theme.colors.borderMedium,
     borderRadius: 6,
     fontSize: 13,
     outline: "none",
     width: "100%",
-    boxSizing: "border-box" as const,
+    boxSizing: "border-box",
   };
 
   return (
@@ -181,7 +174,7 @@ export default function OnboardingManager({
         <div style={{ height: 8, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 16 }}>
           <div style={{ 
             height: "100%", 
-            width: `${pct}%`, 
+            width: pct + "%", 
             background: pct === 100 ? theme.colors.success : theme.colors.primary, 
             borderRadius: 4,
             transition: "width 0.3s ease"
@@ -214,10 +207,7 @@ export default function OnboardingManager({
           {items.sort((a, b) => a.order - b.order).map((item) => (
             <div 
               key={item.id} 
-              style={{ 
-                padding: 16, 
-                borderBottom: "1px solid " + theme.colors.bgTertiary,
-              }}
+              style={{ padding: 16, borderBottom: "1px solid " + theme.colors.bgTertiary }}
             >
               <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                 <button
@@ -258,7 +248,7 @@ export default function OnboardingManager({
 
                   {item.completedAt && item.completedBy && (
                     <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>
-                      ✓ Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
+                      Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
                     </div>
                   )}
 
@@ -330,7 +320,7 @@ export default function OnboardingManager({
                       </div>
                     ) : item.resourceUrl ? (
                       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                        
+                        <a
                           href={item.resourceUrl}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -347,7 +337,7 @@ export default function OnboardingManager({
                             textDecoration: "none",
                           }}
                         >
-                          🔗 {item.resourceLabel || "View Resource"}
+                          {item.resourceLabel || "View Resource"}
                         </a>
                         <button
                           onClick={() => startEditResource(item)}
@@ -456,7 +446,7 @@ export default function OnboardingManager({
               textAlign: "center",
               color: theme.colors.success
             }}>
-              🎉 Onboarding complete! Consider changing client status to <strong>ACTIVE</strong>.
+              Onboarding complete! Consider changing client status to ACTIVE.
             </div>
           )}
         </div>
