@@ -20,7 +20,15 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     if (data.notes !== undefined) {
-      updateData.notes = data.notes;
+      updateData.notes = data.notes || null;
+    }
+
+    if (data.resourceUrl !== undefined) {
+      updateData.resourceUrl = data.resourceUrl || null;
+    }
+
+    if (data.resourceLabel !== undefined) {
+      updateData.resourceLabel = data.resourceLabel || null;
     }
 
     const item = await prisma.onboardingItem.update({
@@ -30,6 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     return NextResponse.json(item);
   } catch (error) {
+    console.error("Failed to update onboarding item:", error);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }
