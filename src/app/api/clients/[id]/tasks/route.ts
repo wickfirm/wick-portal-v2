@@ -13,16 +13,20 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const where: any = { clientId: params.id };
   if (projectId) where.projectId = projectId;
 
-  const tasks = await prisma.clientTask.findMany({
-    where,
-    include: { 
-      category: true,
-      assignee: { select: { id: true, name: true } }
-    },
-    orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
-  });
+  try {
+    const tasks = await prisma.clientTask.findMany({
+      where,
+      include: { 
+        category: true,
+      },
+      orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
+    });
 
-  return NextResponse.json(tasks);
+    return NextResponse.json(tasks);
+  } catch (error) {
+    console.error("Failed to fetch tasks:", error);
+    return NextResponse.json({ error: "Failed to fetch tasks" }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -43,7 +47,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         clientId: params.id,
         projectId: data.projectId || null,
         categoryId: data.categoryId || null,
-        assigneeId: data.assigneeId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
         status: data.status || "PENDING",
@@ -55,10 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         internalLinkLabel: data.internalLinkLabel || null,
         order: (lastTask?.order ?? 0) + 1,
       },
-      include: { 
-        category: true,
-        assignee: { select: { id: true, name: true } }
-      },
+      include: { category: true },
     });
 
     return NextResponse.json(task);
