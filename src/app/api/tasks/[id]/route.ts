@@ -23,17 +23,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.externalLinkLabel !== undefined) updateData.externalLinkLabel = data.externalLinkLabel;
     if (data.internalLink !== undefined) updateData.internalLink = data.internalLink;
     if (data.internalLinkLabel !== undefined) updateData.internalLinkLabel = data.internalLinkLabel;
-    if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId || null;
     if (data.order !== undefined) updateData.order = data.order;
 
     const task = await prisma.clientTask.update({
       where: { id: params.id },
       data: updateData,
-      include: { category: true, assignee: { select: { id: true, name: true } } },
+      include: { category: true },
     });
 
     return NextResponse.json(task);
   } catch (error) {
+    console.error("Failed to update task:", error);
     return NextResponse.json({ error: "Failed to update" }, { status: 500 });
   }
 }
