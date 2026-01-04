@@ -15,18 +15,11 @@ type Task = {
   priority: string;
   dueDate: string | null;
   category: { id: string; name: string } | null;
-  assignee: { id: string; name: string | null; email: string } | null;
 };
 
 type TaskCategory = {
   id: string;
   name: string;
-};
-
-type TeamMember = {
-  id: string;
-  name: string | null;
-  email: string;
 };
 
 const STATUS_OPTIONS = ["PENDING", "TODO", "IN_PROGRESS", "ONGOING", "ON_HOLD", "IN_REVIEW", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
@@ -41,15 +34,14 @@ export default function ClientTasksPage() {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
-  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newTask, setNewTask] = useState({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "", assigneeId: "" });
+  const [newTask, setNewTask] = useState({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
   const [adding, setAdding] = useState(false);
 
   // Edit state
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", notes: "", status: "", priority: "", dueDate: "", categoryId: "", assigneeId: "" });
+  const [editForm, setEditForm] = useState({ name: "", notes: "", status: "", priority: "", dueDate: "", categoryId: "" });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -57,12 +49,10 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId).then(res => res.json()),
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
-      fetch("/api/team").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData, teamData]) => {
+    ]).then(([clientData, tasksData, categoriesData]) => {
       setClient(clientData);
       setTasks(tasksData);
       setCategories(categoriesData);
-      setTeamMembers(teamData);
       setLoading(false);
     });
   }, [clientId]);
@@ -84,7 +74,7 @@ export default function ClientTasksPage() {
     });
 
     if (res.ok) {
-      setNewTask({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "", assigneeId: "" });
+      setNewTask({ name: "", notes: "", status: "PENDING", priority: "MEDIUM", dueDate: "", categoryId: "" });
       setShowForm(false);
       fetchTasks();
     } else {
@@ -102,8 +92,7 @@ export default function ClientTasksPage() {
       status: task.status,
       priority: task.priority,
       dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
-      categoryId: task.category?.id || "",
-      assigneeId: task.assignee?.id || ""
+      categoryId: task.category?.id || ""
     });
   }
 
@@ -128,15 +117,6 @@ export default function ClientTasksPage() {
     setSaving(false);
   }
 
-  async function updateTaskStatus(taskId: string, status: string) {
-    await fetch("/api/clients/" + clientId + "/tasks/" + taskId, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    fetchTasks();
-  }
-
   async function deleteTask(taskId: string) {
     if (!confirm("Delete this task?")) return;
     await fetch("/api/clients/" + clientId + "/tasks/" + taskId, { method: "DELETE" });
@@ -158,7 +138,7 @@ export default function ClientTasksPage() {
   const pendingTasks = tasks.filter(t => t.status !== "COMPLETED");
   const completedTasks = tasks.filter(t => t.status === "COMPLETED");
 
-  const TaskRow = ({ task, showActions = true }: { task: Task; showActions?: boolean }) => (
+  const TaskRow = ({ task }: { task: Task }) => (
     <tr style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
       <td style={{ padding: 12 }}>
         <div style={{ fontWeight: 500, color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary, textDecoration: task.status === "COMPLETED" ? "line-through" : "none" }}>{task.name}</div>
@@ -167,29 +147,6 @@ export default function ClientTasksPage() {
       <td style={{ padding: 12 }}>
         {task.category ? (
           <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{task.category.name}</span>
-        ) : (
-          <span style={{ color: theme.colors.textMuted }}>-</span>
-        )}
-      </td>
-      <td style={{ padding: 12 }}>
-        {task.assignee ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <div style={{
-              width: 24,
-              height: 24,
-              borderRadius: 12,
-              background: theme.gradients.accent,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: 10,
-              fontWeight: 600
-            }}>
-              {(task.assignee.name || task.assignee.email).charAt(0).toUpperCase()}
-            </div>
-            <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{task.assignee.name || task.assignee.email}</span>
-          </div>
         ) : (
           <span style={{ color: theme.colors.textMuted }}>-</span>
         )}
@@ -218,7 +175,7 @@ export default function ClientTasksPage() {
           background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
           color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary
         }}>
-          {task.status.replace("_", " ")}
+          {task.status.replace(/_/g, " ")}
         </span>
       </td>
       <td style={{ padding: 12, textAlign: "right" }}>
@@ -298,11 +255,11 @@ export default function ClientTasksPage() {
                     placeholder="Enter task name"
                   />
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 16 }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 16 }}>
                   <div>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Status</label>
                     <select value={newTask.status} onChange={(e) => setNewTask({ ...newTask, status: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                      {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                     </select>
                   </div>
                   <div>
@@ -316,13 +273,6 @@ export default function ClientTasksPage() {
                     <select value={newTask.categoryId} onChange={(e) => setNewTask({ ...newTask, categoryId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
                       <option value="">None</option>
                       {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assignee</label>
-                    <select value={newTask.assigneeId} onChange={(e) => setNewTask({ ...newTask, assigneeId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                      <option value="">Unassigned</option>
-                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
                     </select>
                   </div>
                   <div>
@@ -400,7 +350,7 @@ export default function ClientTasksPage() {
                     <div>
                       <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Status</label>
                       <select value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
+                        {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                       </select>
                     </div>
                     <div>
@@ -422,13 +372,6 @@ export default function ClientTasksPage() {
                       <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Due Date</label>
                       <input type="date" value={editForm.dueDate} onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })} style={inputStyle} />
                     </div>
-                  </div>
-                  <div>
-                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assignee</label>
-                    <select value={editForm.assigneeId} onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                      <option value="">Unassigned</option>
-                      {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name || m.email}</option>)}
-                    </select>
                   </div>
                   <div>
                     <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Notes</label>
@@ -480,7 +423,6 @@ export default function ClientTasksPage() {
                 <tr style={{ background: theme.colors.bgPrimary }}>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Task</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Category</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Assignee</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Due Date</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Priority</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Status</th>
@@ -505,7 +447,6 @@ export default function ClientTasksPage() {
                 <tr style={{ background: theme.colors.bgPrimary }}>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Task</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Category</th>
-                  <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Assignee</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Due Date</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Priority</th>
                   <th style={{ padding: 12, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase" }}>Status</th>
