@@ -33,6 +33,7 @@ export const theme = {
     infoBg: "#e8f0fe",
     purple: "#7b1fa2",
     purpleBg: "#f3e5f5",
+    primaryBg: "#fef0ef",
   },
   
   gradients: {
