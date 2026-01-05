@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
     
-    // Hash the password
     const hashedPassword = await bcrypt.hash(data.password, 10);
     
     const user = await prisma.user.create({
@@ -20,10 +19,22 @@ export async function POST(req: NextRequest) {
         email: data.email,
         password: hashedPassword,
         role: data.role || "MEMBER",
+        agencyId: data.agencyId || null,
         clientId: data.clientId || null,
         isActive: true,
       },
     });
+
+    // Assign to clients if provided
+    if (data.clientIds && data.clientIds.length > 0) {
+      await prisma.clientTeamMember.createMany({
+        data: data.clientIds.map((clientId: string) => ({
+          userId: user.id,
+          clientId,
+        })),
+        skipDuplicates: true,
+      });
+    }
 
     return NextResponse.json({ id: user.id, name: user.name, email: user.email });
   } catch (error) {
@@ -38,7 +49,13 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "desc" },
-    include: { client: true },
+    include: { 
+      client: true,
+      agency: true,
+      clientAssignments: {
+        include: { client: { select: { id: true, name: true, nickname: true } } }
+      }
+    },
   });
   
   return NextResponse.json(users);
