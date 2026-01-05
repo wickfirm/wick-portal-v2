@@ -26,7 +26,7 @@ type Task = {
   client?: {
     nickname: string | null;
     name: string;
-    agency: { id: string; name: string } | null;
+    agencies: { agency: { id: string; name: string } }[];
   };
 };
 
@@ -171,7 +171,8 @@ export default function ClientTasksPage() {
     if (task.ownerType === "CLIENT") {
       return task.client?.nickname || client?.nickname || client?.name || "Client";
     } else {
-      return task.client?.agency?.name || client?.agency?.name || "Agency";
+      const agencyName = task.client?.agencies?.[0]?.agency?.name || client?.agencies?.[0]?.agency?.name;
+      return agencyName || "Agency";
     }
   }
 
@@ -222,7 +223,7 @@ export default function ClientTasksPage() {
 
   // Owner display names for dropdown
   const clientDisplayName = client?.nickname || client?.name || "Client";
-  const agencyDisplayName = client?.agency?.name || "Agency";
+  const agencyDisplayName = client?.agencies?.[0]?.agency?.name || "Agency";
 
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
 
