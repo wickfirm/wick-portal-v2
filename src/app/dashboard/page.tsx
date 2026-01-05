@@ -19,8 +19,17 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  const endOfWeek = new Date(today);
-  endOfWeek.setDate(endOfWeek.getDate() + 7);
+  // Build client filter based on role
+  let clientFilter: any = {};
+  if (user.role !== "SUPER_ADMIN") {
+    // Get client IDs user is assigned to
+    const assignments = await prisma.clientTeamMember.findMany({
+      where: { userId: user.id },
+      select: { clientId: true },
+    });
+    const clientIds = assignments.map(a => a.clientId);
+    clientFilter = { id: { in: clientIds } };
+  }
 
   const [
     clientCount, 
@@ -31,23 +40,45 @@ export default async function DashboardPage() {
     recentProjects,
     recentClients,
   ] = await Promise.all([
-    prisma.client.count({ where: { status: "ACTIVE" } }),
-    prisma.project.count(),
-    prisma.project.count({ where: { status: "IN_PROGRESS" } }),
+    // Count only accessible clients
+    prisma.client.count({ 
+      where: { 
+        status: "ACTIVE",
+        ...clientFilter,
+      } 
+    }),
+    // Count only accessible projects
+    prisma.project.count({
+      where: user.role === "SUPER_ADMIN" ? {} : { client: clientFilter },
+    }),
+    prisma.project.count({ 
+      where: { 
+        status: "IN_PROGRESS",
+        ...(user.role === "SUPER_ADMIN" ? {} : { client: clientFilter }),
+      } 
+    }),
     prisma.user.count({ where: { isActive: true } }),
+    // Tasks for accessible clients only
     prisma.clientTask.findMany({
-      where: { status: { not: "COMPLETED" } },
+      where: { 
+        status: { not: "COMPLETED" },
+        ...(user.role === "SUPER_ADMIN" ? {} : { client: clientFilter }),
+      },
       include: {
         client: { select: { id: true, name: true } },
       },
       orderBy: { dueDate: "asc" },
     }),
+    // Recent projects for accessible clients
     prisma.project.findMany({
+      where: user.role === "SUPER_ADMIN" ? {} : { client: clientFilter },
       take: 5,
       orderBy: { updatedAt: "desc" },
       include: { client: true, stages: true },
     }),
+    // Recent accessible clients
     prisma.client.findMany({
+      where: clientFilter,
       take: 5,
       orderBy: { createdAt: "desc" },
     }),
@@ -80,7 +111,12 @@ export default async function DashboardPage() {
           <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
             Welcome back, {user.name?.split(" ")[0]}
           </h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Here is what is happening with your agency today.</p>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
+            {user.role === "SUPER_ADMIN" 
+              ? "Here is what is happening with your agency today."
+              : "Here is what is happening with your clients today."
+            }
+          </p>
         </div>
 
         {/* Stats Row */}
@@ -113,15 +149,27 @@ export default async function DashboardPage() {
             <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Active Tasks</div>
           </div>
 
-          <Link href="/team" style={{ textDecoration: "none" }}>
+          {user.role === "SUPER_ADMIN" && (
+            <Link href="/team" style={{ textDecoration: "none" }}>
+              <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+                <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.warning + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
+                  🧑‍💻
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 4 }}>{teamCount}</div>
+                <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Team Members</div>
+              </div>
+            </Link>
+          )}
+          
+          {user.role !== "SUPER_ADMIN" && (
             <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
               <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.warning + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
-                🧑‍💻
+                📊
               </div>
-              <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 4 }}>{teamCount}</div>
-              <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Team Members</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 4 }}>{projectCount}</div>
+              <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Total Projects</div>
             </div>
-          </Link>
+          )}
         </div>
 
         {/* Task Alerts Row */}
