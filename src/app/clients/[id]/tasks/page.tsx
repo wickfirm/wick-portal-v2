@@ -21,6 +21,12 @@ type Task = {
   category: { id: string; name: string } | null;
   categoryId?: string | null;
   projectId: string | null;
+  ownerType: string;
+  client?: {
+    nickname: string | null;
+    name: string;
+    agency: { id: string; name: string } | null;
+  };
 };
 
 type TaskCategory = {
@@ -31,6 +37,7 @@ type TaskCategory = {
 
 const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
 const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
+const OWNER_OPTIONS = ["AGENCY", "CLIENT"];
 
 export default function ClientTasksPage() {
   const params = useParams();
@@ -45,6 +52,7 @@ export default function ClientTasksPage() {
   // Filter state
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
+  const [filterOwner, setFilterOwner] = useState<string>("ALL");
   const [hideCompleted, setHideCompleted] = useState(true);
   
   // Side panel state
@@ -108,6 +116,7 @@ export default function ClientTasksPage() {
         categoryId: categoryId || null,
         status: "PENDING",
         priority: "MEDIUM",
+        ownerType: "AGENCY",
       }),
     });
     
@@ -128,6 +137,7 @@ export default function ClientTasksPage() {
       internalLink: task.internalLink || "",
       internalLinkLabel: task.internalLinkLabel || "",
       categoryId: task.category?.id || "",
+      ownerType: task.ownerType || "AGENCY",
     });
   }
 
@@ -153,11 +163,21 @@ export default function ClientTasksPage() {
     fetchTasks();
   }
 
+  // Get owner display name
+  function getOwnerDisplay(task: Task) {
+    if (task.ownerType === "CLIENT") {
+      return task.client?.nickname || client?.nickname || client?.name || "Client";
+    } else {
+      return task.client?.agency?.name || client?.agency?.name || "Agency";
+    }
+  }
+
   // Filter tasks
   const filteredTasks = tasks.filter(task => {
     if (hideCompleted && task.status === "COMPLETED") return false;
     if (filterStatus !== "ALL" && task.status !== filterStatus) return false;
     if (filterPriority !== "ALL" && task.priority !== filterPriority) return false;
+    if (filterOwner !== "ALL" && task.ownerType !== filterOwner) return false;
     return true;
   });
 
@@ -183,6 +203,7 @@ export default function ClientTasksPage() {
   const activeFilterCount = [
     filterStatus !== "ALL",
     filterPriority !== "ALL",
+    filterOwner !== "ALL",
     !hideCompleted,
   ].filter(Boolean).length;
 
@@ -196,12 +217,16 @@ export default function ClientTasksPage() {
     outline: "none",
   };
 
+  // Owner display names for dropdown
+  const clientDisplayName = client?.nickname || client?.name || "Client";
+  const agencyDisplayName = client?.agency?.name || "Agency";
+
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
 
   const renderTaskRow = (task: Task) => (
     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
       {/* Task Name */}
-      <td style={{ padding: "10px 12px", minWidth: 200 }}>
+      <td style={{ padding: "10px 12px", minWidth: 180 }}>
         <div 
           onClick={() => openTaskPanel(task)}
           style={{ 
@@ -213,6 +238,28 @@ export default function ClientTasksPage() {
         >
           {task.name}
         </div>
+      </td>
+
+      {/* Owner */}
+      <td style={{ padding: "10px 12px", width: 100 }}>
+        <select
+          value={task.ownerType}
+          onChange={(e) => updateTaskField(task.id, "ownerType", e.target.value)}
+          style={{
+            padding: "4px 8px",
+            borderRadius: 6,
+            border: "none",
+            fontSize: 11,
+            fontWeight: 500,
+            background: task.ownerType === "CLIENT" ? theme.colors.warningBg : theme.colors.infoBg,
+            color: task.ownerType === "CLIENT" ? "#92400E" : theme.colors.info,
+            cursor: "pointer",
+            outline: "none",
+          }}
+        >
+          <option value="AGENCY">{agencyDisplayName}</option>
+          <option value="CLIENT">{clientDisplayName}</option>
+        </select>
       </td>
 
       {/* Due Date */}
@@ -280,21 +327,21 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Notes/Links Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 180 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.notes || "-"}
         </div>
       </td>
 
       {/* Next Steps Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
+      <td style={{ padding: "10px 12px", maxWidth: 120 }}>
         <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {task.nextSteps || "-"}
         </div>
       </td>
 
       {/* External Link */}
-      <td style={{ padding: "10px 12px", width: 80 }}>
+      <td style={{ padding: "10px 12px", width: 70 }}>
         {task.externalLink ? (
           <a href={task.externalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
@@ -313,7 +360,7 @@ export default function ClientTasksPage() {
       </td>
 
       {/* Internal Link */}
-      <td style={{ padding: "10px 12px", width: 80 }}>
+      <td style={{ padding: "10px 12px", width: 70 }}>
         {task.internalLink ? (
           <a href={task.internalLink} target="_blank" rel="noopener noreferrer" style={{
             padding: "4px 8px",
@@ -461,10 +508,11 @@ export default function ClientTasksPage() {
               </div>
             ) : (
               <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
                   <thead>
                     <tr style={{ background: theme.colors.bgPrimary }}>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Task</th>
+                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Owner</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Due Date</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Priority</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Status</th>
@@ -502,7 +550,7 @@ export default function ClientTasksPage() {
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Tasks</h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
-              {client?.name} • {filteredTasks.length} tasks shown ({tasks.filter(t => t.status !== "COMPLETED").length} active total)
+              {client?.name} {client?.nickname && `(${client.nickname})`} • {filteredTasks.length} tasks shown
             </p>
           </div>
         </div>
@@ -522,6 +570,24 @@ export default function ClientTasksPage() {
           <span style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
             Filters {activeFilterCount > 0 && `(${activeFilterCount})`}:
           </span>
+
+          {/* Owner Filter */}
+          <select
+            value={filterOwner}
+            onChange={(e) => setFilterOwner(e.target.value)}
+            style={{
+              padding: "8px 12px",
+              borderRadius: 6,
+              border: "1px solid " + theme.colors.borderMedium,
+              fontSize: 13,
+              cursor: "pointer",
+              background: filterOwner !== "ALL" ? theme.colors.successBg : "white",
+            }}
+          >
+            <option value="ALL">All Owners</option>
+            <option value="AGENCY">{agencyDisplayName}</option>
+            <option value="CLIENT">{clientDisplayName}</option>
+          </select>
 
           {/* Status Filter */}
           <select
@@ -574,6 +640,7 @@ export default function ClientTasksPage() {
               onClick={() => {
                 setFilterStatus("ALL");
                 setFilterPriority("ALL");
+                setFilterOwner("ALL");
                 setHideCompleted(true);
               }}
               style={{
@@ -617,6 +684,7 @@ export default function ClientTasksPage() {
               onClick={() => {
                 setFilterStatus("ALL");
                 setFilterPriority("ALL");
+                setFilterOwner("ALL");
                 setHideCompleted(false);
               }}
               style={{
@@ -747,7 +815,7 @@ export default function ClientTasksPage() {
                 />
               </div>
 
-              {/* Category & Due Date */}
+              {/* Category & Owner */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Category</label>
@@ -761,14 +829,27 @@ export default function ClientTasksPage() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
-                  <input
-                    type="date"
-                    value={editForm.dueDate || ""}
-                    onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
-                    style={inputStyle}
-                  />
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Owner</label>
+                  <select
+                    value={editForm.ownerType || "AGENCY"}
+                    onChange={(e) => setEditForm({ ...editForm, ownerType: e.target.value })}
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    <option value="AGENCY">{agencyDisplayName}</option>
+                    <option value="CLIENT">{clientDisplayName}</option>
+                  </select>
                 </div>
+              </div>
+
+              {/* Due Date */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Due Date</label>
+                <input
+                  type="date"
+                  value={editForm.dueDate || ""}
+                  onChange={(e) => setEditForm({ ...editForm, dueDate: e.target.value })}
+                  style={inputStyle}
+                />
               </div>
 
               {/* Notes */}
