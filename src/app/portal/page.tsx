@@ -24,7 +24,7 @@ export default async function PortalDashboard() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <PortalHeader userName={user.name} />
         <main style={{ maxWidth: 600, margin: "0 auto", padding: 48, textAlign: "center" }}>
-          <div style={{ fontSize: 64, marginBottom: 24 }}>🔗</div>
+          <div style={{ fontSize: 64, marginBottom: 24 }}>X</div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>No Client Linked</h1>
           <p style={{ color: theme.colors.textSecondary }}>Your account is not linked to a client. Please contact your account manager.</p>
         </main>
@@ -98,23 +98,21 @@ export default async function PortalDashboard() {
       <PortalHeader userName={user.name} />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Welcome Header */}
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
-            Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}! 👋
+            Welcome back{user.name ? `, ${user.name.split(" ")[0]}` : ""}!
           </h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
-            Here's what's happening with {client.nickname || client.name}.
+            Here is what is happening with {client.nickname || client.name}.
           </p>
         </div>
 
-        {/* Quick Stats */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
           <Link href="/portal/projects" style={{ textDecoration: "none" }}>
             <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.infoBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                  📁
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.infoBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: theme.colors.info, fontWeight: 600 }}>
+                  P
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{activeProjects.length}</div>
               </div>
@@ -125,8 +123,8 @@ export default async function PortalDashboard() {
           <Link href="/portal/tasks" style={{ textDecoration: "none" }}>
             <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, cursor: "pointer" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.warningBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                  ✓
+                <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.warningBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: theme.colors.warning, fontWeight: 600 }}>
+                  T
                 </div>
                 <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{pendingTasks.length}</div>
               </div>
@@ -139,8 +137,8 @@ export default async function PortalDashboard() {
 
           <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.successBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                ✅
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.successBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: theme.colors.success, fontWeight: 600 }}>
+                C
               </div>
               <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{completedTasks.length}</div>
             </div>
@@ -149,8 +147,8 @@ export default async function PortalDashboard() {
 
           <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: onboardingPct === 100 ? theme.colors.successBg : theme.colors.primaryBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>
-                🚀
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: onboardingPct === 100 ? theme.colors.successBg : theme.colors.primaryBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, color: onboardingPct === 100 ? theme.colors.success : theme.colors.primary, fontWeight: 600 }}>
+                O
               </div>
               <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{onboardingPct}%</div>
             </div>
@@ -158,11 +156,10 @@ export default async function PortalDashboard() {
           </div>
         </div>
 
-        {/* Onboarding Progress (if not complete) */}
         {totalOnboarding > 0 && onboardingPct < 100 && (
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>🚀 Onboarding Progress</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Onboarding Progress</h3>
               <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{completedOnboarding} of {totalOnboarding} complete</span>
             </div>
             <div style={{ height: 12, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 16 }}>
@@ -187,7 +184,7 @@ export default async function PortalDashboard() {
                   fontSize: 12,
                   fontWeight: 500,
                 }}>
-                  {item.isCompleted ? "✓" : "○"} {item.name}
+                  {item.isCompleted ? "Done" : "Pending"}: {item.name}
                 </div>
               ))}
               {onboardingItems.length > 5 && (
@@ -199,13 +196,12 @@ export default async function PortalDashboard() {
           </div>
         )}
 
-        {/* Metrics Preview */}
         {latestMetrics && (
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>📊 Performance Snapshot</h3>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Performance Snapshot</h3>
               <Link href="/portal/metrics" style={{ fontSize: 13, color: theme.colors.primary, textDecoration: "none", fontWeight: 500 }}>
-                View Details →
+                View Details
               </Link>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16 }}>
@@ -220,7 +216,7 @@ export default async function PortalDashboard() {
                     color: getChange(latestMetrics.gaSessions, previousMetrics?.gaSessions)! >= 0 ? theme.colors.success : theme.colors.error,
                     marginTop: 4 
                   }}>
-                    {getChange(latestMetrics.gaSessions, previousMetrics?.gaSessions)! >= 0 ? "↑" : "↓"} {Math.abs(getChange(latestMetrics.gaSessions, previousMetrics?.gaSessions)!)}% vs last month
+                    {getChange(latestMetrics.gaSessions, previousMetrics?.gaSessions)! >= 0 ? "+" : ""}{getChange(latestMetrics.gaSessions, previousMetrics?.gaSessions)}% vs last month
                   </div>
                 )}
               </div>
@@ -235,7 +231,7 @@ export default async function PortalDashboard() {
                     color: getChange(latestMetrics.gscClicks, previousMetrics?.gscClicks)! >= 0 ? theme.colors.success : theme.colors.error,
                     marginTop: 4 
                   }}>
-                    {getChange(latestMetrics.gscClicks, previousMetrics?.gscClicks)! >= 0 ? "↑" : "↓"} {Math.abs(getChange(latestMetrics.gscClicks, previousMetrics?.gscClicks)!)}% vs last month
+                    {getChange(latestMetrics.gscClicks, previousMetrics?.gscClicks)! >= 0 ? "+" : ""}{getChange(latestMetrics.gscClicks, previousMetrics?.gscClicks)}% vs last month
                   </div>
                 )}
               </div>
@@ -256,7 +252,7 @@ export default async function PortalDashboard() {
                     color: getChange(latestMetrics.seoKeywordsTop10, previousMetrics?.seoKeywordsTop10)! >= 0 ? theme.colors.success : theme.colors.error,
                     marginTop: 4 
                   }}>
-                    {getChange(latestMetrics.seoKeywordsTop10, previousMetrics?.seoKeywordsTop10)! >= 0 ? "↑" : "↓"} {Math.abs(getChange(latestMetrics.seoKeywordsTop10, previousMetrics?.seoKeywordsTop10)!)}% vs last month
+                    {getChange(latestMetrics.seoKeywordsTop10, previousMetrics?.seoKeywordsTop10)! >= 0 ? "+" : ""}{getChange(latestMetrics.seoKeywordsTop10, previousMetrics?.seoKeywordsTop10)}% vs last month
                   </div>
                 )}
               </div>
@@ -264,12 +260,10 @@ export default async function PortalDashboard() {
           </div>
         )}
 
-        {/* Main Content Grid */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-          {/* Recent Projects */}
           <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>📁 Projects</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Projects</h3>
               <Link href="/portal/projects" style={{ fontSize: 12, color: theme.colors.primary, textDecoration: "none", fontWeight: 500 }}>
                 View all
               </Link>
@@ -320,16 +314,15 @@ export default async function PortalDashboard() {
             )}
           </div>
 
-          {/* Pending Tasks */}
           <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>📋 Pending Tasks</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Pending Tasks</h3>
               <Link href="/portal/tasks" style={{ fontSize: 12, color: theme.colors.primary, textDecoration: "none", fontWeight: 500 }}>
                 View all
               </Link>
             </div>
             {pendingTasks.length === 0 ? (
-              <div style={{ padding: 40, textAlign: "center", color: theme.colors.textMuted, fontSize: 13 }}>All caught up! 🎉</div>
+              <div style={{ padding: 40, textAlign: "center", color: theme.colors.textMuted, fontSize: 13 }}>All caught up!</div>
             ) : (
               <div>
                 {pendingTasks.slice(0, 5).map((task, idx) => {
@@ -348,7 +341,7 @@ export default async function PortalDashboard() {
                             )}
                             {task.dueDate && (
                               <span style={{ color: isOverdue ? theme.colors.error : theme.colors.textMuted }}>
-                                {isOverdue ? "⚠️ " : ""}Due {new Date(task.dueDate).toLocaleDateString()}
+                                Due {new Date(task.dueDate).toLocaleDateString()}
                               </span>
                             )}
                           </div>
@@ -372,12 +365,10 @@ export default async function PortalDashboard() {
           </div>
         </div>
 
-        {/* Bottom Row: Team & Resources */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-          {/* Your Team */}
           <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>👥 Your Team</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Your Team</h3>
               <Link href="/portal/team" style={{ fontSize: 12, color: theme.colors.primary, textDecoration: "none", fontWeight: 500 }}>
                 View all
               </Link>
@@ -412,10 +403,9 @@ export default async function PortalDashboard() {
             )}
           </div>
 
-          {/* Quick Resources */}
           <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
             <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>🔗 Quick Links</h3>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Quick Links</h3>
               <Link href="/portal/resources" style={{ fontSize: 12, color: theme.colors.primary, textDecoration: "none", fontWeight: 500 }}>
                 View all
               </Link>
@@ -449,14 +439,16 @@ export default async function PortalDashboard() {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      fontSize: 14
+                      fontSize: 12,
+                      fontWeight: 600,
+                      color: theme.colors.info
                     }}>
-                      {resource.type === "DRIVE" ? "📁" : resource.type === "SHEET" ? "📊" : resource.type === "DOC" ? "📄" : "🔗"}
+                      {resource.name.charAt(0).toUpperCase()}
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontWeight: 500, fontSize: 13, color: theme.colors.textPrimary }}>{resource.name}</div>
                     </div>
-                    <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>↗</span>
+                    <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>Open</span>
                   </a>
                 ))}
               </div>
