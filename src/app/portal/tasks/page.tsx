@@ -33,7 +33,7 @@ export default async function PortalTasksPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <PortalHeader userName={user.name} />
+      <PortalHeader />
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
