@@ -6,6 +6,12 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
+type Agency = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+};
+
 export default function EditClientPage() {
   const router = useRouter();
   const params = useParams();
@@ -15,14 +21,20 @@ export default function EditClientPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [client, setClient] = useState<any>(null);
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [userRole, setUserRole] = useState<string>("");
 
   useEffect(() => {
-    fetch(`/api/clients/${clientId}`)
-      .then(res => res.json())
-      .then(data => {
-        setClient(data);
-        setLoading(false);
-      });
+    Promise.all([
+      fetch(`/api/clients/${clientId}`).then(res => res.json()),
+      fetch("/api/agencies").then(res => res.json()),
+      fetch("/api/auth/session").then(res => res.json()),
+    ]).then(([clientData, agenciesData, sessionData]) => {
+      setClient(clientData);
+      setAgencies(Array.isArray(agenciesData) ? agenciesData : []);
+      setUserRole(sessionData?.user?.role || "");
+      setLoading(false);
+    });
   }, [clientId]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -31,15 +43,21 @@ export default function EditClientPage() {
     setError("");
 
     const formData = new FormData(e.currentTarget);
-    const data = {
+    const data: any = {
       name: formData.get("name"),
+      nickname: formData.get("nickname") || null,
       industry: formData.get("industry") || null,
       website: formData.get("website") || null,
       status: formData.get("status"),
       primaryContact: formData.get("primaryContact") || null,
       primaryEmail: formData.get("primaryEmail") || null,
-      monthlyRetainer: formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null,
+      agencyId: formData.get("agencyId") || null,
     };
+
+    // Only include monthlyRetainer for SUPER_ADMIN
+    if (userRole === "SUPER_ADMIN") {
+      data.monthlyRetainer = formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null;
+    }
 
     const res = await fetch(`/api/clients/${clientId}`, {
       method: "PUT",
@@ -101,9 +119,40 @@ export default function EditClientPage() {
           )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Client Name *</label>
-              <input name="name" required defaultValue={client.name} style={inputStyle} />
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Client Name *</label>
+                <input name="name" required defaultValue={client.name} style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>Nickname</label>
+                <input name="nickname" defaultValue={client.nickname || ""} placeholder="e.g., OB" style={inputStyle} />
+                <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>Short name for tasks</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Servicing Agency</label>
+                <select name="agencyId" defaultValue={client.agencyId || ""} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">Select agency...</option>
+                  {agencies.map(agency => (
+                    <option key={agency.id} value={agency.id}>
+                      {agency.name} {agency.isDefault ? "(Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select name="status" defaultValue={client.status} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="LEAD">Lead</option>
+                  <option value="ONBOARDING">Onboarding</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PAUSED">Paused</option>
+                  <option value="CHURNED">Churned</option>
+                </select>
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
@@ -117,17 +166,6 @@ export default function EditClientPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Status</label>
-              <select name="status" defaultValue={client.status} style={{ ...inputStyle, cursor: "pointer" }}>
-                <option value="LEAD">Lead</option>
-                <option value="ONBOARDING">Onboarding</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAUSED">Paused</option>
-                <option value="CHURNED">Churned</option>
-              </select>
-            </div>
-
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
               <div>
                 <label style={labelStyle}>Primary Contact</label>
@@ -139,10 +177,12 @@ export default function EditClientPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 32 }}>
-              <label style={labelStyle}>Monthly Retainer (USD)</label>
-              <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={inputStyle} />
-            </div>
+            {userRole === "SUPER_ADMIN" && (
+              <div style={{ marginBottom: 32 }}>
+                <label style={labelStyle}>Monthly Retainer (USD)</label>
+                <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={inputStyle} />
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 12 }}>
               <button type="submit" disabled={saving} style={{
