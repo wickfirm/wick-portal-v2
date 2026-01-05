@@ -9,7 +9,9 @@ export const dynamic = "force-dynamic";
 
 export default async function PortalResourcesPage() {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+  if (!session) {
+    redirect("/login");
+  }
 
   const user = session.user as any;
 
@@ -18,87 +20,49 @@ export default async function PortalResourcesPage() {
     include: { client: true },
   });
 
-  if (!dbUser?.client) {
+  if (!dbUser || !dbUser.client) {
     redirect("/portal");
   }
 
+  const clientId = dbUser.client.id;
+
   const resources = await prisma.clientResource.findMany({
-    where: { clientId: dbUser.client.id },
+    where: { clientId: clientId },
     orderBy: { order: "asc" },
   });
+
+  const resourceCount = resources.length;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <PortalHeader userName={user.name} />
-
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Resources</h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
-            Quick access to all your important documents and tools.
-          </p>
-        </div>
-
-        <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
-          {resources.length === 0 ? (
-            <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>R</div>
-              <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No resources yet</div>
-              <div style={{ color: theme.colors.textSecondary }}>Your team will add important links and documents here.</div>
-            </div>
+        <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 16 }}>
+          Resources
+        </h1>
+        <p style={{ color: theme.colors.textSecondary, marginBottom: 32 }}>
+          Quick access to all your important documents and tools.
+        </p>
+        <div style={{ background: theme.colors.bgSecondary, borderRadius: 12, border: "1px solid " + theme.colors.borderLight, padding: 24 }}>
+          {resourceCount === 0 ? (
+            <p style={{ textAlign: "center", color: theme.colors.textMuted }}>No resources yet</p>
           ) : (
-            <div>
-              {resources.map(function(resource, idx) {
+            <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+              {resources.map(function(resource) {
                 return (
-                  
-                    key={resource.id}
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "16px 20px",
-                      borderBottom: idx < resources.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                      textDecoration: "none",
-                      color: "inherit",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 10,
-                        background: theme.colors.infoBg,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        color: theme.colors.info
-                      }}>
-                        {resource.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>{resource.name}</div>
-                        <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>{resource.type}</div>
-                      </div>
-                    </div>
-                    <div style={{
-                      padding: "8px 14px",
-                      background: theme.colors.primaryBg,
-                      color: theme.colors.primary,
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 500,
-                    }}>
-                      Open
-                    </div>
-                  </a>
+                  <li key={resource.id} style={{ marginBottom: 12 }}>
+                    
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: theme.colors.primary, textDecoration: "none" }}
+                    >
+                      {resource.name}
+                    </a>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
           )}
         </div>
       </main>
