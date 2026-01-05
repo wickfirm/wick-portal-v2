@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
@@ -42,6 +43,8 @@ const OWNER_OPTIONS = ["AGENCY", "CLIENT"];
 export default function ClientTasksPage() {
   const params = useParams();
   const clientId = params.id as string;
+  const { data: session } = useSession();
+  const user = session?.user as any;
 
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -537,7 +540,7 @@ export default function ClientTasksPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header />
+      <Header userName={user?.name} userRole={user?.role} />
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
