@@ -1,15 +1,37 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
+type Agency = {
+  id: string;
+  name: string;
+  isDefault: boolean;
+};
+
 export default function NewClientPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [agencies, setAgencies] = useState<Agency[]>([]);
+  const [defaultAgencyId, setDefaultAgencyId] = useState<string>("");
+
+  useEffect(() => {
+    fetch("/api/agencies")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAgencies(data);
+          const defaultAgency = data.find((a: Agency) => a.isDefault);
+          if (defaultAgency) {
+            setDefaultAgencyId(defaultAgency.id);
+          }
+        }
+      });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -19,12 +41,14 @@ export default function NewClientPage() {
     const formData = new FormData(e.currentTarget);
     const data = {
       name: formData.get("name"),
+      nickname: formData.get("nickname") || null,
       industry: formData.get("industry") || null,
       website: formData.get("website") || null,
       status: formData.get("status") || "LEAD",
       primaryContact: formData.get("primaryContact") || null,
       primaryEmail: formData.get("primaryEmail") || null,
       monthlyRetainer: formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null,
+      agencyId: formData.get("agencyId") || null,
     };
 
     const res = await fetch("/api/clients", {
@@ -84,9 +108,40 @@ export default function NewClientPage() {
           )}
 
           <form onSubmit={handleSubmit}>
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Client Name *</label>
-              <input name="name" required style={inputStyle} placeholder="Acme Corporation" />
+            <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Client Name *</label>
+                <input name="name" required style={inputStyle} placeholder="Acme Corporation" />
+              </div>
+              <div>
+                <label style={labelStyle}>Nickname</label>
+                <input name="nickname" style={inputStyle} placeholder="e.g., ACME" />
+                <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>Short name for tasks</div>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Servicing Agency</label>
+                <select name="agencyId" defaultValue={defaultAgencyId} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="">Select agency...</option>
+                  {agencies.map(agency => (
+                    <option key={agency.id} value={agency.id}>
+                      {agency.name} {agency.isDefault ? "(Default)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select name="status" defaultValue="LEAD" style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="LEAD">Lead</option>
+                  <option value="ONBOARDING">Onboarding</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PAUSED">Paused</option>
+                  <option value="CHURNED">Churned</option>
+                </select>
+              </div>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
@@ -98,17 +153,6 @@ export default function NewClientPage() {
                 <label style={labelStyle}>Website</label>
                 <input name="website" type="url" style={inputStyle} placeholder="https://example.com" />
               </div>
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={labelStyle}>Status</label>
-              <select name="status" defaultValue="LEAD" style={{ ...inputStyle, cursor: "pointer" }}>
-                <option value="LEAD">Lead</option>
-                <option value="ONBOARDING">Onboarding</option>
-                <option value="ACTIVE">Active</option>
-                <option value="PAUSED">Paused</option>
-                <option value="CHURNED">Churned</option>
-              </select>
             </div>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
