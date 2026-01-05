@@ -19,30 +19,37 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
         
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
+        try {
+          console.log("Querying database...");
+          const user = await prisma.user.findUnique({
+            where: { email: credentials.email },
+          });
 
-        console.log("User found:", user ? "yes" : "no");
+          console.log("User found:", user ? user.email : "none");
 
-        if (!user) {
-          console.log("No user found for email:", credentials.email);
+          if (!user) {
+            console.log("No user found");
+            return null;
+          }
+
+          console.log("Checking password...");
+          const isValid = await compare(credentials.password, user.password);
+          console.log("Password valid:", isValid);
+          
+          if (!isValid) {
+            return null;
+          }
+
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+          };
+        } catch (error) {
+          console.error("Auth error:", error);
           return null;
         }
-
-        const isValid = await compare(credentials.password, user.password);
-        console.log("Password valid:", isValid);
-        
-        if (!isValid) {
-          return null;
-        }
-
-        return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-        };
       },
     }),
   ],
