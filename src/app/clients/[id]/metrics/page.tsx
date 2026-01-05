@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Header from "@/components/Header";
 
 type Section = "analytics" | "seo" | "aeo" | "meta" | "google" | "linkedin" | "tiktok" | "instagram" | "facebook" | "liOrganic" | "ttOrganic" | "twitter" | "content" | "hours";
 
@@ -154,20 +155,7 @@ export default function ClientMetricsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
-      <header style={{ background: "white", padding: 16, borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <Link href="/dashboard" style={{ fontWeight: "bold", fontSize: 20, textDecoration: "none", color: "#333" }}>Wick Portal</Link>
-          <nav style={{ display: "flex", gap: 16 }}>
-            <Link href="/dashboard" style={{ color: "#666", textDecoration: "none" }}>Dashboard</Link>
-            <Link href="/clients" style={{ color: "#333", textDecoration: "none", fontWeight: 500 }}>Clients</Link>
-            <Link href="/projects" style={{ color: "#666", textDecoration: "none" }}>Projects</Link>
-            <Link href="/team" style={{ color: "#666", textDecoration: "none" }}>Team</Link>
-            <Link href="/analytics" style={{ color: "#666", textDecoration: "none" }}>Analytics</Link>
-            <Link href="/settings" style={{ color: "#666", textDecoration: "none" }}>Settings</Link>
-          </nav>
-        </div>
-        <Link href="/api/auth/signout" style={{ color: "#666", textDecoration: "none" }}>Sign out</Link>
-      </header>
+      <Header />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: 24 }}>
         <div style={{ marginBottom: 24 }}>
