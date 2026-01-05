@@ -60,7 +60,7 @@ export default async function SettingsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header userName={user.name} userRole={user.role} />
+      <Header />
 
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
