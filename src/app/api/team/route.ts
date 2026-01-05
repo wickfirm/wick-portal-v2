@@ -2,30 +2,95 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const user = session.user as any;
+
+  // CLIENT role sees only team members assigned to their clients
+  if (user.role === "CLIENT") {
+    // Get clients this user has access to
+    const userWithClient = await prisma.user.findUnique({
+      where: { id: user.id },
+      include: { client: true },
+    });
+
+    if (userWithClient?.clientId) {
+      // Get team members for this client
+      const teamMembers = await prisma.clientTeamMember.findMany({
+        where: { clientId: userWithClient.clientId },
+        include: {
+          user: {
+            include: {
+              agency: true,
+              clientAssignments: {
+                include: {
+                  client: { select: { id: true, name: true, nickname: true } }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      return NextResponse.json(teamMembers.map(tm => tm.user));
+    }
+
+    return NextResponse.json([]);
+  }
+
+  // SUPER_ADMIN and ADMIN see all users
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    include: {
+      agency: true,
+      clientAssignments: {
+        include: {
+          client: { select: { id: true, name: true, nickname: true } }
+        }
+      }
+    }
+  });
+
+  return NextResponse.json(users);
+}
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const currentUser = session.user as any;
+  
+  // Only SUPER_ADMIN and ADMIN can create users
+  if (!["SUPER_ADMIN", "ADMIN"].includes(currentUser.role)) {
+    return NextResponse.json({ error: "Not authorized" }, { status: 403 });
+  }
+
   try {
     const data = await req.json();
-    
-    const hashedPassword = await bcrypt.hash(data.password, 10);
-    
+
+    // Check if email already exists
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
+    if (existing) {
+      return NextResponse.json({ error: "Email already exists" }, { status: 400 });
+    }
+
+    const hashedPassword = await hash(data.password, 10);
+
     const user = await prisma.user.create({
       data: {
-        name: data.name,
         email: data.email,
+        name: data.name || null,
         password: hashedPassword,
         role: data.role || "MEMBER",
         agencyId: data.agencyId || null,
-        clientId: data.clientId || null,
-        isActive: true,
       },
     });
 
-    // Assign to clients if provided
+    // Create client assignments if provided
     if (data.clientIds && data.clientIds.length > 0) {
       await prisma.clientTeamMember.createMany({
         data: data.clientIds.map((clientId: string) => ({
@@ -36,27 +101,9 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ id: user.id, name: user.name, email: user.email });
+    return NextResponse.json(user);
   } catch (error) {
     console.error("Failed to create user:", error);
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
   }
-}
-
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const users = await prisma.user.findMany({
-    orderBy: { createdAt: "desc" },
-    include: { 
-      client: true,
-      agency: true,
-      clientAssignments: {
-        include: { client: { select: { id: true, name: true, nickname: true } } }
-      }
-    },
-  });
-  
-  return NextResponse.json(users);
 }
