@@ -2,30 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { theme } from "@/lib/theme";
 
-type HeaderProps = {
-  userName?: string;
-  userRole?: string;
-};
-
-export default function Header({ userName, userRole }: HeaderProps) {
+export default function Header() {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const user = session?.user as any;
+  const userName = user?.name || "";
+  const userRole = user?.role || "";
 
-  // Base nav items available to all internal users
-  const allNavItems = [
-    { href: "/dashboard", label: "Dashboard", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
-    { href: "/clients", label: "Clients", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
-    { href: "/projects", label: "Projects", roles: ["ADMIN", "MANAGER", "SPECIALIST"] },
-    { href: "/team", label: "Team", roles: ["ADMIN"] },
-    { href: "/analytics", label: "Analytics", roles: ["ADMIN", "MANAGER"] },
-    { href: "/settings", label: "Settings", roles: ["ADMIN", "MANAGER"] },
+  const navItems = [
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/clients", label: "Clients" },
+    { href: "/projects", label: "Projects" },
+    { href: "/team", label: "Team" },
+    { href: "/analytics", label: "Analytics" },
+    { href: "/settings", label: "Settings" },
   ];
-
-  // Filter nav items based on user role
-  const navItems = allNavItems.filter(item => 
-    item.roles.includes(userRole || "SPECIALIST")
-  );
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -108,7 +102,7 @@ export default function Header({ userName, userRole }: HeaderProps) {
               <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>{userName}</div>
               {userRole && (
                 <div style={{ fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  {userRole}
+                  {userRole.replace("_", " ")}
                 </div>
               )}
             </div>
