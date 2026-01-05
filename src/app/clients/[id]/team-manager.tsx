@@ -6,7 +6,7 @@ import { theme } from "@/lib/theme";
 type TeamMember = {
   id: string;
   userId: string;
-  name: string;
+  name: string | null;
   email: string;
   role: string;
 };
