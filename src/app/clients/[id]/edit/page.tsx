@@ -101,7 +101,7 @@ export default function EditClientPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header userName={userName} userRole={userRole} />
+      <Header />
 
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
