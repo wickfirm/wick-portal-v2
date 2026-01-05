@@ -130,25 +130,18 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                   </span>
                 </div>
                 <div style={{ color: theme.colors.textSecondary, fontSize: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  {client.agencies.length > 0 && (
-                    <div style={{ display: "flex", gap: 4 }}>
-                      {client.agencies.map(ca => (
-                        <span 
-                          key={ca.id}
-                          style={{ 
-                            padding: "2px 8px", 
-                            background: theme.colors.infoBg, 
-                            color: theme.colors.info, 
-                            borderRadius: 4, 
-                            fontSize: 12,
-                            fontWeight: 500,
-                          }}
-                        >
-                          {ca.agency.name}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  {client.agencies.map(ca => (
+                    <span key={ca.agency.id} style={{ 
+                      padding: "2px 8px", 
+                      background: theme.colors.infoBg, 
+                      color: theme.colors.info, 
+                      borderRadius: 4, 
+                      fontSize: 12,
+                      fontWeight: 500,
+                    }}>
+                      {ca.agency.name}
+                    </span>
+                  ))}
                   {client.industry && <span>{client.industry}</span>}
                   {client.website && (
                     <>
@@ -235,11 +228,10 @@ export default async function ClientViewPage({ params }: { params: { id: string 
             </div>
 
             {/* Agencies Manager */}
-            {canManageTeam && (
-              <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
-                <AgenciesManager clientId={client.id} />
-              </div>
-            )}
+            <AgenciesManager 
+              clientId={client.id} 
+              initialAgencies={client.agencies.map(ca => ca.agency)} 
+            />
 
             {/* Team Members (visible to SUPER_ADMIN and ADMIN) */}
             {canManageTeam && (
