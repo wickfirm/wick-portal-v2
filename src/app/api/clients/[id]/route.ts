@@ -30,9 +30,11 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
-    include: { 
+include: {
       projects: true,
-      agency: true,
+      agencies: {
+        include: { agency: true }
+      },
       teamMembers: {
         include: { user: { select: { id: true, name: true, email: true, role: true } } }
       }
