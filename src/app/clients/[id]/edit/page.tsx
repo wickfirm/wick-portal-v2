@@ -23,6 +23,7 @@ export default function EditClientPage() {
   const [client, setClient] = useState<any>(null);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [userRole, setUserRole] = useState<string>("");
+  const [userName, setUserName] = useState<string>("");
 
   useEffect(() => {
     Promise.all([
@@ -33,6 +34,7 @@ export default function EditClientPage() {
       setClient(clientData);
       setAgencies(Array.isArray(agenciesData) ? agenciesData : []);
       setUserRole(sessionData?.user?.role || "");
+      setUserName(sessionData?.user?.name || "");
       setLoading(false);
     });
   }, [clientId]);
@@ -99,7 +101,7 @@ export default function EditClientPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header />
+      <Header userName={userName} userRole={userRole} />
 
       <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
