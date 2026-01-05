@@ -19,6 +19,15 @@ export default async function SettingsPage() {
       href: "/settings/account",
       icon: "👤",
       color: theme.colors.purple,
+      roles: ["SUPER_ADMIN", "ADMIN", "MEMBER"],
+    },
+    {
+      title: "Agencies",
+      description: "Manage agencies that service your clients",
+      href: "/settings/agencies",
+      icon: "🏢",
+      color: theme.colors.warning,
+      roles: ["SUPER_ADMIN"],
     },
     {
       title: "Stage Templates",
@@ -26,6 +35,7 @@ export default async function SettingsPage() {
       href: "/settings/stage-templates",
       icon: "📋",
       color: theme.colors.primary,
+      roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
       title: "Onboarding Templates",
@@ -33,15 +43,20 @@ export default async function SettingsPage() {
       href: "/settings/onboarding",
       icon: "✅",
       color: theme.colors.success,
+      roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
-      title: "Task Settings",
-      description: "Manage categories, statuses, and priorities for tasks",
-      href: "/settings/tasks",
-      icon: "📝",
+      title: "Task Categories",
+      description: "Manage categories for client tasks",
+      href: "/settings/task-categories",
+      icon: "📁",
       color: theme.colors.info,
+      roles: ["SUPER_ADMIN", "ADMIN"],
     },
   ];
+
+  // Filter settings based on user role
+  const visibleItems = settingsItems.filter(item => item.roles.includes(user.role));
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
@@ -54,7 +69,7 @@ export default async function SettingsPage() {
         </div>
 
         <div style={{ display: "grid", gap: 16 }}>
-          {settingsItems.map((item) => (
+          {visibleItems.map((item) => (
             <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
               <div style={{
                 background: theme.colors.bgSecondary,
