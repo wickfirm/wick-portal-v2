@@ -25,6 +25,7 @@ type User = {
   name: string | null;
   role: string;
   isActive: boolean;
+  agencyId?: string | null;
   agency?: Agency | null;
   clientAssignments?: ClientAssignment[];
 };
@@ -53,6 +54,16 @@ export default function TeamPage() {
     clientIds: [] as string[],
   });
   const [adding, setAdding] = useState(false);
+
+  // Edit state
+  const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    role: "",
+    agencyId: "",
+    clientIds: [] as string[],
+  });
+  const [saving, setSaving] = useState(false);
 
   const isClientRole = currentUser?.role === "CLIENT";
 
@@ -104,6 +115,36 @@ export default function TeamPage() {
     setAdding(false);
   }
 
+  function openEditModal(user: User) {
+    setEditingUser(user);
+    setEditForm({
+      name: user.name || "",
+      role: user.role,
+      agencyId: user.agencyId || "",
+      clientIds: user.clientAssignments?.map(ca => ca.client.id) || [],
+    });
+  }
+
+  async function saveEdit() {
+    if (!editingUser) return;
+    setSaving(true);
+
+    const res = await fetch("/api/team/" + editingUser.id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editForm),
+    });
+
+    if (res.ok) {
+      setEditingUser(null);
+      fetchData();
+    } else {
+      const data = await res.json();
+      alert(data.error || "Failed to update user");
+    }
+    setSaving(false);
+  }
+
   async function toggleActive(user: User) {
     await fetch("/api/team/" + user.id, {
       method: "PUT",
@@ -119,11 +160,19 @@ export default function TeamPage() {
     fetchData();
   }
 
-  function toggleClientSelection(clientId: string) {
-    if (newUser.clientIds.includes(clientId)) {
-      setNewUser({ ...newUser, clientIds: newUser.clientIds.filter(id => id !== clientId) });
+  function toggleClientSelection(clientId: string, isEdit = false) {
+    if (isEdit) {
+      if (editForm.clientIds.includes(clientId)) {
+        setEditForm({ ...editForm, clientIds: editForm.clientIds.filter(id => id !== clientId) });
+      } else {
+        setEditForm({ ...editForm, clientIds: [...editForm.clientIds, clientId] });
+      }
     } else {
-      setNewUser({ ...newUser, clientIds: [...newUser.clientIds, clientId] });
+      if (newUser.clientIds.includes(clientId)) {
+        setNewUser({ ...newUser, clientIds: newUser.clientIds.filter(id => id !== clientId) });
+      } else {
+        setNewUser({ ...newUser, clientIds: [...newUser.clientIds, clientId] });
+      }
     }
   }
 
@@ -139,9 +188,8 @@ export default function TeamPage() {
 
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
 
-  // CLIENT role sees only team members assigned to their clients
   const displayUsers = isClientRole 
-    ? users.filter(u => u.role !== "CLIENT") // Show agency team only
+    ? users.filter(u => u.role !== "CLIENT")
     : users;
 
   return (
@@ -444,6 +492,22 @@ export default function TeamPage() {
                     {!isClientRole && (
                       <td style={{ padding: 16, textAlign: "right" }}>
                         <button
+                          onClick={() => openEditModal(user)}
+                          style={{
+                            padding: "6px 12px",
+                            marginRight: 8,
+                            background: theme.colors.infoBg,
+                            color: theme.colors.info,
+                            border: "none",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
                           onClick={() => toggleActive(user)}
                           style={{
                             padding: "6px 12px",
@@ -483,6 +547,172 @@ export default function TeamPage() {
           )}
         </div>
       </main>
+
+      {/* Edit Modal */}
+      {editingUser && (
+        <>
+          <div
+            onClick={() => setEditingUser(null)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.4)",
+              zIndex: 1000,
+            }}
+          />
+          <div style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            background: theme.colors.bgSecondary,
+            borderRadius: 12,
+            padding: 32,
+            width: 500,
+            maxHeight: "90vh",
+            overflow: "auto",
+            zIndex: 1001,
+            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+          }}>
+            <h3 style={{ margin: "0 0 24px 0", fontSize: 20, fontWeight: 600 }}>
+              Edit User
+            </h3>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email</label>
+              <input
+                value={editingUser.email}
+                disabled
+                style={{ ...inputStyle, background: theme.colors.bgTertiary, color: theme.colors.textMuted }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
+              <input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                style={inputStyle}
+                placeholder="John Smith"
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
+                <select
+                  value={editForm.role}
+                  onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  <option value="MEMBER">Member</option>
+                  <option value="MANAGER">Manager</option>
+                  <option value="ADMIN">Admin</option>
+                  <option value="SUPER_ADMIN">Super Admin</option>
+                  <option value="CLIENT">Client</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Agency</label>
+                <select
+                  value={editForm.agencyId}
+                  onChange={(e) => setEditForm({ ...editForm, agencyId: e.target.value })}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  <option value="">No Agency</option>
+                  {agencies.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 24 }}>
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
+                Assign to Clients
+              </label>
+              <div style={{ 
+                border: "1px solid " + theme.colors.borderMedium, 
+                borderRadius: 8, 
+                maxHeight: 200, 
+                overflow: "auto",
+                background: theme.colors.bgPrimary,
+              }}>
+                {clients.length === 0 ? (
+                  <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No clients available</div>
+                ) : (
+                  clients.map(client => (
+                    <label 
+                      key={client.id} 
+                      style={{ 
+                        display: "flex", 
+                        alignItems: "center", 
+                        gap: 10, 
+                        padding: "10px 12px",
+                        cursor: "pointer",
+                        borderBottom: "1px solid " + theme.colors.borderLight,
+                        background: editForm.clientIds.includes(client.id) ? theme.colors.successBg : "transparent",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={editForm.clientIds.includes(client.id)}
+                        onChange={() => toggleClientSelection(client.id, true)}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontSize: 14 }}>
+                        {client.nickname || client.name}
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {editForm.clientIds.length > 0 && (
+                <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>
+                  {editForm.clientIds.length} client(s) selected
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setEditingUser(null)}
+                style={{
+                  flex: 1,
+                  padding: "12px 20px",
+                  background: theme.colors.bgTertiary,
+                  color: theme.colors.textSecondary,
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                style={{
+                  flex: 1,
+                  padding: "12px 20px",
+                  background: saving ? theme.colors.bgTertiary : theme.colors.primary,
+                  color: saving ? theme.colors.textMuted : "white",
+                  border: "none",
+                  borderRadius: 8,
+                  fontWeight: 500,
+                  cursor: saving ? "not-allowed" : "pointer",
+                }}
+              >
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
