@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const client = await prisma.client.findUnique({
     where: { id: params.id },
-include: {
+    include: { 
       projects: true,
       agencies: {
         include: { agency: true }
@@ -81,7 +81,6 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       notes: data.notes,
       primaryContact: data.primaryContact,
       primaryEmail: data.primaryEmail,
-      agencyId: data.agencyId || null,
       updatedAt: new Date(),
     };
 
@@ -93,7 +92,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     const client = await prisma.client.update({
       where: { id: params.id },
       data: updateData,
-      include: { agency: true },
+      include: { 
+        agencies: {
+          include: { agency: true }
+        }
+      },
     });
 
     return NextResponse.json(client);
