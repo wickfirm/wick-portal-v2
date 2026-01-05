@@ -49,14 +49,25 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    // Check if any clients are using this agency
-    const clientCount = await prisma.client.count({
+    // Check if any clients are using this agency via junction table
+    const clientAgencyCount = await prisma.clientAgency.count({
       where: { agencyId: params.id },
     });
 
-    if (clientCount > 0) {
+    if (clientAgencyCount > 0) {
       return NextResponse.json({ 
-        error: `Cannot delete agency. ${clientCount} client(s) are assigned to it.` 
+        error: `Cannot delete agency. ${clientAgencyCount} client(s) are assigned to it.` 
+      }, { status: 400 });
+    }
+
+    // Check if any users are assigned to this agency
+    const userCount = await prisma.user.count({
+      where: { agencyId: params.id },
+    });
+
+    if (userCount > 0) {
+      return NextResponse.json({ 
+        error: `Cannot delete agency. ${userCount} user(s) are assigned to it.` 
       }, { status: 400 });
     }
 
