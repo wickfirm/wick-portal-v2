@@ -6,6 +6,7 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
 import ClientResources from "./client-resources";
+import TeamManager from "./team-manager";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -15,12 +16,27 @@ export default async function ClientViewPage({ params }: { params: { id: string 
   if (!session) redirect("/login");
   const user = session.user as any;
 
+  // Check access for non-SUPER_ADMIN
+  if (user.role !== "SUPER_ADMIN") {
+    const hasAccess = await prisma.clientTeamMember.findFirst({
+      where: { clientId: params.id, userId: user.id },
+    });
+    if (!hasAccess) {
+      redirect("/clients");
+    }
+  }
+
   const client = await prisma.client.findUnique({
     where: { id: params.id },
     include: {
       projects: { include: { stages: true }, orderBy: { createdAt: "desc" } },
       onboardingItems: { orderBy: { order: "asc" } },
       resources: { orderBy: { order: "asc" } },
+      agency: true,
+      teamMembers: {
+        include: { user: { select: { id: true, name: true, email: true, role: true } } },
+        orderBy: { assignedAt: "asc" },
+      },
     },
   });
 
@@ -50,6 +66,18 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     order: resource.order,
   }));
 
+  const teamForClient = client.teamMembers.map(tm => ({
+    id: tm.id,
+    userId: tm.userId,
+    name: tm.user.name,
+    email: tm.user.email,
+    role: tm.user.role,
+  }));
+
+  const canManageTeam = ["SUPER_ADMIN", "ADMIN"].includes(user.role);
+  const canAddProjects = ["SUPER_ADMIN", "ADMIN"].includes(user.role);
+  const canSeeBudget = user.role === "SUPER_ADMIN";
+
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header userName={user.name} userRole={user.role} />
@@ -77,11 +105,16 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                 fontWeight: 700,
                 fontSize: 28
               }}>
-                {client.name.charAt(0).toUpperCase()}
+                {(client.nickname || client.name).charAt(0).toUpperCase()}
               </div>
               <div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-                  <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>{client.name}</h1>
+                  <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                    {client.name}
+                    {client.nickname && (
+                      <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 8 }}>({client.nickname})</span>
+                    )}
+                  </h1>
                   <span style={{
                     padding: "4px 12px",
                     borderRadius: 20,
@@ -93,9 +126,28 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                     {client.status}
                   </span>
                 </div>
-                <div style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
-                  {client.industry || "No industry"} {client.website && " • "} 
-                  {client.website && <a href={client.website} target="_blank" style={{ color: theme.colors.primary }}>{client.website.replace("https://", "").replace("http://", "")}</a>}
+                <div style={{ color: theme.colors.textSecondary, fontSize: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                  {client.agency && (
+                    <span style={{ 
+                      padding: "2px 8px", 
+                      background: theme.colors.infoBg, 
+                      color: theme.colors.info, 
+                      borderRadius: 4, 
+                      fontSize: 12,
+                      fontWeight: 500,
+                    }}>
+                      {client.agency.name}
+                    </span>
+                  )}
+                  {client.industry && <span>{client.industry}</span>}
+                  {client.website && (
+                    <>
+                      <span>•</span>
+                      <a href={client.website} target="_blank" style={{ color: theme.colors.primary }}>
+                        {client.website.replace("https://", "").replace("http://", "")}
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -155,12 +207,14 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                   <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Email</div>
                   <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{client.primaryEmail || "—"}</div>
                 </div>
-                <div>
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Monthly Retainer</div>
-                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                    {client.monthlyRetainer ? "$" + Number(client.monthlyRetainer).toLocaleString() : "—"}
+                {canSeeBudget && (
+                  <div>
+                    <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Monthly Retainer</div>
+                    <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
+                      {client.monthlyRetainer ? "$" + Number(client.monthlyRetainer).toLocaleString() : "—"}
+                    </div>
                   </div>
-                </div>
+                )}
                 <div>
                   <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Client Since</div>
                   <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
@@ -169,6 +223,15 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                 </div>
               </div>
             </div>
+
+            {/* Team Members (visible to SUPER_ADMIN and ADMIN) */}
+            {canManageTeam && (
+              <TeamManager 
+                clientId={client.id} 
+                initialTeam={teamForClient} 
+                canEdit={canManageTeam}
+              />
+            )}
 
             {/* Client Resources */}
             <ClientResources clientId={client.id} initialResources={resourcesForClient} />
@@ -182,17 +245,19 @@ export default async function ClientViewPage({ params }: { params: { id: string 
         <div style={{ marginTop: 24, background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           <div style={{ padding: "20px 24px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>Projects ({client.projects.length})</h2>
-            <Link href={"/projects/new?clientId=" + client.id} style={{
-              background: theme.colors.primary,
-              color: "white",
-              padding: "8px 16px",
-              borderRadius: 6,
-              textDecoration: "none",
-              fontWeight: 500,
-              fontSize: 13
-            }}>
-              + Add Project
-            </Link>
+            {canAddProjects && (
+              <Link href={"/projects/new?clientId=" + client.id} style={{
+                background: theme.colors.primary,
+                color: "white",
+                padding: "8px 16px",
+                borderRadius: 6,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>
+                + Add Project
+              </Link>
+            )}
           </div>
 
           {client.projects.length === 0 ? (
