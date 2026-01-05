@@ -95,7 +95,7 @@ export default function TaskPrioritiesPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header userName={currentUser?.name} userRole={currentUser?.role} />
+      <Header />
 
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
