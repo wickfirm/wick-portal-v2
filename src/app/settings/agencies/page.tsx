@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
+import { useSession } from "next-auth/react";
 
 type Agency = {
   id: string;
@@ -14,6 +15,9 @@ type Agency = {
 
 export default function AgenciesSettingsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const user = session?.user as any;
+  
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -106,7 +110,7 @@ export default function AgenciesSettingsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header />
+      <Header userName={user?.name} userRole={user?.role} />
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
