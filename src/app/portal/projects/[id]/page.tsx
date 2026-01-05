@@ -38,7 +38,7 @@ export default async function PortalProjectDetailPage({ params }: { params: { id
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <PortalHeader />
+      <PortalHeader userName={user.name} />
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
