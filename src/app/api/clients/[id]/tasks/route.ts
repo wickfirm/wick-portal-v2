@@ -18,6 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where,
       include: { 
         category: true,
+        client: { select: { nickname: true, name: true, agency: { select: { id: true, name: true } } } },
       },
       orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
     });
@@ -56,6 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         externalLinkLabel: data.externalLinkLabel || null,
         internalLink: data.internalLink || null,
         internalLinkLabel: data.internalLinkLabel || null,
+        ownerType: data.ownerType || "AGENCY",
         order: (lastTask?.order ?? 0) + 1,
       },
       include: { category: true },
