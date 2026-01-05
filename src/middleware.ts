@@ -14,8 +14,8 @@ export default withAuth(
       return NextResponse.redirect(new URL("/portal", req.url));
     }
 
-    // SPECIALIST role - no access to team management or settings (except account)
-    if (token?.role === "SPECIALIST") {
+    // MEMBER role - no access to team management or settings (except account)
+    if (token?.role === "MEMBER") {
       if (path.startsWith("/team") || (path.startsWith("/settings") && !path.startsWith("/settings/account"))) {
         return NextResponse.redirect(new URL("/dashboard", req.url));
       }
