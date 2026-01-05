@@ -22,7 +22,7 @@ export default async function PortalDashboard() {
   if (!dbUser?.client) {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-        <PortalHeader userName={user.name} />
+        <PortalHeader />
         <main style={{ maxWidth: 600, margin: "0 auto", padding: 48, textAlign: "center" }}>
           <div style={{ fontSize: 64, marginBottom: 24 }}>X</div>
           <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>No Client Linked</h1>
@@ -58,7 +58,7 @@ export default async function PortalDashboard() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <PortalHeader userName={user.name} />
+      <PortalHeader />
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
