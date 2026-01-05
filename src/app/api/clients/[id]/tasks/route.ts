@@ -18,7 +18,13 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where,
       include: { 
         category: true,
-        client: { select: { nickname: true, name: true, agency: { select: { id: true, name: true } } } },
+        client: { 
+          select: { 
+            nickname: true, 
+            name: true, 
+            agencies: { include: { agency: true } } 
+          } 
+        },
       },
       orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
     });
