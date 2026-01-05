@@ -16,7 +16,7 @@ export default function TeamPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "SPECIALIST" });
+  const [newUser, setNewUser] = useState({ email: "", name: "", password: "", role: "MEMBER" });
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
@@ -41,7 +41,7 @@ export default function TeamPage() {
     });
 
     if (res.ok) {
-      setNewUser({ email: "", name: "", password: "", role: "SPECIALIST" });
+      setNewUser({ email: "", name: "", password: "", role: "MEMBER" });
       setShowForm(false);
       fetchUsers();
     } else {
@@ -155,7 +155,7 @@ export default function TeamPage() {
                   >
                     <option value="ADMIN">Admin</option>
                     <option value="MANAGER">Manager</option>
-                    <option value="SPECIALIST">Specialist</option>
+                    <option value="MEMBER">Member</option>
                     <option value="CLIENT">Client</option>
                   </select>
                 </div>
