@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { theme } from "@/lib/theme";
 
 export default function LoginPage() {
@@ -105,7 +106,7 @@ export default function LoginPage() {
             />
           </div>
 
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
             <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
               Password
             </label>
@@ -123,6 +124,20 @@ export default function LoginPage() {
                 boxSizing: "border-box"
               }}
             />
+          </div>
+
+          <div style={{ marginBottom: 24, textAlign: "right" }}>
+            <Link 
+              href="/reset-password" 
+              style={{ 
+                color: theme.colors.primary, 
+                fontSize: 13, 
+                textDecoration: "none",
+                fontWeight: 500,
+              }}
+            >
+              Forgot password?
+            </Link>
           </div>
 
           <button
