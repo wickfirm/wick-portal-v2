@@ -15,13 +15,13 @@ model User {
   password  String
   name      String?
   role      UserRole  @default(MEMBER)
-  isActive  Boolean  @default(true) @map("is_active")
-  clientId  String?  @map("client_id")
+  isActive  Boolean  @default(true)
+  clientId  String?
   client    Client?  @relation(fields: [clientId], references: [id])
   agencyId  String?  @map("agency_id")
   agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   assignedTasks     ClientTask[]
   clientAssignments ClientTeamMember[]
 
