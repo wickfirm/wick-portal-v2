@@ -252,7 +252,7 @@ export default function TeamManager({ clientId, initialTeam, canEdit }: Props) {
                         alignItems: "center", 
                         gap: 12,
                         padding: "10px 12px",
-                        background: selectedUserIds.includes(user.id) ? theme.colors.primaryBg : theme.colors.bgPrimary,
+                        background: selectedUserIds.includes(user.id) ? theme.colors.infoBg : theme.colors.bgPrimary,
                         borderRadius: 8,
                         cursor: "pointer",
                         border: "1px solid " + (selectedUserIds.includes(user.id) ? theme.colors.primary : "transparent"),
