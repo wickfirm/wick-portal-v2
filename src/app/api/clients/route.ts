@@ -11,7 +11,7 @@ export async function GET() {
 
   const user = session.user as any;
 
-  let clients;
+  let clients: any[];
 
   // SUPER_ADMIN sees all clients
   if (user.role === "SUPER_ADMIN") {
