@@ -7,21 +7,6 @@ import { theme } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
 
-const TYPE_ICONS: Record<string, string> = {
-  DRIVE: "📁",
-  SHEET: "📊",
-  DOC: "📄",
-  SLIDE: "📽️",
-  FIGMA: "🎨",
-  NOTION: "📝",
-  KITCHEN: "🍳",
-  ANALYTICS: "📈",
-  SEARCH_CONSOLE: "🔍",
-  ADS: "💰",
-  SOCIAL: "📱",
-  LINK: "🔗",
-};
-
 const TYPE_LABELS: Record<string, string> = {
   DRIVE: "Google Drive",
   SHEET: "Spreadsheet",
@@ -86,7 +71,7 @@ export default async function PortalResourcesPage() {
             border: "1px solid " + theme.colors.borderLight, 
             textAlign: "center" 
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
+            <div style={{ fontSize: 48, marginBottom: 16 }}>R</div>
             <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No resources yet</div>
             <div style={{ color: theme.colors.textSecondary }}>Your team will add important links and documents here.</div>
           </div>
@@ -107,7 +92,20 @@ export default async function PortalResourcesPage() {
                   gap: 10,
                   background: theme.colors.bgPrimary,
                 }}>
-                  <span style={{ fontSize: 18 }}>{TYPE_ICONS[type] || "🔗"}</span>
+                  <div style={{ 
+                    width: 28, 
+                    height: 28, 
+                    borderRadius: 6, 
+                    background: theme.colors.infoBg, 
+                    display: "flex", 
+                    alignItems: "center", 
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: theme.colors.info
+                  }}>
+                    {type.charAt(0)}
+                  </div>
                   <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>
                     {TYPE_LABELS[type] || type}
                   </h2>
@@ -147,9 +145,11 @@ export default async function PortalResourcesPage() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 18
+                          fontSize: 14,
+                          fontWeight: 600,
+                          color: theme.colors.info
                         }}>
-                          {TYPE_ICONS[type] || "🔗"}
+                          {resource.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <div style={{ fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>{resource.name}</div>
@@ -166,7 +166,7 @@ export default async function PortalResourcesPage() {
                         fontSize: 13,
                         fontWeight: 500,
                       }}>
-                        Open ↗
+                        Open
                       </div>
                     </a>
                   ))}
