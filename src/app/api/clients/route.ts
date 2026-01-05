@@ -19,7 +19,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       include: { 
         projects: true,
-        agency: true,
+        agencies: {
+          include: { agency: true }
+        },
         teamMembers: {
           include: { user: { select: { id: true, name: true } } }
         }
@@ -37,7 +39,9 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
       include: { 
         projects: true,
-        agency: true,
+        agencies: {
+          include: { agency: true }
+        },
         teamMembers: {
           include: { user: { select: { id: true, name: true } } }
         }
@@ -80,7 +84,6 @@ export async function POST(req: NextRequest) {
         primaryContact: data.primaryContact || null,
         primaryEmail: data.primaryEmail || null,
         monthlyRetainer: data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null,
-        agencyId: data.agencyId || null,
       },
     });
 
