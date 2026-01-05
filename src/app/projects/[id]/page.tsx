@@ -64,7 +64,7 @@ export default async function ProjectViewPage({ params }: { params: { id: string
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header userName={user.name} userRole={user.role} />
+      <Header />
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         {/* Breadcrumb */}
