@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
         name: data.name,
         email: data.email,
         password: hashedPassword,
-        role: data.role || "SPECIALIST",
+        role: data.role || "MEMBER",
         clientId: data.clientId || null,
         isActive: true,
       },
