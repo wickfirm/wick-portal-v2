@@ -31,7 +31,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data: updateData,
       include: { 
         category: true,
-        client: { select: { nickname: true, name: true, agency: { select: { id: true, name: true } } } },
+        client: { 
+          select: { 
+            nickname: true, 
+            name: true, 
+            agencies: { include: { agency: true } } 
+          } 
+        },
       },
     });
 
