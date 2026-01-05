@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import OnboardingManager from "./onboarding-manager";
 import ClientResources from "./client-resources";
 import TeamManager from "./team-manager";
+import AgenciesManager from "./agencies-manager";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -32,7 +33,9 @@ export default async function ClientViewPage({ params }: { params: { id: string 
       projects: { include: { stages: true }, orderBy: { createdAt: "desc" } },
       onboardingItems: { orderBy: { order: "asc" } },
       resources: { orderBy: { order: "asc" } },
-      agency: true,
+      agencies: {
+        include: { agency: true }
+      },
       teamMembers: {
         include: { user: { select: { id: true, name: true, email: true, role: true } } },
         orderBy: { assignedAt: "asc" },
@@ -127,17 +130,24 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                   </span>
                 </div>
                 <div style={{ color: theme.colors.textSecondary, fontSize: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                  {client.agency && (
-                    <span style={{ 
-                      padding: "2px 8px", 
-                      background: theme.colors.infoBg, 
-                      color: theme.colors.info, 
-                      borderRadius: 4, 
-                      fontSize: 12,
-                      fontWeight: 500,
-                    }}>
-                      {client.agency.name}
-                    </span>
+                  {client.agencies.length > 0 && (
+                    <div style={{ display: "flex", gap: 4 }}>
+                      {client.agencies.map(ca => (
+                        <span 
+                          key={ca.id}
+                          style={{ 
+                            padding: "2px 8px", 
+                            background: theme.colors.infoBg, 
+                            color: theme.colors.info, 
+                            borderRadius: 4, 
+                            fontSize: 12,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {ca.agency.name}
+                        </span>
+                      ))}
+                    </div>
                   )}
                   {client.industry && <span>{client.industry}</span>}
                   {client.website && (
@@ -223,6 +233,13 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                 </div>
               </div>
             </div>
+
+            {/* Agencies Manager */}
+            {canManageTeam && (
+              <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
+                <AgenciesManager clientId={client.id} />
+              </div>
+            )}
 
             {/* Team Members (visible to SUPER_ADMIN and ADMIN) */}
             {canManageTeam && (
