@@ -27,7 +27,7 @@ export default async function ClientsPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header userName={user.name} userRole={user.role} />
+      <Header />
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {/* Page Header */}
