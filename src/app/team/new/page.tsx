@@ -86,7 +86,7 @@ export default function NewTeamMemberPage() {
             <div style={{ marginBottom: 16 }}>
               <label style={{ display: "block", marginBottom: 4, fontWeight: 500 }}>Role *</label>
               <select name="role" required style={{ width: "100%", padding: 10, border: "1px solid #ddd", borderRadius: 4, boxSizing: "border-box" }}>
-                <option value="SPECIALIST">Specialist</option>
+                <option value="MEMBER">Member</option>
                 <option value="MANAGER">Manager</option>
                 <option value="ADMIN">Admin</option>
                 <option value="CLIENT">Client</option>
