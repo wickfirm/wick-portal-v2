@@ -12,6 +12,8 @@ export default function PortalHeader({ userName }: { userName?: string }) {
     { href: "/portal/projects", label: "Projects" },
     { href: "/portal/tasks", label: "Tasks" },
     { href: "/portal/metrics", label: "Metrics" },
+    { href: "/portal/team", label: "Team" },
+    { href: "/portal/resources", label: "Resources" },
   ];
 
   const isActive = (href: string) => {
