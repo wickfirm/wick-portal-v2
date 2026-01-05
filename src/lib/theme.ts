@@ -90,9 +90,10 @@ export const PRIORITY_STYLES: Record<string, { bg: string; color: string }> = {
 
 // Role styles
 export const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
+  SUPER_ADMIN: { bg: "#FEE2E2", color: "#DC2626" },
   ADMIN: { bg: theme.colors.errorBg, color: theme.colors.error },
   MANAGER: { bg: theme.colors.warningBg, color: theme.colors.warning },
-  SPECIALIST: { bg: theme.colors.infoBg, color: theme.colors.info },
+  MEMBER: { bg: theme.colors.infoBg, color: theme.colors.info },
   CLIENT: { bg: theme.colors.successBg, color: theme.colors.success },
 };
 
