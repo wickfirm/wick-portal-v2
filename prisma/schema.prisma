@@ -360,11 +360,11 @@ model Agency {
 
 model ClientAgency {
   id        String   @id @default(cuid())
-  clientId  String
+  clientId  String   @map("client_id")
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  agencyId  String
+  agencyId  String   @map("agency_id")
   agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([clientId, agencyId])
   @@map("client_agencies")
