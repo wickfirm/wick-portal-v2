@@ -183,13 +183,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 }
 
+
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const clientId = params.id;
-    const { itemId, isCompleted, inputValue, fileUrl, notes } = await req.json();
+    const { itemId, isCompleted, inputValue, fileUrl, notes, resourceUrl, resourceLabel } = await req.json();
 
     if (!itemId) {
       return NextResponse.json({ error: "itemId required" }, { status: 400 });
@@ -224,6 +225,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     if (notes !== undefined) {
       updateData.notes = notes;
+    }
+
+    if (resourceUrl !== undefined) {
+      updateData.resourceUrl = resourceUrl;
+    }
+
+    if (resourceLabel !== undefined) {
+      updateData.resourceLabel = resourceLabel;
     }
 
     const updatedItem = await prisma.onboardingItem.update({
