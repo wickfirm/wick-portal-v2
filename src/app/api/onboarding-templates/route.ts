@@ -8,7 +8,13 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const templates = await prisma.onboardingTemplate.findMany({
-    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
+    where: { isActive: true },
+    include: {
+      items: {
+        orderBy: { order: "asc" },
+      },
+    },
+    orderBy: [{ order: "asc" }],
   });
 
   return NextResponse.json(templates);
