@@ -20,6 +20,23 @@ function formatValue(value: number, formatType: FormatType = "number"): string {
   return value.toLocaleString();
 }
 
+// Helper to determine which labels to show
+function getVisibleLabelIndices(dataLength: number): number[] {
+  if (dataLength <= 6) {
+    // Show all labels
+    return Array.from({ length: dataLength }, function(_, i) { return i; });
+  } else if (dataLength <= 12) {
+    // Show every 2nd label
+    return Array.from({ length: dataLength }, function(_, i) { return i; }).filter(function(i) { return i % 2 === 0 || i === dataLength - 1; });
+  } else if (dataLength <= 18) {
+    // Show every 3rd label
+    return Array.from({ length: dataLength }, function(_, i) { return i; }).filter(function(i) { return i % 3 === 0 || i === dataLength - 1; });
+  } else {
+    // Show every 4th label for 18+ months
+    return Array.from({ length: dataLength }, function(_, i) { return i; }).filter(function(i) { return i % 4 === 0 || i === dataLength - 1; });
+  }
+}
+
 interface MetricsChartProps {
   data: DataPoint[];
   color?: string;
@@ -67,6 +84,8 @@ export default function MetricsChart({
   var areaPath = linePath + "L " + points[points.length - 1].x + " " + (chartHeight + padding.top) + " L " + points[0].x + " " + (chartHeight + padding.top) + " Z";
 
   var gradientId = "gradient-" + color.replace("#", "") + "-" + Math.random().toString(36).substr(2, 9);
+
+  var visibleLabelIndices = getVisibleLabelIndices(data.length);
 
   return (
     <div style={{ position: "relative", width: "100%", height: height }}>
@@ -180,8 +199,20 @@ export default function MetricsChart({
           padding: "0 4px",
         }}>
           {data.map(function(d, idx) {
+            var isVisible = visibleLabelIndices.indexOf(idx) !== -1;
             return (
-              <span key={idx} style={{ fontSize: 10, color: hoveredIndex === idx ? theme.colors.textPrimary : theme.colors.textMuted, fontWeight: hoveredIndex === idx ? 600 : 400 }}>
+              <span 
+                key={idx} 
+                style={{ 
+                  fontSize: 10, 
+                  color: hoveredIndex === idx ? theme.colors.textPrimary : theme.colors.textMuted, 
+                  fontWeight: hoveredIndex === idx ? 600 : 400,
+                  visibility: isVisible ? "visible" : "hidden",
+                  minWidth: 0,
+                  flex: 1,
+                  textAlign: "center",
+                }}
+              >
                 {d.label}
               </span>
             );
@@ -379,6 +410,8 @@ export function MultiLineChart({
     });
   });
 
+  var visibleLabelIndices = getVisibleLabelIndices(datasets[0].data.length);
+
   return (
     <div style={{ position: "relative", width: "100%", height: height }}>
       <svg
@@ -507,8 +540,20 @@ export function MultiLineChart({
         padding: "0 4px",
       }}>
         {datasets[0].data.map(function(d, idx) {
+          var isVisible = visibleLabelIndices.indexOf(idx) !== -1;
           return (
-            <span key={idx} style={{ fontSize: 10, color: hoveredIndex === idx ? theme.colors.textPrimary : theme.colors.textMuted, fontWeight: hoveredIndex === idx ? 600 : 400 }}>
+            <span 
+              key={idx} 
+              style={{ 
+                fontSize: 10, 
+                color: hoveredIndex === idx ? theme.colors.textPrimary : theme.colors.textMuted, 
+                fontWeight: hoveredIndex === idx ? 600 : 400,
+                visibility: isVisible ? "visible" : "hidden",
+                minWidth: 0,
+                flex: 1,
+                textAlign: "center",
+              }}
+            >
               {d.label}
             </span>
           );
