@@ -49,7 +49,17 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   try {
     const clientId = params.id;
-    const body = await req.json();
+    
+    // Handle empty body gracefully
+    let body: any = {};
+    try {
+      const text = await req.text();
+      if (text && text.trim()) {
+        body = JSON.parse(text);
+      }
+    } catch (e) {
+      // Empty body is fine, use legacy logic
+    }
     
     // If serviceTypes provided, use new initialization logic
     if (body.serviceTypes && Array.isArray(body.serviceTypes)) {
