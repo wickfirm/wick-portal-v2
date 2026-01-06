@@ -44,7 +44,7 @@ export default function OnboardingManager({
   const router = useRouter();
   const [items, setItems] = useState<OnboardingItem[]>(initialItems);
   const [loading, setLoading] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ GENERAL: true });
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
 
   const groupedItems = items.reduce((acc: Record<string, OnboardingItem[]>, item) => {
     if (!acc[item.serviceType]) {
