@@ -17,7 +17,6 @@ export default async function ClientViewPage({ params }: { params: { id: string 
   if (!session) redirect("/login");
   const user = session.user as any;
 
-  // Check access for non-SUPER_ADMIN
   if (user.role !== "SUPER_ADMIN") {
     const hasAccess = await prisma.clientTeamMember.findFirst({
       where: { clientId: params.id, userId: user.id },
@@ -47,22 +46,22 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
   }
 
-const onboardingForClient = client.onboardingItems.map(item => ({
-  id: item.id,
-  name: item.name,
-  description: item.description,
-  serviceType: item.serviceType,
-  itemType: item.itemType || "CHECKBOX",
-  order: item.order,
-  isRequired: item.isRequired || false,
-  isCompleted: item.isCompleted,
-  completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-  completedBy: item.completedBy,
-  inputValue: item.inputValue,
-  notes: item.notes,
-  resourceUrl: item.resourceUrl,
-  resourceLabel: item.resourceLabel,
-}));
+  const onboardingForClient = client.onboardingItems.map(item => ({
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    serviceType: item.serviceType,
+    itemType: item.itemType || "CHECKBOX",
+    order: item.order,
+    isRequired: item.isRequired || false,
+    isCompleted: item.isCompleted,
+    completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+    completedBy: item.completedBy,
+    inputValue: item.inputValue,
+    notes: item.notes,
+    resourceUrl: item.resourceUrl,
+    resourceLabel: item.resourceLabel,
+  }));
 
   const resourcesForClient = client.resources.map(resource => ({
     id: resource.id,
@@ -114,13 +113,13 @@ const onboardingForClient = client.onboardingItems.map(item => ({
                 {(client.nickname || client.name).charAt(0).toUpperCase()}
               </div>
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-                  <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
-                    {client.name}
-                    {client.nickname && (
-                      <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 8 }}>({client.nickname})</span>
-                    )}
-                  </h1>
+                <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 8 }}>
+                  {client.name}
+                  {client.nickname && (
+                    <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 8 }}>({client.nickname})</span>
+                  )}
+                </h1>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   <span style={{
                     padding: "4px 12px",
                     borderRadius: 20,
@@ -131,28 +130,23 @@ const onboardingForClient = client.onboardingItems.map(item => ({
                   }}>
                     {client.status}
                   </span>
-                </div>
-                <div style={{ color: theme.colors.textSecondary, fontSize: 14, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                   {client.agencies.map(ca => (
                     <span key={ca.agency.id} style={{ 
-                      padding: "2px 8px", 
+                      padding: "4px 10px", 
                       background: theme.colors.infoBg, 
                       color: theme.colors.info, 
-                      borderRadius: 4, 
+                      borderRadius: 20, 
                       fontSize: 12,
                       fontWeight: 500,
                     }}>
                       {ca.agency.name}
                     </span>
                   ))}
-                  {client.industry && <span>{client.industry}</span>}
+                  {client.industry && <span style={{ color: theme.colors.textSecondary, fontSize: 14 }}>• {client.industry}</span>}
                   {client.website && (
-                    <>
-                      <span>•</span>
-                      <a href={client.website} target="_blank" style={{ color: theme.colors.primary }}>
-                        {client.website.replace("https://", "").replace("http://", "")}
-                      </a>
-                    </>
+                    <a href={client.website} target="_blank" style={{ color: theme.colors.primary, fontSize: 14 }}>
+                      • {client.website.replace("https://", "").replace("http://", "")}
+                    </a>
                   )}
                 </div>
               </div>
@@ -161,8 +155,8 @@ const onboardingForClient = client.onboardingItems.map(item => ({
               <Link href={"/clients/" + client.id + "/onboarding"} style={{
                 padding: "10px 16px",
                 borderRadius: theme.borderRadius.md,
-                background: theme.colors.successBg,
-                color: theme.colors.success,
+                background: client.status === "ONBOARDING" || client.status === "LEAD" ? theme.colors.warningBg : theme.colors.bgTertiary,
+                color: client.status === "ONBOARDING" || client.status === "LEAD" ? theme.colors.warning : theme.colors.textSecondary,
                 textDecoration: "none",
                 fontWeight: 500,
                 fontSize: 13
@@ -177,7 +171,7 @@ const onboardingForClient = client.onboardingItems.map(item => ({
                 textDecoration: "none",
                 fontWeight: 500,
                 fontSize: 13
-              }}>                
+              }}>
                 Metrics
               </Link>
               <Link href={"/clients/" + client.id + "/tasks"} style={{
@@ -247,7 +241,7 @@ const onboardingForClient = client.onboardingItems.map(item => ({
               initialAgencies={client.agencies.map(ca => ca.agency)} 
             />
 
-            {/* Team Members (visible to SUPER_ADMIN and ADMIN) */}
+            {/* Team Members */}
             {canManageTeam && (
               <TeamManager 
                 clientId={client.id} 
