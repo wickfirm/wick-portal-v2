@@ -381,13 +381,16 @@ interface OnboardingItemRowProps {
   item: OnboardingItem;
   isLast: boolean;
   saving: boolean;
-  onUpdate: (updates: { isCompleted?: boolean; inputValue?: string; notes?: string }) => void;
+  onUpdate: (updates: { isCompleted?: boolean; inputValue?: string; notes?: string; resourceUrl?: string; resourceLabel?: string }) => void;
 }
 
 function OnboardingItemRow({ item, isLast, saving, onUpdate }: OnboardingItemRowProps) {
   const [inputValue, setInputValue] = useState(item.inputValue || "");
   const [notes, setNotes] = useState(item.notes || "");
   const [showNotes, setShowNotes] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState(item.resourceUrl || "");
+  const [linkLabel, setLinkLabel] = useState(item.resourceLabel || "");
 
   const handleCheckboxChange = () => {
     onUpdate({ isCompleted: !item.isCompleted });
@@ -403,6 +406,11 @@ function OnboardingItemRow({ item, isLast, saving, onUpdate }: OnboardingItemRow
     if (notes !== (item.notes || "")) {
       onUpdate({ notes });
     }
+  };
+
+  const handleSaveLink = () => {
+    onUpdate({ resourceUrl: linkUrl, resourceLabel: linkLabel });
+    setShowLinkForm(false);
   };
 
   return (
@@ -498,6 +506,26 @@ function OnboardingItemRow({ item, isLast, saving, onUpdate }: OnboardingItemRow
             </div>
           )}
 
+          {/* Resource Link Display */}
+          {item.resourceUrl && (
+            <div style={{ marginBottom: 8 }}>
+              <a 
+                href={item.resourceUrl} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                style={{ 
+                  fontSize: 13, 
+                  color: theme.colors.primary,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 4,
+                }}
+              >
+                🔗 {item.resourceLabel || item.resourceUrl}
+              </a>
+            </div>
+          )}
+
           {/* Completed info */}
           {item.isCompleted && item.completedAt && (
             <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
@@ -505,21 +533,105 @@ function OnboardingItemRow({ item, isLast, saving, onUpdate }: OnboardingItemRow
             </div>
           )}
 
-          {/* Notes toggle */}
-          <button
-            onClick={() => setShowNotes(!showNotes)}
-            style={{
-              background: "none",
-              border: "none",
-              padding: 0,
-              fontSize: 12,
-              color: theme.colors.textMuted,
-              cursor: "pointer",
-              marginTop: 4,
-            }}
-          >
-            {showNotes ? "Hide notes" : (item.notes ? "View notes" : "+ Add notes")}
-          </button>
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 16, marginTop: 8 }}>
+            {/* Add Link */}
+            {!showLinkForm && (
+              <button
+                onClick={() => setShowLinkForm(true)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  fontSize: 12,
+                  color: theme.colors.textMuted,
+                  cursor: "pointer",
+                }}
+              >
+                + Add link
+              </button>
+            )}
+
+            {/* Notes toggle */}
+            <button
+              onClick={() => setShowNotes(!showNotes)}
+              style={{
+                background: "none",
+                border: "none",
+                padding: 0,
+                fontSize: 12,
+                color: theme.colors.textMuted,
+                cursor: "pointer",
+              }}
+            >
+              {showNotes ? "Hide notes" : (item.notes ? "View notes" : "+ Add notes")}
+            </button>
+          </div>
+
+          {/* Link Form */}
+          {showLinkForm && (
+            <div style={{ marginTop: 8, padding: 12, background: theme.colors.bgTertiary, borderRadius: theme.borderRadius.md }}>
+              <div style={{ marginBottom: 8 }}>
+                <input
+                  type="text"
+                  value={linkLabel}
+                  onChange={(e) => setLinkLabel(e.target.value)}
+                  placeholder="Link label (optional)"
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid " + theme.colors.borderLight,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: 13,
+                    marginBottom: 8,
+                  }}
+                />
+                <input
+                  type="url"
+                  value={linkUrl}
+                  onChange={(e) => setLinkUrl(e.target.value)}
+                  placeholder="https://..."
+                  style={{
+                    width: "100%",
+                    padding: "8px 12px",
+                    border: "1px solid " + theme.colors.borderLight,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: 13,
+                  }}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={handleSaveLink}
+                  style={{
+                    padding: "6px 12px",
+                    background: theme.colors.primary,
+                    color: "white",
+                    border: "none",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  Save Link
+                </button>
+                <button
+                  onClick={() => setShowLinkForm(false)}
+                  style={{
+                    padding: "6px 12px",
+                    background: theme.colors.bgSecondary,
+                    color: theme.colors.textSecondary,
+                    border: "none",
+                    borderRadius: 4,
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
 
           {showNotes && (
             <textarea
