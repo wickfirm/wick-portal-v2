@@ -13,8 +13,7 @@ export default async function AnalyticsPage() {
   if (!session) redirect("/login");
 
   const [
-    totalClients,
-    activeClients,
+    clients,
     totalProjects,
     completedProjects,
     inProgressProjects,
@@ -25,8 +24,10 @@ export default async function AnalyticsPage() {
     projectsByStatus,
     allMetrics,
   ] = await Promise.all([
-    prisma.client.count(),
-    prisma.client.count({ where: { status: "ACTIVE" } }),
+    prisma.client.findMany({ 
+      select: { id: true, name: true, nickname: true, status: true },
+      orderBy: { name: "asc" }
+    }),
     prisma.project.count(),
     prisma.project.count({ where: { status: "COMPLETED" } }),
     prisma.project.count({ where: { status: "IN_PROGRESS" } }),
@@ -35,11 +36,26 @@ export default async function AnalyticsPage() {
     prisma.client.groupBy({ by: ["status"], _count: { status: true } }),
     prisma.project.groupBy({ by: ["serviceType"], _count: { serviceType: true } }),
     prisma.project.groupBy({ by: ["status"], _count: { status: true } }),
-    prisma.clientMetrics.findMany({ orderBy: { month: "asc" } }),
+    prisma.clientMetrics.findMany({ 
+      orderBy: { month: "asc" },
+      include: { client: { select: { id: true, name: true, nickname: true } } }
+    }),
   ]);
 
   const serializedMetrics = allMetrics.map(function(m) {
-    return { ...m, month: m.month.toISOString() };
+    return { 
+      ...m, 
+      month: m.month.toISOString(),
+      clientName: m.client.nickname || m.client.name,
+    };
+  });
+
+  const serializedClients = clients.map(function(c) {
+    return {
+      id: c.id,
+      name: c.nickname || c.name,
+      status: c.status,
+    };
   });
 
   return (
@@ -47,8 +63,7 @@ export default async function AnalyticsPage() {
       <Header />
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <AdminAnalyticsDashboard
-          totalClients={totalClients}
-          activeClients={activeClients}
+          clients={serializedClients}
           totalProjects={totalProjects}
           completedProjects={completedProjects}
           inProgressProjects={inProgressProjects}
