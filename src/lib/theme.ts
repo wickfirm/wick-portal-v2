@@ -1,53 +1,53 @@
 // Omnixia Portal Theme Configuration
-// Dark Mode
+// Light Mode
 
 export const theme = {
   colors: {
     // Brand Colors
-    primary: "#9D8DF7",
-    primaryDark: "#7B68EE",
-    accent: "#B8A9FF",
+    primary: "#e85a4f",
+    primaryDark: "#d44a3f",
+    accent: "#f8b739",
     
     // Backgrounds
-    bgPrimary: "#0F0D2A",
-    bgSecondary: "#1A1840",
-    bgTertiary: "#252350",
+    bgPrimary: "#f8f9fa",
+    bgSecondary: "#ffffff",
+    bgTertiary: "#f1f3f4",
     
     // Text
-    textPrimary: "#F0F0F5",
-    textSecondary: "#B8B8D0",
-    textMuted: "#7878A0",
+    textPrimary: "#1a1a1a",
+    textSecondary: "#5f6368",
+    textMuted: "#9aa0a6",
     
     // Borders
-    borderLight: "#2D2B55",
-    borderMedium: "#3D3B65",
+    borderLight: "#e8eaed",
+    borderMedium: "#dadce0",
     
     // Status Colors
-    success: "#4ADE80",
-    successBg: "#1A3D2E",
-    warning: "#FCD34D",
-    warningBg: "#3D3520",
-    error: "#F87171",
-    errorBg: "#3D1F1F",
-    info: "#9D8DF7",
-    infoBg: "#2D2860",
-    purple: "#9D8DF7",
-    purpleBg: "#2D2860",
-    primaryBg: "#2D2860",
+    success: "#34a853",
+    successBg: "#e6f4ea",
+    warning: "#f9ab00",
+    warningBg: "#fef7e0",
+    error: "#ea4335",
+    errorBg: "#fce8e6",
+    info: "#4285f4",
+    infoBg: "#e8f0fe",
+    purple: "#7b1fa2",
+    purpleBg: "#f3e5f5",
+    primaryBg: "#fef0ef",
   },
   
   gradients: {
-    primary: "linear-gradient(135deg, #9D8DF7, #7B68EE)",
-    accent: "linear-gradient(135deg, #9D8DF7, #B8A9FF)",
-    progress: "linear-gradient(90deg, #9D8DF7, #B8A9FF)",
-    progressComplete: "linear-gradient(90deg, #4ADE80, #22C55E)",
+    primary: "linear-gradient(135deg, #e85a4f, #d44a3f)",
+    accent: "linear-gradient(135deg, #e85a4f, #f8b739)",
+    progress: "linear-gradient(90deg, #e85a4f, #f8b739)",
+    progressComplete: "linear-gradient(90deg, #34a853, #4caf50)",
   },
   
   shadows: {
-    sm: "0 1px 2px rgba(0, 0, 0, 0.2)",
-    md: "0 4px 6px rgba(0, 0, 0, 0.3)",
-    lg: "0 10px 25px rgba(0, 0, 0, 0.4)",
-    button: "0 2px 8px rgba(157, 141, 247, 0.4)",
+    sm: "0 1px 2px rgba(0, 0, 0, 0.05)",
+    md: "0 4px 6px rgba(0, 0, 0, 0.07)",
+    lg: "0 10px 25px rgba(0, 0, 0, 0.1)",
+    button: "0 2px 8px rgba(232, 90, 79, 0.3)",
   },
   
   borderRadius: {
@@ -59,7 +59,7 @@ export const theme = {
   },
 };
 
-// Status badge styles
+// Status badge styles - ready to use
 export const STATUS_STYLES: Record<string, { bg: string; color: string }> = {
   // Client statuses
   ACTIVE: { bg: theme.colors.successBg, color: theme.colors.success },
@@ -91,7 +91,7 @@ export const PRIORITY_STYLES: Record<string, { bg: string; color: string }> = {
 
 // Role styles
 export const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
-  SUPER_ADMIN: { bg: "#3D1F1F", color: "#F87171" },
+  SUPER_ADMIN: { bg: "#FEE2E2", color: "#DC2626" },
   ADMIN: { bg: theme.colors.errorBg, color: theme.colors.error },
   MANAGER: { bg: theme.colors.warningBg, color: theme.colors.warning },
   MEMBER: { bg: theme.colors.infoBg, color: theme.colors.info },
