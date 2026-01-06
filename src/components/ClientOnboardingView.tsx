@@ -20,6 +20,8 @@ interface OnboardingItem {
   inputValue: string | null;
   fileUrl: string | null;
   notes: string | null;
+  resourceUrl: string | null;
+  resourceLabel: string | null;
 }
 
 interface Template {
