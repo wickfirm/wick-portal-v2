@@ -51,7 +51,7 @@ const SERVICE_TYPE_ICONS: Record<string, string> = {
   CONSULTING: "💼",
 };
 
-const ITEM_TYPES = ["CHECKBOX", "TEXT_INPUT", "URL_INPUT", "FILE_UPLOAD"];
+const ITEM_TYPES = ["TEXT_INPUT", "URL_INPUT"];
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
 
 export default function OnboardingSettingsPage() {
