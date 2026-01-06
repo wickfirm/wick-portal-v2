@@ -2,431 +2,471 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { theme } from "@/lib/theme";
 
 type OnboardingItem = {
   id: string;
   name: string;
   description: string | null;
-  serviceType: string | null;
+  serviceType: string;
+  itemType: string;
   order: number;
+  isRequired: boolean;
   isCompleted: boolean;
   completedAt: string | null;
   completedBy: string | null;
+  inputValue: string | null;
   notes: string | null;
   resourceUrl: string | null;
   resourceLabel: string | null;
 };
 
-const SERVICE_TYPE_LABELS: Record<string, string> = {
+const SERVICE_LABELS: Record<string, string> = {
   GENERAL: "General",
   SEO: "SEO",
   AEO: "AEO",
-  WEB_DEVELOPMENT: "Web Development",
   PAID_MEDIA: "Paid Media",
-  SOCIAL_MEDIA: "Social Media",
+  WEB_DEVELOPMENT: "Web Dev",
+  SOCIAL_MEDIA: "Social",
   CONTENT: "Content",
-  BRANDING: "Branding",
-  CONSULTING: "Consulting",
 };
 
-export default function OnboardingManager({ 
-  clientId, 
+export default function OnboardingManager({
+  clientId,
   clientStatus,
-  initialItems 
-}: { 
-  clientId: string; 
+  initialItems,
+}: {
+  clientId: string;
   clientStatus: string;
   initialItems: OnboardingItem[];
 }) {
   const router = useRouter();
   const [items, setItems] = useState<OnboardingItem[]>(initialItems);
-  const [initializing, setInitializing] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
-  
-  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
-  const [notesValue, setNotesValue] = useState("");
-  
-  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
-  const [resourceUrl, setResourceUrl] = useState("");
-  const [resourceLabel, setResourceLabel] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ GENERAL: true });
 
-  const completed = items.filter(i => i.isCompleted).length;
+  // Group items by service type
+  const groupedItems = items.reduce((acc: Record<string, OnboardingItem[]>, item) => {
+    if (!acc[item.serviceType]) {
+      acc[item.serviceType] = [];
+    }
+    acc[item.serviceType].push(item);
+    return acc;
+  }, {});
+
+  const serviceTypes = Object.keys(groupedItems);
+  const completed = items.filter((i) => i.isCompleted).length;
   const total = items.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-  // Group items by service type
-  const groupedItems = items.reduce((acc, item) => {
-    const key = item.serviceType || "GENERAL";
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(item);
-    return acc;
-  }, {} as Record<string, OnboardingItem[]>);
-
-  // Sort groups: GENERAL first, then alphabetically
-  const sortedGroups = Object.keys(groupedItems).sort((a, b) => {
-    if (a === "GENERAL") return -1;
-    if (b === "GENERAL") return 1;
-    return a.localeCompare(b);
-  });
-
-  function toggleSection(serviceType: string) {
-    const newCollapsed = new Set(collapsedSections);
-    if (newCollapsed.has(serviceType)) {
-      newCollapsed.delete(serviceType);
-    } else {
-      newCollapsed.add(serviceType);
-    }
-    setCollapsedSections(newCollapsed);
-  }
-
-  async function initializeOnboarding() {
-    setInitializing(true);
-    const res = await fetch("/api/clients/" + clientId + "/onboarding", {
-      method: "POST",
-    });
-
-    if (res.ok) {
-      const newItems = await res.json();
-      setItems(newItems);
-      router.refresh();
-    }
-    setInitializing(false);
-  }
-
-  async function toggleItem(item: OnboardingItem) {
-    const res = await fetch("/api/onboarding-items/" + item.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isCompleted: !item.isCompleted }),
-    });
-
-    if (res.ok) {
-      const updated = await res.json();
-      setItems(items.map(i => i.id === item.id ? {
-        ...i,
-        ...updated,
-        completedAt: updated.completedAt ? updated.completedAt : null,
-      } : i));
-      router.refresh();
-    }
-  }
-
-  async function saveNotes(item: OnboardingItem) {
-    const res = await fetch("/api/onboarding-items/" + item.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ notes: notesValue }),
-    });
-
-    if (res.ok) {
-      const updated = await res.json();
-      setItems(items.map(i => i.id === item.id ? { ...i, notes: updated.notes } : i));
-    }
-    setEditingNotesId(null);
-  }
-
-  async function saveResource(item: OnboardingItem) {
-    const res = await fetch("/api/onboarding-items/" + item.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        resourceUrl: resourceUrl || null,
-        resourceLabel: resourceLabel || null
-      }),
-    });
-
-    if (res.ok) {
-      const updated = await res.json();
-      setItems(items.map(i => i.id === item.id ? { 
-        ...i, 
-        resourceUrl: updated.resourceUrl,
-        resourceLabel: updated.resourceLabel 
-      } : i));
-    }
-    setEditingResourceId(null);
-  }
-
-  function startEditResource(item: OnboardingItem) {
-    setEditingResourceId(item.id);
-    setResourceUrl(item.resourceUrl || "");
-    setResourceLabel(item.resourceLabel || "");
-  }
-
-  async function removeResource(item: OnboardingItem) {
-    const res = await fetch("/api/onboarding-items/" + item.id, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ resourceUrl: null, resourceLabel: null }),
-    });
-    if (res.ok) {
-      setItems(items.map(i => i.id === item.id ? { 
-        ...i, 
-        resourceUrl: null,
-        resourceLabel: null 
-      } : i));
-    }
-  }
-
-  function guessLabelFromUrl(url: string): string {
-    if (url.includes("drive.google.com")) return "Google Drive";
-    if (url.includes("docs.google.com")) return "Google Docs";
-    if (url.includes("sheets.google.com")) return "Google Sheets";
-    if (url.includes("dropbox.com")) return "Dropbox";
-    if (url.includes("notion.so") || url.includes("notion.site")) return "Notion";
-    if (url.includes("figma.com")) return "Figma";
-    if (url.includes("canva.com")) return "Canva";
-    if (url.includes("slack.com")) return "Slack";
-    if (url.includes("trello.com")) return "Trello";
-    if (url.includes("asana.com")) return "Asana";
-    if (url.includes("github.com")) return "GitHub";
-    if (url.includes("gitlab.com")) return "GitLab";
-    if (url.includes("onedrive")) return "OneDrive";
-    if (url.includes("sharepoint")) return "SharePoint";
-    return "Link";
-  }
-
-  const inputStyle: React.CSSProperties = {
-    padding: "8px 12px",
-    border: "1px solid " + theme.colors.borderMedium,
-    borderRadius: 6,
-    fontSize: 13,
-    outline: "none",
-    width: "100%",
-    boxSizing: "border-box",
+  const toggleSection = (serviceType: string) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [serviceType]: !prev[serviceType],
+    }));
   };
 
-  const renderItem = (item: OnboardingItem) => (
-    <div 
-      key={item.id} 
-      style={{ padding: "12px 16px", borderBottom: "1px solid " + theme.colors.bgTertiary }}
-    >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-        <button
-          onClick={() => toggleItem(item)}
-          style={{ 
-            width: 22, 
-            height: 22, 
-            borderRadius: 6, 
-            border: item.isCompleted ? "none" : "2px solid " + theme.colors.borderMedium,
-            background: item.isCompleted ? theme.colors.success : "white",
-            color: "white", 
-            fontSize: 12, 
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexShrink: 0,
-            marginTop: 2
-          }}
-        >
-          {item.isCompleted ? "✓" : ""}
-        </button>
+  async function toggleItem(item: OnboardingItem) {
+    setLoading(true);
+    const res = await fetch(`/api/clients/${clientId}/onboarding`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId: item.id, isCompleted: !item.isCompleted }),
+    });
 
-        <div style={{ flex: 1 }}>
-          <div style={{ 
-            fontWeight: 500, 
-            fontSize: 14,
-            textDecoration: item.isCompleted ? "line-through" : "none",
-            color: item.isCompleted ? theme.colors.textMuted : theme.colors.textPrimary
-          }}>
-            {item.name}
-          </div>
-          
-          {item.description && (
-            <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 }}>
-              {item.description}
-            </div>
-          )}
+    if (res.ok) {
+      setItems((prev) =>
+        prev.map((i) =>
+          i.id === item.id
+            ? { ...i, isCompleted: !i.isCompleted, completedAt: !i.isCompleted ? new Date().toISOString() : null }
+            : i
+        )
+      );
+      router.refresh();
+    }
+    setLoading(false);
+  }
 
-          {item.completedAt && item.completedBy && (
-            <div style={{ fontSize: 11, color: theme.colors.success, marginTop: 4 }}>
-              Completed by {item.completedBy} on {new Date(item.completedAt).toLocaleDateString()}
-            </div>
-          )}
+  async function refreshItems() {
+    setLoading(true);
+    const res = await fetch(`/api/clients/${clientId}/onboarding`, { method: "POST" });
+    if (res.ok) {
+      const data = await res.json();
+      setItems(data);
+      router.refresh();
+    }
+    setLoading(false);
+  }
 
-          {/* Resource Link Section */}
-          <div style={{ marginTop: 8 }}>
-            {editingResourceId === item.id ? (
-              <div style={{ 
-                background: theme.colors.bgPrimary, 
-                padding: 12, 
-                borderRadius: 8, 
-                border: "1px solid " + theme.colors.borderLight 
-              }}>
-                <div style={{ marginBottom: 8 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Resource URL</label>
-                  <input
-                    value={resourceUrl}
-                    onChange={(e) => {
-                      setResourceUrl(e.target.value);
-                      if (!resourceLabel && e.target.value) {
-                        setResourceLabel(guessLabelFromUrl(e.target.value));
-                      }
-                    }}
-                    placeholder="https://drive.google.com/..."
-                    style={inputStyle}
-                    autoFocus
-                  />
-                </div>
-                <div style={{ marginBottom: 10 }}>
-                  <label style={{ display: "block", fontSize: 11, fontWeight: 500, marginBottom: 4, color: theme.colors.textSecondary }}>Label (optional)</label>
-                  <input
-                    value={resourceLabel}
-                    onChange={(e) => setResourceLabel(e.target.value)}
-                    placeholder="e.g., Brand Guidelines PDF"
-                    style={inputStyle}
-                  />
-                </div>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <button onClick={() => saveResource(item)} style={{ padding: "6px 14px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Save</button>
-                  <button onClick={() => setEditingResourceId(null)} style={{ padding: "6px 14px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
-                </div>
-              </div>
-            ) : item.resourceUrl ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <a href={item.resourceUrl} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", background: theme.colors.infoBg, color: theme.colors.info, borderRadius: 6, fontSize: 12, fontWeight: 500, textDecoration: "none" }}>
-                  {item.resourceLabel || "View Resource"}
-                </a>
-                <button onClick={() => startEditResource(item)} style={{ padding: "4px 8px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>Edit</button>
-                <button onClick={() => removeResource(item)} style={{ padding: "4px 8px", background: theme.colors.errorBg, color: theme.colors.error, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}>Remove</button>
-              </div>
-            ) : (
-              <button onClick={() => startEditResource(item)} style={{ padding: "4px 10px", background: "transparent", color: theme.colors.textMuted, border: "1px dashed " + theme.colors.borderMedium, borderRadius: 6, fontSize: 12, cursor: "pointer" }}>
-                + Add link
-              </button>
-            )}
-          </div>
-
-          {/* Notes section */}
-          <div style={{ marginTop: 6 }}>
-            {editingNotesId === item.id ? (
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  value={notesValue}
-                  onChange={(e) => setNotesValue(e.target.value)}
-                  placeholder="Add notes..."
-                  style={{ ...inputStyle, flex: 1, padding: "6px 10px", fontSize: 12 }}
-                  autoFocus
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") saveNotes(item);
-                    if (e.key === "Escape") setEditingNotesId(null);
-                  }}
-                />
-                <button onClick={() => saveNotes(item)} style={{ padding: "6px 12px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Save</button>
-                <button onClick={() => setEditingNotesId(null)} style={{ padding: "6px 12px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}>Cancel</button>
-              </div>
-            ) : (
-              <div 
-                onClick={() => { setEditingNotesId(item.id); setNotesValue(item.notes || ""); }}
-                style={{ fontSize: 12, color: item.notes ? theme.colors.textSecondary : theme.colors.textMuted, cursor: "pointer", fontStyle: item.notes ? "normal" : "italic" }}
-              >
-                {item.notes || "+ Add notes"}
-              </div>
-            )}
-          </div>
+  if (total === 0) {
+    return (
+      <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+            Onboarding
+          </h3>
         </div>
+        <div style={{ textAlign: "center", padding: "24px 0" }}>
+          <p style={{ color: theme.colors.textMuted, marginBottom: 16 }}>No onboarding items yet</p>
+          <Link
+            href={`/clients/${clientId}/onboarding`}
+            style={{
+              display: "inline-block",
+              padding: "10px 20px",
+              background: theme.colors.primary,
+              color: "white",
+              borderRadius: theme.borderRadius.md,
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 14,
+            }}
+          >
+            Start Onboarding
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+      {/* Header */}
+      <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", margin: 0 }}>
+          Onboarding Checklist
+        </h3>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+            {completed}/{total} ({pct}%)
+          </span>
+          <Link
+            href={`/clients/${clientId}/onboarding`}
+            style={{
+              padding: "6px 12px",
+              background: theme.colors.bgTertiary,
+              color: theme.colors.textSecondary,
+              borderRadius: 6,
+              textDecoration: "none",
+              fontSize: 12,
+              fontWeight: 500,
+            }}
+          >
+            View All
+          </Link>
+        </div>
+      </div>
+
+      {/* Progress Bar */}
+      <div style={{ padding: "12px 20px", borderBottom: "1px solid " + theme.colors.borderLight }}>
+        <div style={{ height: 6, background: theme.colors.bgTertiary, borderRadius: 3 }}>
+          <div
+            style={{
+              height: "100%",
+              width: pct + "%",
+              background: pct === 100 ? theme.colors.success : theme.colors.primary,
+              borderRadius: 3,
+              transition: "width 300ms ease",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Sections */}
+      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+        {serviceTypes.map((serviceType) => {
+          const sectionItems = groupedItems[serviceType];
+          const sectionCompleted = sectionItems.filter((i) => i.isCompleted).length;
+          const sectionTotal = sectionItems.length;
+          const isExpanded = expandedSections[serviceType] ?? false;
+
+          return (
+            <div key={serviceType}>
+              {/* Section Header */}
+              <div
+                onClick={() => toggleSection(serviceType)}
+                style={{
+                  padding: "12px 20px",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  cursor: "pointer",
+                  background: theme.colors.bgPrimary,
+                  borderBottom: "1px solid " + theme.colors.bgTertiary,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 150ms", fontSize: 10 }}>▶</span>
+                  <span style={{ fontWeight: 600, fontSize: 13 }}>{SERVICE_LABELS[serviceType] || serviceType}</span>
+                </div>
+                <span style={{ fontSize: 12, color: sectionCompleted === sectionTotal ? theme.colors.success : theme.colors.textMuted }}>
+                  {sectionCompleted}/{sectionTotal}
+                </span>
+              </div>
+
+              {/* Section Items */}
+              {isExpanded && (
+                <div>
+                  {sectionItems.map((item, idx) => (
+                    <OnboardingItemRow
+                      key={item.id}
+                      item={item}
+                      clientId={clientId}
+                      isLast={idx === sectionItems.length - 1}
+                      loading={loading}
+                      onToggle={() => toggleItem(item)}
+                      onUpdate={() => router.refresh()}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
+}
+
+function OnboardingItemRow({
+  item,
+  clientId,
+  isLast,
+  loading,
+  onToggle,
+  onUpdate,
+}: {
+  item: OnboardingItem;
+  clientId: string;
+  isLast: boolean;
+  loading: boolean;
+  onToggle: () => void;
+  onUpdate: () => void;
+}) {
+  const [inputValue, setInputValue] = useState(item.inputValue || "");
+  const [notes, setNotes] = useState(item.notes || "");
+  const [showNotes, setShowNotes] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkUrl, setLinkUrl] = useState(item.resourceUrl || "");
+  const [linkLabel, setLinkLabel] = useState(item.resourceLabel || "");
+  const [saving, setSaving] = useState(false);
+
+  const saveField = async (updates: Record<string, any>) => {
+    setSaving(true);
+    await fetch(`/api/clients/${clientId}/onboarding`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ itemId: item.id, ...updates }),
+    });
+    setSaving(false);
+    onUpdate();
+  };
+
+  const handleInputBlur = () => {
+    if (inputValue !== (item.inputValue || "")) {
+      saveField({ inputValue });
+    }
+  };
+
+  const handleNotesBlur = () => {
+    if (notes !== (item.notes || "")) {
+      saveField({ notes });
+    }
+  };
+
+  const handleSaveLink = () => {
+    saveField({ resourceUrl: linkUrl, resourceLabel: linkLabel });
+    setShowLinkForm(false);
+  };
+
+  const handleRemoveLink = () => {
+    setLinkUrl("");
+    setLinkLabel("");
+    saveField({ resourceUrl: "", resourceLabel: "" });
+  };
 
   return (
-    <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24, overflow: "hidden" }}>
-      {/* Header */}
-      <div style={{ padding: "16px 20px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>Onboarding Checklist</h3>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {items.length > 0 && (
-            <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>{completed}/{total} ({pct}%)</span>
-          )}
-          {items.length > 0 && (
-            <button
-              onClick={initializeOnboarding}
-              disabled={initializing}
-              style={{ padding: "6px 12px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 12, cursor: "pointer" }}
+    <div
+      style={{
+        padding: "14px 20px",
+        borderBottom: isLast ? "none" : "1px solid " + theme.colors.bgTertiary,
+        background: item.isCompleted ? "rgba(16, 185, 129, 0.02)" : "transparent",
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
+        {/* Checkbox */}
+        <div
+          onClick={onToggle}
+          style={{
+            width: 20,
+            height: 20,
+            borderRadius: 5,
+            border: item.isCompleted ? "none" : "2px solid " + theme.colors.borderLight,
+            background: item.isCompleted ? theme.colors.success : "transparent",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: loading ? "wait" : "pointer",
+            flexShrink: 0,
+            marginTop: 2,
+          }}
+        >
+          {item.isCompleted && <span style={{ color: "white", fontSize: 11 }}>✓</span>}
+        </div>
+
+        {/* Content */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 2, flexWrap: "wrap" }}>
+            <span
+              style={{
+                fontWeight: 500,
+                fontSize: 14,
+                textDecoration: item.isCompleted ? "line-through" : "none",
+                color: item.isCompleted ? theme.colors.textSecondary : theme.colors.textPrimary,
+              }}
             >
-              {initializing ? "..." : "Refresh"}
+              {item.name}
+            </span>
+            {item.isRequired && (
+              <span style={{ fontSize: 9, color: theme.colors.error, fontWeight: 600 }}>REQUIRED</span>
+            )}
+            {item.itemType !== "CHECKBOX" && (
+              <span style={{ fontSize: 9, color: theme.colors.textMuted, background: theme.colors.bgTertiary, padding: "1px 5px", borderRadius: 3 }}>
+                {item.itemType.replace("_", " ")}
+              </span>
+            )}
+          </div>
+
+          {item.description && (
+            <p style={{ margin: "0 0 6px 0", fontSize: 12, color: theme.colors.textSecondary }}>
+              {item.description}
+            </p>
+          )}
+
+          {/* Input field for TEXT_INPUT or URL_INPUT */}
+          {(item.itemType === "TEXT_INPUT" || item.itemType === "URL_INPUT") && (
+            <input
+              type={item.itemType === "URL_INPUT" ? "url" : "text"}
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onBlur={handleInputBlur}
+              placeholder={item.itemType === "URL_INPUT" ? "https://..." : "Enter details..."}
+              style={{
+                width: "100%",
+                padding: "6px 10px",
+                border: "1px solid " + theme.colors.borderLight,
+                borderRadius: 4,
+                fontSize: 12,
+                marginBottom: 6,
+              }}
+            />
+          )}
+
+          {/* Resource Link Display */}
+          {item.resourceUrl && !showLinkForm && (
+            <div style={{ marginBottom: 6, display: "flex", alignItems: "center", gap: 8 }}>
+              
+                href={item.resourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: 12, color: theme.colors.primary }}
+              >
+                🔗 {item.resourceLabel || "Link"}
+              </a>
+              <button
+                onClick={() => setShowLinkForm(true)}
+                style={{ background: "none", border: "none", fontSize: 11, color: theme.colors.textMuted, cursor: "pointer" }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleRemoveLink}
+                style={{ background: "none", border: "none", fontSize: 11, color: theme.colors.error, cursor: "pointer" }}
+              >
+                Remove
+              </button>
+            </div>
+          )}
+
+          {/* Completed info */}
+          {item.isCompleted && item.completedAt && (
+            <div style={{ fontSize: 10, color: theme.colors.success, marginBottom: 4 }}>
+              Completed {new Date(item.completedAt).toLocaleDateString()} by {item.completedBy}
+            </div>
+          )}
+
+          {/* Notes display */}
+          {item.notes && !showNotes && (
+            <div style={{ fontSize: 11, color: theme.colors.textMuted, fontStyle: "italic", marginBottom: 4 }}>
+              {item.notes}
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: 12, marginTop: 4 }}>
+            {!item.resourceUrl && !showLinkForm && (
+              <button
+                onClick={() => setShowLinkForm(true)}
+                style={{ background: "none", border: "none", padding: 0, fontSize: 11, color: theme.colors.textMuted, cursor: "pointer" }}
+              >
+                + Add link
+              </button>
+            )}
+            <button
+              onClick={() => setShowNotes(!showNotes)}
+              style={{ background: "none", border: "none", padding: 0, fontSize: 11, color: theme.colors.textMuted, cursor: "pointer" }}
+            >
+              {showNotes ? "Hide notes" : item.notes ? "Edit notes" : "+ Add notes"}
             </button>
+          </div>
+
+          {/* Link Form */}
+          {showLinkForm && (
+            <div style={{ marginTop: 8, padding: 10, background: theme.colors.bgTertiary, borderRadius: 4 }}>
+              <input
+                type="text"
+                value={linkLabel}
+                onChange={(e) => setLinkLabel(e.target.value)}
+                placeholder="Label (optional)"
+                style={{ width: "100%", padding: "6px 10px", border: "1px solid " + theme.colors.borderLight, borderRadius: 4, fontSize: 12, marginBottom: 6 }}
+              />
+              <input
+                type="url"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                placeholder="https://..."
+                style={{ width: "100%", padding: "6px 10px", border: "1px solid " + theme.colors.borderLight, borderRadius: 4, fontSize: 12, marginBottom: 8 }}
+              />
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={handleSaveLink}
+                  disabled={saving}
+                  style={{ padding: "5px 10px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}
+                >
+                  {saving ? "..." : "Save"}
+                </button>
+                <button
+                  onClick={() => setShowLinkForm(false)}
+                  style={{ padding: "5px 10px", background: theme.colors.bgSecondary, color: theme.colors.textSecondary, border: "none", borderRadius: 4, fontSize: 11, cursor: "pointer" }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Notes Form */}
+          {showNotes && (
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={handleNotesBlur}
+              placeholder="Add notes..."
+              style={{ width: "100%", marginTop: 8, padding: "6px 10px", border: "1px solid " + theme.colors.borderLight, borderRadius: 4, fontSize: 12, minHeight: 50, resize: "vertical" }}
+            />
           )}
         </div>
       </div>
-
-      {/* Progress bar */}
-      {items.length > 0 && (
-        <div style={{ height: 4, background: theme.colors.bgTertiary }}>
-          <div style={{ height: "100%", width: pct + "%", background: pct === 100 ? theme.colors.success : theme.colors.primary, transition: "width 0.3s ease" }} />
-        </div>
-      )}
-
-      {/* Content */}
-      {items.length === 0 ? (
-        <div style={{ textAlign: "center", padding: 32 }}>
-          <p style={{ color: theme.colors.textMuted, marginBottom: 16, fontSize: 14 }}>No onboarding checklist initialized yet.</p>
-          <button
-            onClick={initializeOnboarding}
-            disabled={initializing}
-            style={{ padding: "12px 24px", background: theme.colors.primary, color: "white", border: "none", borderRadius: theme.borderRadius.md, cursor: "pointer", fontWeight: 500, fontSize: 14 }}
-          >
-            {initializing ? "Initializing..." : "Start Onboarding"}
-          </button>
-        </div>
-      ) : (
-        <div>
-          {sortedGroups.map((serviceType) => {
-            const groupItems = groupedItems[serviceType].sort((a, b) => a.order - b.order);
-            const groupCompleted = groupItems.filter(i => i.isCompleted).length;
-            const isCollapsed = collapsedSections.has(serviceType);
-            
-            return (
-              <div key={serviceType}>
-                {/* Section Header */}
-                <div 
-                  onClick={() => toggleSection(serviceType)}
-                  style={{ 
-                    padding: "12px 20px", 
-                    background: theme.colors.bgTertiary, 
-                    borderBottom: "1px solid " + theme.colors.borderLight,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    cursor: "pointer",
-                    userSelect: "none"
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span style={{ fontSize: 12, color: theme.colors.textMuted, transition: "transform 0.2s", transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)" }}>▼</span>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: theme.colors.textPrimary }}>
-                      {SERVICE_TYPE_LABELS[serviceType] || serviceType}
-                    </span>
-                  </div>
-                  <span style={{ 
-                    fontSize: 12, 
-                    padding: "2px 8px", 
-                    borderRadius: 10, 
-                    background: groupCompleted === groupItems.length ? theme.colors.successBg : theme.colors.bgSecondary,
-                    color: groupCompleted === groupItems.length ? theme.colors.success : theme.colors.textSecondary
-                  }}>
-                    {groupCompleted}/{groupItems.length}
-                  </span>
-                </div>
-                
-                {/* Section Items */}
-                {!isCollapsed && (
-                  <div>
-                    {groupItems.map(renderItem)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-
-          {pct === 100 && (
-            <div style={{ padding: 16, background: theme.colors.successBg, textAlign: "center", color: theme.colors.success, fontSize: 14 }}>
-              Onboarding complete!
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
