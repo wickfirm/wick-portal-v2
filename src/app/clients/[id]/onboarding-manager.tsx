@@ -88,17 +88,6 @@ export default function OnboardingManager({
     setLoading(false);
   }
 
-  async function refreshItems() {
-    setLoading(true);
-    const res = await fetch(`/api/clients/${clientId}/onboarding`, { method: "POST" });
-    if (res.ok) {
-      const data = await res.json();
-      setItems(data);
-      router.refresh();
-    }
-    setLoading(false);
-  }
-
   if (total === 0) {
     return (
       <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
