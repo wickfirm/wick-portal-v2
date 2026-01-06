@@ -155,7 +155,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
               </div>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-              <Link href={"/clients/" + client.id + "/metrics"} style={{
+              <Link href={"/clients/" + client.id + "/onboarding"} style={{
                 padding: "10px 16px",
                 borderRadius: theme.borderRadius.md,
                 background: theme.colors.successBg,
