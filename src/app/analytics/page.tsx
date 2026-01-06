@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
+import MetricsChart, { BarChart, MultiLineChart } from "@/components/MetricsChart";
 
 export const dynamic = "force-dynamic";
 
@@ -18,12 +19,16 @@ export default async function AnalyticsPage() {
     totalProjects,
     completedProjects,
     inProgressProjects,
+    totalTasks,
+    completedTasks,
   ] = await Promise.all([
     prisma.client.count(),
     prisma.client.count({ where: { status: "ACTIVE" } }),
     prisma.project.count(),
     prisma.project.count({ where: { status: "COMPLETED" } }),
     prisma.project.count({ where: { status: "IN_PROGRESS" } }),
+    prisma.clientTask.count(),
+    prisma.clientTask.count({ where: { status: "COMPLETED" } }),
   ]);
 
   const clientsByStatus = await prisma.client.groupBy({
@@ -36,7 +41,81 @@ export default async function AnalyticsPage() {
     _count: { serviceType: true },
   });
 
+  const projectsByStatus = await prisma.project.groupBy({
+    by: ["status"],
+    _count: { status: true },
+  });
+
+  // Get aggregated metrics across all clients for the last 12 months
+  const allMetrics = await prisma.clientMetrics.findMany({
+    orderBy: { month: "asc" },
+  });
+
+  // Group metrics by month
+  const metricsByMonth: Record<string, { sessions: number; clicks: number; spend: number; count: number }> = {};
+  
+  allMetrics.forEach(function(m) {
+    const monthKey = new Date(m.month).toISOString().slice(0, 7);
+    if (!metricsByMonth[monthKey]) {
+      metricsByMonth[monthKey] = { sessions: 0, clicks: 0, spend: 0, count: 0 };
+    }
+    metricsByMonth[monthKey].sessions += Number(m.gaSessions) || 0;
+    metricsByMonth[monthKey].clicks += Number(m.gscClicks) || 0;
+    metricsByMonth[monthKey].spend += (Number(m.metaSpend) || 0) + (Number(m.googleAdsSpend) || 0);
+    metricsByMonth[monthKey].count += 1;
+  });
+
+  const sortedMonths = Object.keys(metricsByMonth).sort().slice(-12);
+
+  const sessionsData = sortedMonths.map(function(monthKey) {
+    return {
+      label: new Date(monthKey + "-01").toLocaleDateString("en-US", { month: "short" }),
+      value: metricsByMonth[monthKey].sessions,
+    };
+  });
+
+  const clicksData = sortedMonths.map(function(monthKey) {
+    return {
+      label: new Date(monthKey + "-01").toLocaleDateString("en-US", { month: "short" }),
+      value: metricsByMonth[monthKey].clicks,
+    };
+  });
+
+  const spendData = sortedMonths.slice(-6).map(function(monthKey) {
+    return {
+      label: new Date(monthKey + "-01").toLocaleDateString("en-US", { month: "short" }),
+      value: metricsByMonth[monthKey].spend,
+    };
+  });
+
+  const trafficDatasets = [
+    {
+      label: "Sessions",
+      color: theme.colors.info,
+      data: sessionsData,
+    },
+    {
+      label: "Clicks",
+      color: theme.colors.success,
+      data: clicksData,
+    },
+  ];
+
+  // Project status data for bar chart
+  const projectStatusData = projectsByStatus.map(function(item) {
+    return {
+      label: item.status.replace("_", " ").slice(0, 8),
+      value: item._count.status,
+    };
+  });
+
   const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
+  const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+  // Calculate totals
+  const totalSessions = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].sessions; }, 0);
+  const totalClicks = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].clicks; }, 0);
+  const totalSpend = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].spend; }, 0);
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
@@ -45,63 +124,124 @@ export default async function AnalyticsPage() {
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Analytics</h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Overview of your agency performance</p>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Overview of your agency performance across all clients</p>
         </div>
 
         {/* Key Metrics */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 32 }}>
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.primary + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
-              C
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.primaryBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: theme.colors.primary, fontWeight: 600 }}>
+                C
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{totalClients}</div>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 4 }}>{totalClients}</div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Total Clients</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Total Clients</div>
+            <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>{activeClients} active</div>
           </div>
 
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.success + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
-              A
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.infoBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: theme.colors.info, fontWeight: 600 }}>
+                P
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{totalProjects}</div>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.success, marginBottom: 4 }}>{activeClients}</div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Active Clients</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Total Projects</div>
+            <div style={{ fontSize: 12, color: theme.colors.info, marginTop: 4 }}>{inProgressProjects} in progress</div>
           </div>
 
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.info + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
-              P
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.successBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: theme.colors.success, fontWeight: 600 }}>
+                %
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{completionRate}%</div>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.info, marginBottom: 4 }}>{inProgressProjects}</div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Active Projects</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Project Completion</div>
+            <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>{completedProjects} completed</div>
           </div>
 
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ width: 44, height: 44, borderRadius: 10, background: theme.colors.warning + "15", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 20, marginBottom: 12 }}>
-              %
+          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.colors.warningBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16, color: theme.colors.warning, fontWeight: 600 }}>
+                T
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{taskCompletionRate}%</div>
             </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.warning, marginBottom: 4 }}>{completionRate}%</div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Completion Rate</div>
+            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Task Completion</div>
+            <div style={{ fontSize: 12, color: theme.colors.warning, marginTop: 4 }}>{completedTasks}/{totalTasks} tasks</div>
           </div>
         </div>
 
-        {/* Charts Row */}
+        {/* Aggregated Performance Metrics */}
+        {sortedMonths.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+            <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Total Sessions (All Clients)</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: theme.colors.info }}>{totalSessions.toLocaleString()}</div>
+            </div>
+            <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Total Organic Clicks</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: theme.colors.success }}>{totalClicks.toLocaleString()}</div>
+            </div>
+            <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Total Ad Spend Managed</div>
+              <div style={{ fontSize: 24, fontWeight: 700, color: theme.colors.primary }}>${totalSpend.toLocaleString()}</div>
+            </div>
+          </div>
+        )}
+
+        {/* Traffic Charts */}
+        {sessionsData.length > 1 && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
+            <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Sessions Trend (All Clients)</h3>
+              <MetricsChart data={sessionsData} color={theme.colors.info} height={180} />
+            </div>
+            <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Organic Clicks Trend</h3>
+              <MetricsChart data={clicksData} color={theme.colors.success} height={180} />
+            </div>
+          </div>
+        )}
+
+        {/* Combined Traffic Chart */}
+        {sessionsData.length > 1 && (
+          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Traffic Overview</h3>
+            <MultiLineChart datasets={trafficDatasets} height={220} />
+          </div>
+        )}
+
+        {/* Ad Spend Chart */}
+        {spendData.length > 0 && spendData.some(function(d) { return d.value > 0; }) && (
+          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
+            <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Ad Spend by Month (All Clients)</h3>
+            <BarChart data={spendData} color={theme.colors.primary} height={180} formatValue={function(v) { return "$" + v.toLocaleString(); }} />
+          </div>
+        )}
+
+        {/* Status Breakdowns */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
           {/* Clients by Status */}
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Clients by Status</h3>
             <div style={{ display: "grid", gap: 12 }}>
-              {clientsByStatus.map((item) => {
-                const percentage = totalClients > 0 ? Math.round((item._count.status / totalClients) * 100) : 0;
+              {clientsByStatus.map(function(item) {
+                var percentage = totalClients > 0 ? Math.round((item._count.status / totalClients) * 100) : 0;
+                var statusColor = item.status === "ACTIVE" ? theme.colors.success : item.status === "ONBOARDING" ? theme.colors.info : theme.colors.textMuted;
                 return (
                   <div key={item.status}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
                       <span style={{ fontSize: 14, color: theme.colors.textPrimary }}>{item.status}</span>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textSecondary }}>{item._count.status}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textSecondary }}>{item._count.status} ({percentage}%)</span>
                     </div>
                     <div style={{ height: 8, background: theme.colors.bgTertiary, borderRadius: 4 }}>
                       <div style={{
                         height: "100%",
                         width: percentage + "%",
-                        background: theme.gradients.progress,
+                        background: statusColor,
                         borderRadius: 4
                       }} />
                     </div>
@@ -111,17 +251,33 @@ export default async function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Projects by Type */}
+          {/* Projects by Status */}
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Service Type</h3>
-            <div style={{ display: "grid", gap: 12 }}>
-              {projectsByType.map((item) => {
-                const percentage = totalProjects > 0 ? Math.round((item._count.serviceType / totalProjects) * 100) : 0;
+            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Status</h3>
+            {projectStatusData.length > 0 ? (
+              <BarChart data={projectStatusData} color={theme.colors.info} height={160} />
+            ) : (
+              <div style={{ height: 160, display: "flex", alignItems: "center", justifyContent: "center", color: theme.colors.textMuted }}>
+                No projects yet
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Projects by Service Type */}
+        <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Service Type</h3>
+          <div style={{ display: "grid", gap: 12 }}>
+            {projectsByType.length === 0 ? (
+              <div style={{ padding: 40, textAlign: "center", color: theme.colors.textMuted }}>No projects yet</div>
+            ) : (
+              projectsByType.map(function(item) {
+                var percentage = totalProjects > 0 ? Math.round((item._count.serviceType / totalProjects) * 100) : 0;
                 return (
                   <div key={item.serviceType}>
                     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                      <span style={{ fontSize: 14, color: theme.colors.textPrimary }}>{item.serviceType.replace("_", " ")}</span>
-                      <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textSecondary }}>{item._count.serviceType}</span>
+                      <span style={{ fontSize: 14, color: theme.colors.textPrimary }}>{item.serviceType.replace(/_/g, " ")}</span>
+                      <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textSecondary }}>{item._count.serviceType} ({percentage}%)</span>
                     </div>
                     <div style={{ height: 8, background: theme.colors.bgTertiary, borderRadius: 4 }}>
                       <div style={{
@@ -133,34 +289,8 @@ export default async function AnalyticsPage() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          </div>
-        </div>
-
-        {/* Project Completion */}
-        <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-          <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Project Completion</h3>
-          <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <div style={{ flex: 1, height: 24, background: theme.colors.bgTertiary, borderRadius: 12, overflow: "hidden" }}>
-              <div style={{
-                height: "100%",
-                width: completionRate + "%",
-                background: "linear-gradient(90deg, " + theme.colors.success + ", " + theme.colors.info + ")",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "white",
-                fontSize: 12,
-                fontWeight: 600
-              }}>
-                {completionRate > 10 ? completionRate + "%" : ""}
-              </div>
-            </div>
-            <div style={{ textAlign: "right", minWidth: 120 }}>
-              <div style={{ fontSize: 14, color: theme.colors.textPrimary, fontWeight: 500 }}>{completedProjects} / {totalProjects}</div>
-              <div style={{ fontSize: 12, color: theme.colors.textMuted }}>projects completed</div>
-            </div>
+              })
+            )}
           </div>
         </div>
       </main>
