@@ -80,6 +80,11 @@ export async function POST(req: NextRequest) {
 
     const hashedPassword = await hash(data.password, 10);
 
+    // For CLIENT role, set clientId to first selected client
+    const clientId = data.role === "CLIENT" && data.clientIds && data.clientIds.length > 0
+      ? data.clientIds[0]
+      : null;
+
     const user = await prisma.user.create({
       data: {
         email: data.email,
@@ -87,6 +92,7 @@ export async function POST(req: NextRequest) {
         password: hashedPassword,
         role: data.role || "MEMBER",
         agencyId: data.agencyId || null,
+        clientId: clientId,
       },
     });
 
