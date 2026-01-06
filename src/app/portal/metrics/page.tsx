@@ -106,7 +106,6 @@ export default async function PortalMetricsPage() {
           </div>
         ) : (
           <div>
-            {/* Summary Cards */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
               <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
                 <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Sessions</div>
@@ -143,7 +142,6 @@ export default async function PortalMetricsPage() {
               </div>
             </div>
 
-            {/* Charts Row */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
               <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
                 <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Sessions Trend</h3>
@@ -155,21 +153,17 @@ export default async function PortalMetricsPage() {
               </div>
             </div>
 
-            {/* Traffic Overview */}
             <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Traffic Overview</h3>
               <MultiLineChart datasets={trafficDatasets} height={220} />
             </div>
 
-            {/* Ad Spend */}
             <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
               <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Ad Spend by Month</h3>
-              <BarChart data={adSpendData} color={theme.colors.primary} height={180} formatValue={function(v) { return "$" + v.toLocaleString(); }} />
+              <BarChart data={adSpendData} color={theme.colors.primary} height={180} format="currency" />
             </div>
 
-            {/* Data Tables */}
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-              {/* Analytics Table */}
               <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Google Analytics</h3>
@@ -200,7 +194,6 @@ export default async function PortalMetricsPage() {
                 </div>
               </div>
 
-              {/* Search Console Table */}
               <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid " + theme.colors.borderLight }}>
                   <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600 }}>Search Console</h3>
