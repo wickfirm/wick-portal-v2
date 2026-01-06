@@ -130,16 +130,36 @@ model StageTemplate {
 }
 
 model OnboardingTemplate {
-  id          String   @id @default(cuid())
+  id          String                   @id @default(cuid())
   name        String
   description String?
-  serviceType String   @default("GENERAL")
+  serviceType String                   @default("GENERAL")
   order       Int
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isActive    Boolean                  @default(true)
+  items       OnboardingTemplateItem[]
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
 
   @@map("onboarding_templates")
+}
+
+model OnboardingTemplateItem {
+  id              String             @id @default(cuid())
+  templateId      String
+  template        OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name            String
+  description     String?
+  itemType        String             @default("CHECKBOX")
+  isRequired      Boolean            @default(false)
+  order           Int
+  autoCreateTask  Boolean            @default(false)
+  taskName        String?
+  taskPriority    TaskPriority?
+  taskAssignRole  String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@map("onboarding_template_items")
 }
 
 model OnboardingItem {
@@ -147,11 +167,15 @@ model OnboardingItem {
   name          String
   description   String?
   serviceType   String    @default("GENERAL")
+  itemType      String    @default("CHECKBOX")
   order         Int
+  isRequired    Boolean   @default(false)
   isCompleted   Boolean   @default(false)
   completedAt   DateTime?
   completedBy   String?
   notes         String?
+  inputValue    String?
+  fileUrl       String?
   resourceUrl   String?
   resourceLabel String?
   clientId      String
