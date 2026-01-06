@@ -47,19 +47,22 @@ export default async function ClientViewPage({ params }: { params: { id: string 
     return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
   }
 
-  const onboardingForClient = client.onboardingItems.map(item => ({
-    id: item.id,
-    name: item.name,
-    description: item.description,
-    serviceType: item.serviceType,
-    order: item.order,
-    isCompleted: item.isCompleted,
-    completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-    completedBy: item.completedBy,
-    notes: item.notes,
-    resourceUrl: item.resourceUrl,
-    resourceLabel: item.resourceLabel,
-  }));
+const onboardingForClient = client.onboardingItems.map(item => ({
+  id: item.id,
+  name: item.name,
+  description: item.description,
+  serviceType: item.serviceType,
+  itemType: item.itemType || "CHECKBOX",
+  order: item.order,
+  isRequired: item.isRequired || false,
+  isCompleted: item.isCompleted,
+  completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+  completedBy: item.completedBy,
+  inputValue: item.inputValue,
+  notes: item.notes,
+  resourceUrl: item.resourceUrl,
+  resourceLabel: item.resourceLabel,
+}));
 
   const resourcesForClient = client.resources.map(resource => ({
     id: resource.id,
