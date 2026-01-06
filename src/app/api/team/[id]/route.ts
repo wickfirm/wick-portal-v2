@@ -22,6 +22,14 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
     if (data.agencyId !== undefined) updateData.agencyId = data.agencyId || null;
 
+    // For CLIENT role, set clientId to first selected client
+    if (data.role === "CLIENT" && data.clientIds && data.clientIds.length > 0) {
+      updateData.clientId = data.clientIds[0];
+    } else if (data.role !== "CLIENT") {
+      // If changing away from CLIENT role, clear clientId
+      updateData.clientId = null;
+    }
+
     const user = await prisma.user.update({
       where: { id: params.id },
       data: updateData,
