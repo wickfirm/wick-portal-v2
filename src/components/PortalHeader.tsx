@@ -9,6 +9,7 @@ export default function PortalHeader({ userName }: { userName?: string }) {
 
   const navItems = [
     { href: "/portal", label: "Dashboard" },
+    { href: "/portal/onboarding", label: "Onboarding" },
     { href: "/portal/projects", label: "Projects" },
     { href: "/portal/tasks", label: "Tasks" },
     { href: "/portal/metrics", label: "Metrics" },
