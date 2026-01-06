@@ -1,12 +1,12 @@
-// Wick Portal Theme Configuration
+// Omnixia Portal Theme Configuration
 // Change colors here and update imports across pages
 
 export const theme = {
   colors: {
     // Brand Colors
-    primary: "#e85a4f",
-    primaryDark: "#d44a3f",
-    accent: "#f8b739",
+    primary: "#7B68EE",
+    primaryDark: "#6A5ACD",
+    accent: "#9D8DF7",
     
     // Backgrounds
     bgPrimary: "#f8f9fa",
@@ -29,17 +29,17 @@ export const theme = {
     warningBg: "#fef7e0",
     error: "#ea4335",
     errorBg: "#fce8e6",
-    info: "#4285f4",
-    infoBg: "#e8f0fe",
-    purple: "#7b1fa2",
-    purpleBg: "#f3e5f5",
-    primaryBg: "#fef0ef",
+    info: "#7B68EE",
+    infoBg: "#EDE9FE",
+    purple: "#7B68EE",
+    purpleBg: "#EDE9FE",
+    primaryBg: "#EDE9FE",
   },
   
   gradients: {
-    primary: "linear-gradient(135deg, #e85a4f, #d44a3f)",
-    accent: "linear-gradient(135deg, #e85a4f, #f8b739)",
-    progress: "linear-gradient(90deg, #e85a4f, #f8b739)",
+    primary: "linear-gradient(135deg, #7B68EE, #6A5ACD)",
+    accent: "linear-gradient(135deg, #7B68EE, #9D8DF7)",
+    progress: "linear-gradient(90deg, #7B68EE, #9D8DF7)",
     progressComplete: "linear-gradient(90deg, #34a853, #4caf50)",
   },
   
@@ -47,7 +47,7 @@ export const theme = {
     sm: "0 1px 2px rgba(0, 0, 0, 0.05)",
     md: "0 4px 6px rgba(0, 0, 0, 0.07)",
     lg: "0 10px 25px rgba(0, 0, 0, 0.1)",
-    button: "0 2px 8px rgba(232, 90, 79, 0.3)",
+    button: "0 2px 8px rgba(123, 104, 238, 0.3)",
   },
   
   borderRadius: {
