@@ -42,15 +42,15 @@ export default function MetricsChart({
     );
   }
 
-  const values = data.map(function(d) { return d.value; });
-  const maxValue = Math.max.apply(null, values);
-  const minValue = Math.min.apply(null, values);
-  const range = maxValue - minValue || 1;
+  var values = data.map(function(d) { return d.value; });
+  var maxValue = Math.max.apply(null, values);
+  var minValue = Math.min.apply(null, values);
+  var range = maxValue - minValue || 1;
 
-  const padding = { top: 20, right: 20, bottom: 40, left: 20 };
-  const chartHeight = height - padding.top - padding.bottom;
+  var padding = { top: 20, right: 20, bottom: 40, left: 20 };
+  var chartHeight = height - padding.top - padding.bottom;
 
-  const points = data.map(function(d, i) {
+  var points = data.map(function(d, i) {
     var x = (i / (data.length - 1)) * 100;
     var y = ((maxValue - d.value) / range) * chartHeight + padding.top;
     return { x: x, y: y, label: d.label, value: d.value };
