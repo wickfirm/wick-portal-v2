@@ -51,17 +51,16 @@ const SERVICE_TYPE_ICONS: Record<string, string> = {
   CONSULTING: "💼",
 };
 
-const ITEM_TYPE_LABELS: Record<string, string> = {
-  CHECKBOX: "Checkbox",
-  TEXT_INPUT: "Text Input",
-  URL_INPUT: "URL Input",
-  FILE_UPLOAD: "File Upload",
-};
+const ITEM_TYPES = ["CHECKBOX", "TEXT_INPUT", "URL_INPUT", "FILE_UPLOAD"];
+const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
 
 export default function OnboardingSettingsPage() {
   const [templates, setTemplates] = useState<OnboardingTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedTemplates, setExpandedTemplates] = useState<Record<string, boolean>>({});
+  const [editingItem, setEditingItem] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<TemplateItem>>({});
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -87,6 +86,42 @@ export default function OnboardingSettingsPage() {
     setExpandedTemplates(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const startEdit = (item: TemplateItem) => {
+    setEditingItem(item.id);
+    setEditForm({
+      name: item.name,
+      description: item.description || "",
+      itemType: item.itemType,
+      isRequired: item.isRequired,
+      autoCreateTask: item.autoCreateTask,
+      taskName: item.taskName || "",
+      taskPriority: item.taskPriority || "MEDIUM",
+    });
+  };
+
+  const cancelEdit = () => {
+    setEditingItem(null);
+    setEditForm({});
+  };
+
+  const saveItem = async (templateId: string, itemId: string) => {
+    setSaving(true);
+    try {
+      await fetch(`/api/onboarding-templates/${templateId}/items/${itemId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      await fetchTemplates();
+      setEditingItem(null);
+      setEditForm({});
+    } catch (error) {
+      console.error("Failed to save:", error);
+      alert("Failed to save changes");
+    }
+    setSaving(false);
+  };
+
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
 
   return (
@@ -103,30 +138,8 @@ export default function OnboardingSettingsPage() {
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>Onboarding Templates</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15, margin: 0 }}>
-            These templates define the onboarding checklists for each service type. When a client is onboarded, 
-            items from the selected service templates are automatically added to their checklist.
+            These templates define the onboarding checklists for each service type. Click on any item to edit it.
           </p>
-        </div>
-
-        {/* Info Card */}
-        <div style={{ 
-          background: theme.colors.infoBg, 
-          padding: 20, 
-          borderRadius: theme.borderRadius.lg, 
-          marginBottom: 24,
-          border: "1px solid " + theme.colors.info + "33",
-        }}>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-            <span style={{ fontSize: 20 }}>💡</span>
-            <div>
-              <div style={{ fontWeight: 600, color: theme.colors.info, marginBottom: 4 }}>How it works</div>
-              <div style={{ fontSize: 14, color: theme.colors.textSecondary, lineHeight: 1.6 }}>
-                When you start onboarding a client at <code style={{ background: theme.colors.bgTertiary, padding: "2px 6px", borderRadius: 4 }}>/clients/[id]/onboarding</code>, 
-                you select which services they're signing up for. The system then creates a personalized checklist 
-                using the <strong>General Setup</strong> items plus items from each selected service template.
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Templates List */}
@@ -219,74 +232,175 @@ export default function OnboardingSettingsPage() {
                 {/* Template Items */}
                 {isExpanded && template.items.length > 0 && (
                   <div style={{ borderTop: "1px solid " + theme.colors.borderLight }}>
-                    <div style={{ 
-                      padding: "12px 24px", 
-                      background: theme.colors.bgPrimary, 
-                      borderBottom: "1px solid " + theme.colors.bgTertiary,
-                      display: "grid",
-                      gridTemplateColumns: "1fr 100px 100px 120px",
-                      gap: 16,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      color: theme.colors.textSecondary,
-                      textTransform: "uppercase",
-                    }}>
-                      <span>Item</span>
-                      <span>Type</span>
-                      <span>Required</span>
-                      <span>Auto Task</span>
-                    </div>
                     {template.items.map((item, idx) => (
-                      <div 
-                        key={item.id} 
-                        style={{ 
-                          padding: "14px 24px",
-                          borderBottom: idx < template.items.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                          display: "grid",
-                          gridTemplateColumns: "1fr 100px 100px 120px",
-                          gap: 16,
-                          alignItems: "center",
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</div>
-                          {item.description && (
-                            <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
-                              {item.description}
+                      <div key={item.id}>
+                        {editingItem === item.id ? (
+                          // Edit Mode
+                          <div style={{ 
+                            padding: "16px 24px",
+                            borderBottom: idx < template.items.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                            background: theme.colors.primaryBg,
+                          }}>
+                            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                              <div>
+                                <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Name</label>
+                                <input
+                                  value={editForm.name || ""}
+                                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 12px", border: "1px solid " + theme.colors.borderLight, borderRadius: 6, fontSize: 14 }}
+                                />
+                              </div>
+                              <div>
+                                <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Type</label>
+                                <select
+                                  value={editForm.itemType || "CHECKBOX"}
+                                  onChange={(e) => setEditForm({ ...editForm, itemType: e.target.value })}
+                                  style={{ width: "100%", padding: "8px 12px", border: "1px solid " + theme.colors.borderLight, borderRadius: 6, fontSize: 14 }}
+                                >
+                                  {ITEM_TYPES.map(t => <option key={t} value={t}>{t.replace("_", " ")}</option>)}
+                                </select>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                        <span style={{ 
-                          fontSize: 11, 
-                          color: theme.colors.textSecondary,
-                          background: theme.colors.bgTertiary,
-                          padding: "3px 8px",
-                          borderRadius: 4,
-                          width: "fit-content",
-                        }}>
-                          {ITEM_TYPE_LABELS[item.itemType] || item.itemType}
-                        </span>
-                        <span style={{ 
-                          fontSize: 12,
-                          color: item.isRequired ? theme.colors.error : theme.colors.textMuted,
-                          fontWeight: item.isRequired ? 600 : 400,
-                        }}>
-                          {item.isRequired ? "Yes" : "No"}
-                        </span>
-                        <div>
-                          {item.autoCreateTask ? (
+                            <div style={{ marginBottom: 16 }}>
+                              <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Description</label>
+                              <input
+                                value={editForm.description || ""}
+                                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                                style={{ width: "100%", padding: "8px 12px", border: "1px solid " + theme.colors.borderLight, borderRadius: 6, fontSize: 14 }}
+                              />
+                            </div>
+                            <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={editForm.isRequired || false}
+                                  onChange={(e) => setEditForm({ ...editForm, isRequired: e.target.checked })}
+                                />
+                                <span style={{ fontSize: 14 }}>Required</span>
+                              </label>
+                              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                                <input
+                                  type="checkbox"
+                                  checked={editForm.autoCreateTask || false}
+                                  onChange={(e) => setEditForm({ ...editForm, autoCreateTask: e.target.checked })}
+                                />
+                                <span style={{ fontSize: 14 }}>Auto-create Task</span>
+                              </label>
+                            </div>
+                            {editForm.autoCreateTask && (
+                              <div style={{ display: "grid", gridTemplateColumns: "1fr 150px", gap: 16, marginBottom: 16 }}>
+                                <div>
+                                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Task Name</label>
+                                  <input
+                                    value={editForm.taskName || ""}
+                                    onChange={(e) => setEditForm({ ...editForm, taskName: e.target.value })}
+                                    style={{ width: "100%", padding: "8px 12px", border: "1px solid " + theme.colors.borderLight, borderRadius: 6, fontSize: 14 }}
+                                  />
+                                </div>
+                                <div>
+                                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, marginBottom: 4 }}>Priority</label>
+                                  <select
+                                    value={editForm.taskPriority || "MEDIUM"}
+                                    onChange={(e) => setEditForm({ ...editForm, taskPriority: e.target.value })}
+                                    style={{ width: "100%", padding: "8px 12px", border: "1px solid " + theme.colors.borderLight, borderRadius: 6, fontSize: 14 }}
+                                  >
+                                    {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                                  </select>
+                                </div>
+                              </div>
+                            )}
+                            <div style={{ display: "flex", gap: 8 }}>
+                              <button
+                                onClick={() => saveItem(template.id, item.id)}
+                                disabled={saving}
+                                style={{
+                                  padding: "8px 16px",
+                                  background: theme.colors.primary,
+                                  color: "white",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {saving ? "Saving..." : "Save"}
+                              </button>
+                              <button
+                                onClick={cancelEdit}
+                                style={{
+                                  padding: "8px 16px",
+                                  background: theme.colors.bgTertiary,
+                                  color: theme.colors.textSecondary,
+                                  border: "none",
+                                  borderRadius: 6,
+                                  fontSize: 13,
+                                  fontWeight: 500,
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          // View Mode
+                          <div 
+                            onClick={() => startEdit(item)}
+                            style={{ 
+                              padding: "14px 24px",
+                              borderBottom: idx < template.items.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                              display: "grid",
+                              gridTemplateColumns: "1fr 100px 80px 140px",
+                              gap: 16,
+                              alignItems: "center",
+                              cursor: "pointer",
+                              transition: "background 150ms ease",
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = theme.colors.bgTertiary}
+                            onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                          >
                             <div>
-                              <div style={{ fontSize: 12, color: theme.colors.success }}>✓ Yes</div>
-                              {item.taskName && (
-                                <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 2 }}>
-                                  "{item.taskName}"
+                              <div style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</div>
+                              {item.description && (
+                                <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
+                                  {item.description}
                                 </div>
                               )}
                             </div>
-                          ) : (
-                            <span style={{ fontSize: 12, color: theme.colors.textMuted }}>No</span>
-                          )}
-                        </div>
+                            <span style={{ 
+                              fontSize: 11, 
+                              color: theme.colors.textSecondary,
+                              background: theme.colors.bgTertiary,
+                              padding: "3px 8px",
+                              borderRadius: 4,
+                              width: "fit-content",
+                            }}>
+                              {item.itemType.replace("_", " ")}
+                            </span>
+                            <span style={{ 
+                              fontSize: 12,
+                              color: item.isRequired ? theme.colors.error : theme.colors.textMuted,
+                              fontWeight: item.isRequired ? 600 : 400,
+                            }}>
+                              {item.isRequired ? "Required" : "Optional"}
+                            </span>
+                            <div>
+                              {item.autoCreateTask ? (
+                                <div>
+                                  <div style={{ fontSize: 12, color: theme.colors.success }}>✓ Auto Task</div>
+                                  {item.taskName && (
+                                    <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
+                                      {item.taskName}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : (
+                                <span style={{ fontSize: 12, color: theme.colors.textMuted }}>—</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
