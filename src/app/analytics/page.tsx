@@ -46,12 +46,10 @@ export default async function AnalyticsPage() {
     _count: { status: true },
   });
 
-  // Get aggregated metrics across all clients for the last 12 months
   const allMetrics = await prisma.clientMetrics.findMany({
     orderBy: { month: "asc" },
   });
 
-  // Group metrics by month
   const metricsByMonth: Record<string, { sessions: number; clicks: number; spend: number; count: number }> = {};
   
   allMetrics.forEach(function(m) {
@@ -101,7 +99,6 @@ export default async function AnalyticsPage() {
     },
   ];
 
-  // Project status data for bar chart
   const projectStatusData = projectsByStatus.map(function(item) {
     return {
       label: item.status.replace("_", " ").slice(0, 8),
@@ -112,7 +109,6 @@ export default async function AnalyticsPage() {
   const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
   const taskCompletionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-  // Calculate totals
   const totalSessions = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].sessions; }, 0);
   const totalClicks = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].clicks; }, 0);
   const totalSpend = sortedMonths.reduce(function(sum, key) { return sum + metricsByMonth[key].spend; }, 0);
@@ -127,7 +123,6 @@ export default async function AnalyticsPage() {
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Overview of your agency performance across all clients</p>
         </div>
 
-        {/* Key Metrics */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 24 }}>
           <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -174,7 +169,6 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Aggregated Performance Metrics */}
         {sortedMonths.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
             <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
@@ -192,7 +186,6 @@ export default async function AnalyticsPage() {
           </div>
         )}
 
-        {/* Traffic Charts */}
         {sessionsData.length > 1 && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
             <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
@@ -206,7 +199,6 @@ export default async function AnalyticsPage() {
           </div>
         )}
 
-        {/* Combined Traffic Chart */}
         {sessionsData.length > 1 && (
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Traffic Overview</h3>
@@ -214,17 +206,14 @@ export default async function AnalyticsPage() {
           </div>
         )}
 
-        {/* Ad Spend Chart */}
         {spendData.length > 0 && spendData.some(function(d) { return d.value > 0; }) && (
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, margin: "0 0 16px 0" }}>Ad Spend by Month (All Clients)</h3>
-            <BarChart data={spendData} color={theme.colors.primary} height={180} formatValue={function(v) { return "$" + v.toLocaleString(); }} />
+            <BarChart data={spendData} color={theme.colors.primary} height={180} format="currency" />
           </div>
         )}
 
-        {/* Status Breakdowns */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 24 }}>
-          {/* Clients by Status */}
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Clients by Status</h3>
             <div style={{ display: "grid", gap: 12 }}>
@@ -251,7 +240,6 @@ export default async function AnalyticsPage() {
             </div>
           </div>
 
-          {/* Projects by Status */}
           <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Status</h3>
             {projectStatusData.length > 0 ? (
@@ -264,7 +252,6 @@ export default async function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Projects by Service Type */}
         <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
           <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Projects by Service Type</h3>
           <div style={{ display: "grid", gap: 12 }}>
