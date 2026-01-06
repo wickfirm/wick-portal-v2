@@ -164,6 +164,17 @@ export default async function ClientViewPage({ params }: { params: { id: string 
                 fontWeight: 500,
                 fontSize: 13
               }}>
+                Onboarding
+              </Link>
+              <Link href={"/clients/" + client.id + "/metrics"} style={{
+                padding: "10px 16px",
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.successBg,
+                color: theme.colors.success,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>                
                 Metrics
               </Link>
               <Link href={"/clients/" + client.id + "/tasks"} style={{
