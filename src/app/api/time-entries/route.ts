@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET - List time entries with filters
 export async function GET(request: Request) {
   try {
@@ -112,23 +114,37 @@ export async function POST(request: Request) {
     // Validate required fields
     if (!clientId || !projectId || !taskId || !date || duration === undefined) {
       return NextResponse.json(
-        { error: "Client, project, task, date, and duration are required" },
+        { error: "Client, project, task, date, and duration are required", received: { clientId, projectId, taskId, date, duration } },
         { status: 400 }
       );
     }
 
-    // Verify the task belongs to the project and client
+    // Verify the task exists and belongs to the client
     const task = await prisma.clientTask.findFirst({
       where: {
         id: taskId,
-        projectId: projectId,
         clientId: clientId,
       },
     });
 
     if (!task) {
       return NextResponse.json(
-        { error: "Invalid task, project, or client combination" },
+        { error: "Task not found or does not belong to this client", taskId, clientId },
+        { status: 400 }
+      );
+    }
+
+    // Verify the project exists and belongs to the client
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        clientId: clientId,
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found or does not belong to this client", projectId, clientId },
         { status: 400 }
       );
     }
@@ -155,6 +171,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ timeEntry });
   } catch (error) {
     console.error("Error creating time entry:", error);
-    return NextResponse.json({ error: "Failed to create time entry" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create time entry", details: String(error) }, { status: 500 });
   }
 }
