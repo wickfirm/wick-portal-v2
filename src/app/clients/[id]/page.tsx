@@ -48,19 +48,19 @@ export default async function ClientViewPage({ params }: { params: { id: string 
 
   const onboardingForClient = client.onboardingItems.map(item => ({
     id: item.id,
-    name: item.name,
+    name: item.title,
     description: item.description,
-    serviceType: item.serviceType,
-    itemType: item.itemType || "CHECKBOX",
+    serviceType: "GENERAL",
+    itemType: "CHECKBOX",
     order: item.order,
-    isRequired: item.isRequired || false,
+    isRequired: false,
     isCompleted: item.isCompleted,
     completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-    completedBy: item.completedBy,
-    inputValue: item.inputValue,
-    notes: item.notes,
-    resourceUrl: item.resourceUrl,
-    resourceLabel: item.resourceLabel,
+    completedBy: null,
+    inputValue: null,
+    notes: null,
+    resourceUrl: null,
+    resourceLabel: null,
   }));
 
   const resourcesForClient = client.resources.map(resource => ({
