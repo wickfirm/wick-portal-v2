@@ -54,6 +54,7 @@ export default function EditClientPage() {
       primaryContact: formData.get("primaryContact") || null,
       primaryEmail: formData.get("primaryEmail") || null,
       agencyId: formData.get("agencyId") || null,
+      showTimeInPortal: formData.get("showTimeInPortal") === "on",
     };
 
     // Only include monthlyRetainer for SUPER_ADMIN
@@ -180,11 +181,39 @@ export default function EditClientPage() {
             </div>
 
             {userRole === "SUPER_ADMIN" && (
-              <div style={{ marginBottom: 32 }}>
+              <div style={{ marginBottom: 20 }}>
                 <label style={labelStyle}>Monthly Retainer (USD)</label>
                 <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={inputStyle} />
               </div>
             )}
+
+            {/* Portal Settings */}
+            <div style={{ 
+              marginBottom: 32, 
+              padding: 20, 
+              background: theme.colors.bgTertiary, 
+              borderRadius: theme.borderRadius.md,
+            }}>
+              <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Client Portal Settings
+              </h3>
+              <label style={{ display: "flex", alignItems: "center", gap: 12, cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  name="showTimeInPortal"
+                  defaultChecked={client.showTimeInPortal || false}
+                  style={{ width: 18, height: 18, cursor: "pointer" }}
+                />
+                <div>
+                  <div style={{ fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
+                    Show time tracking in portal
+                  </div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
+                    Allow clients to see how many hours have been logged on their projects
+                  </div>
+                </div>
+              </label>
+            </div>
 
             <div style={{ display: "flex", gap: 12 }}>
               <button type="submit" disabled={saving} style={{
