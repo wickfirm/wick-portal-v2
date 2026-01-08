@@ -48,6 +48,7 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
   const [showAddRow, setShowAddRow] = useState(false);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   // Add row form state
   const [selectedClient, setSelectedClient] = useState("");
@@ -118,7 +119,7 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
   };
 
   const handleCellClick = (rowKey: string, dateKey: string, currentDuration: number) => {
-    if (!canEdit) return;
+    if (!canEdit || isSaving) return;
     const cellKey = `${rowKey}-${dateKey}`;
     setEditingCell(cellKey);
     setEditValue(currentDuration > 0 ? formatDuration(currentDuration) : "");
@@ -135,18 +136,34 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
     const existingEntries = row.entries[dateKey] || [];
     const existingEntry = existingEntries[0];
 
+    // If no change needed, just close
+    if (!editValue && !existingEntry) {
+      setEditingCell(null);
+      setEditValue("");
+      return;
+    }
+
+    setIsSaving(true);
+
     try {
+      let success = false;
+
       if (duration && duration > 0) {
         if (existingEntry) {
           // Update existing entry
-          await fetch(`/api/time-entries/${existingEntry.id}`, {
+          const res = await fetch(`/api/time-entries/${existingEntry.id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ duration }),
           });
+          success = res.ok;
+          if (!success) {
+            const error = await res.json();
+            console.error("Update error:", error);
+          }
         } else {
           // Create new entry
-          await fetch("/api/time-entries", {
+          const res = await fetch("/api/time-entries", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -158,19 +175,33 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
               billable: true,
             }),
           });
+          success = res.ok;
+          if (!success) {
+            const error = await res.json();
+            console.error("Create error:", error);
+          }
         }
       } else if (existingEntry && (!editValue || duration === 0)) {
         // Delete entry if cleared
-        await fetch(`/api/time-entries/${existingEntry.id}`, {
+        const res = await fetch(`/api/time-entries/${existingEntry.id}`, {
           method: "DELETE",
         });
+        success = res.ok;
+      } else {
+        success = true; // No action needed
       }
 
-      // Refresh page to get updated data
-      window.location.reload();
+      if (success) {
+        // Refresh page to get updated data
+        window.location.reload();
+      } else {
+        alert("Failed to save time entry. Please try again.");
+        setIsSaving(false);
+      }
     } catch (error) {
       console.error("Error saving time entry:", error);
       alert("Failed to save time entry");
+      setIsSaving(false);
     }
 
     setEditingCell(null);
@@ -325,9 +356,10 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
-                      cursor: canEdit ? "pointer" : "default",
+                      cursor: canEdit && !isSaving ? "pointer" : "default",
                       background: isEditing ? theme.colors.infoBg : "transparent",
                       transition: "background 100ms",
+                      opacity: isSaving ? 0.6 : 1,
                     }}
                   >
                     {isEditing ? (
@@ -345,6 +377,7 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                           }
                         }}
                         placeholder="0:00"
+                        disabled={isSaving}
                         style={{
                           width: "100%",
                           maxWidth: 70,
