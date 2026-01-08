@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { theme } from "@/lib/theme";
+import TimerWidget from "./TimerWidget";
 
 export default function Header() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export default function Header() {
     { href: "/dashboard", label: "Dashboard" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
+    { href: "/timesheet", label: "Timesheet" },
     { href: "/team", label: "Team" },
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
@@ -82,6 +84,8 @@ export default function Header() {
       </div>
       
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <TimerWidget />
+        
         {userName && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div style={{
