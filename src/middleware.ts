@@ -6,29 +6,17 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // CLIENT role - restrict to portal only
+    // Check if user is a CLIENT trying to access admin routes
     if (token?.role === "CLIENT") {
-      if (path.startsWith("/portal") || path.startsWith("/api") || path === "/login" || path.startsWith("/auth")) {
+      // Allow access to portal routes
+      if (path.startsWith("/portal")) {
         return NextResponse.next();
       }
+      // Redirect CLIENT users to portal for other routes
       return NextResponse.redirect(new URL("/portal", req.url));
     }
 
-    // MEMBER role - no access to team management or settings (except account)
-    if (token?.role === "MEMBER") {
-      if (path.startsWith("/team") || (path.startsWith("/settings") && !path.startsWith("/settings/account"))) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-    }
-
-    // MANAGER role - no access to team management
-    if (token?.role === "MANAGER") {
-      if (path.startsWith("/team")) {
-        return NextResponse.redirect(new URL("/dashboard", req.url));
-      }
-    }
-
-    // Non-clients trying to access portal - redirect to dashboard
+    // Non-CLIENT users trying to access portal should be redirected to dashboard
     if (path.startsWith("/portal") && token?.role !== "CLIENT") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
@@ -37,11 +25,7 @@ export default withAuth(
   },
   {
     callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        if (path === "/login" || path.startsWith("/auth")) return true;
-        return !!token;
-      },
+      authorized: ({ token }) => !!token,
     },
   }
 );
@@ -55,5 +39,6 @@ export const config = {
     "/analytics/:path*",
     "/settings/:path*",
     "/portal/:path*",
+    "/timesheet/:path*",
   ],
 };
