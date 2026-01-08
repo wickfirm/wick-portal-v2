@@ -2,8 +2,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Force rebuild v2
-
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -24,6 +22,8 @@ model User {
   updatedAt DateTime @updatedAt
   assignedTasks     ClientTask[]
   clientAssignments ClientTeamMember[]
+  timeEntries       TimeEntry[]
+  activeTimer       ActiveTimer?
 
   @@map("users")
 }
@@ -42,6 +42,7 @@ model Client {
   primaryContact  String?
   primaryEmail    String?
   nickname        String?
+  showTimeInPortal Boolean          @default(false)
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   projects        Project[]
@@ -52,22 +53,9 @@ model Client {
   resources       ClientResource[]
   teamMembers     ClientTeamMember[]
   agencies        ClientAgency[]
+  timeEntries     TimeEntry[]
 
   @@map("clients")
-}
-
-model ClientResource {
-  id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  name      String
-  url       String
-  type      String   @default("LINK")
-  order     Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("client_resources")
 }
 
 model Project {
@@ -84,6 +72,7 @@ model Project {
   stages      ProjectStage[]
   tasks       ClientTask[]
   resources   ProjectResource[]
+  timeEntries TimeEntry[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
@@ -106,12 +95,12 @@ model ProjectStage {
 
 model ProjectResource {
   id        String   @id @default(cuid())
-  projectId String
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   name      String
   url       String
   type      String   @default("LINK")
   order     Int      @default(0)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -119,82 +108,51 @@ model ProjectResource {
 }
 
 model StageTemplate {
-  id          String      @id @default(cuid())
-  serviceType ServiceType
-  name        String
-  order       Int
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id        String   @id @default(cuid())
+  name      String
+  stages    String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@map("stage_templates")
 }
 
-model OnboardingTemplate {
-  id          String                   @id @default(cuid())
-  name        String
+model OnboardingItem {
+  id          String   @id @default(cuid())
+  title       String
   description String?
-  serviceType String                   @default("GENERAL")
-  order       Int
-  isActive    Boolean                  @default(true)
-  items       OnboardingTemplateItem[]
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
+  order       Int      @default(0)
+  isCompleted Boolean  @default(false)
+  completedAt DateTime?
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("onboarding_items")
+}
+
+model OnboardingTemplate {
+  id        String                    @id @default(cuid())
+  name      String
+  items     OnboardingTemplateItem[]
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
 
   @@map("onboarding_templates")
 }
 
 model OnboardingTemplateItem {
-  id              String             @id @default(cuid())
-  templateId      String
-  template        OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  name            String
-  description     String?
-  itemType        String             @default("CHECKBOX")
-  isRequired      Boolean            @default(false)
-  order           Int
-  autoCreateTask  Boolean            @default(false)
-  taskName        String?
-  taskPriority    TaskPriority?
-  taskAssignRole  String?
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id          String             @id @default(cuid())
+  title       String
+  description String?
+  order       Int                @default(0)
+  templateId  String
+  template    OnboardingTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
 
   @@map("onboarding_template_items")
-}
-
-model OnboardingItem {
-  id            String    @id @default(cuid())
-  name          String
-  description   String?
-  serviceType   String    @default("GENERAL")
-  itemType      String    @default("CHECKBOX")
-  order         Int
-  isRequired    Boolean   @default(false)
-  isCompleted   Boolean   @default(false)
-  completedAt   DateTime?
-  completedBy   String?
-  notes         String?
-  inputValue    String?
-  fileUrl       String?
-  resourceUrl   String?
-  resourceLabel String?
-  clientId      String
-  client        Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  @@map("onboarding_items")
-}
-
-model TaskCategory {
-  id        String       @id @default(cuid())
-  name      String
-  order     Int
-  tasks     ClientTask[]
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  @@map("task_categories")
 }
 
 model ClientTask {
@@ -219,155 +177,74 @@ model ClientTask {
   ownerType         String       @default("AGENCY")
   projectId         String?
   project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  timeEntries       TimeEntry[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
   @@map("client_tasks")
 }
 
+model TaskCategory {
+  id        String       @id @default(cuid())
+  name      String       @unique
+  color     String       @default("#6B7280")
+  tasks     ClientTask[]
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@map("task_categories")
+}
+
 model ClientMetrics {
-  id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  month     DateTime @db.Date
-
-  // Google Analytics
-  gaSessions           Int?     @map("ga_sessions")
-  gaUsers              Int?     @map("ga_users")
-  gaPageviews          Int?     @map("ga_pageviews")
-  gaBounceRate         Decimal? @map("ga_bounce_rate") @db.Decimal(5, 2)
-  gaAvgSessionDuration Int?     @map("ga_avg_session_duration")
-
-  // Google Search Console
-  gscImpressions Int?     @map("gsc_impressions")
-  gscClicks      Int?     @map("gsc_clicks")
-  gscCtr         Decimal? @map("gsc_ctr") @db.Decimal(5, 2)
-  gscAvgPosition Decimal? @map("gsc_avg_position") @db.Decimal(5, 2)
-
-  // SEO Rankings
-  seoKeywordsTop3   Int?     @map("seo_keywords_top3")
-  seoKeywordsTop10  Int?     @map("seo_keywords_top10")
-  seoKeywordsTop100 Int?     @map("seo_keywords_top100")
-  seoBacklinks      Int?     @map("seo_backlinks")
-  seoDomainRating   Decimal? @map("seo_domain_rating") @db.Decimal(5, 2)
-
-  // AEO
-  aeoVisibilityScore Decimal? @map("aeo_visibility_score") @db.Decimal(5, 2)
-  aeoCitations       Int?     @map("aeo_citations")
-  aeoBrandMentions   Int?     @map("aeo_brand_mentions")
-
-  // META Ads
-  metaSpend       Decimal? @map("meta_spend") @db.Decimal(10, 2)
-  metaImpressions Int?     @map("meta_impressions")
-  metaClicks      Int?     @map("meta_clicks")
-  metaConversions Int?     @map("meta_conversions")
-  metaCtr         Decimal? @map("meta_ctr") @db.Decimal(5, 2)
-  metaCpc         Decimal? @map("meta_cpc") @db.Decimal(10, 2)
-  metaRoas        Decimal? @map("meta_roas") @db.Decimal(5, 2)
-
-  // Google Ads
-  googleAdsSpend       Decimal? @map("google_ads_spend") @db.Decimal(10, 2)
-  googleAdsImpressions Int?     @map("google_ads_impressions")
-  googleAdsClicks      Int?     @map("google_ads_clicks")
-  googleAdsConversions Int?     @map("google_ads_conversions")
-  googleAdsCtr         Decimal? @map("google_ads_ctr") @db.Decimal(5, 2)
-  googleAdsCpc         Decimal? @map("google_ads_cpc") @db.Decimal(10, 2)
-  googleAdsRoas        Decimal? @map("google_ads_roas") @db.Decimal(5, 2)
-
-  // LinkedIn Ads
-  linkedinAdsSpend       Decimal? @map("linkedin_ads_spend") @db.Decimal(10, 2)
-  linkedinAdsImpressions Int?     @map("linkedin_ads_impressions")
-  linkedinAdsClicks      Int?     @map("linkedin_ads_clicks")
-  linkedinAdsConversions Int?     @map("linkedin_ads_conversions")
-  linkedinAdsCtr         Decimal? @map("linkedin_ads_ctr") @db.Decimal(5, 2)
-  linkedinAdsCpc         Decimal? @map("linkedin_ads_cpc") @db.Decimal(10, 2)
-
-  // TikTok Ads
-  tiktokAdsSpend       Decimal? @map("tiktok_ads_spend") @db.Decimal(10, 2)
-  tiktokAdsImpressions Int?     @map("tiktok_ads_impressions")
-  tiktokAdsClicks      Int?     @map("tiktok_ads_clicks")
-  tiktokAdsConversions Int?     @map("tiktok_ads_conversions")
-  tiktokAdsCtr         Decimal? @map("tiktok_ads_ctr") @db.Decimal(5, 2)
-  tiktokAdsCpc         Decimal? @map("tiktok_ads_cpc") @db.Decimal(10, 2)
-
-  // Instagram
-  igFollowers      Int?     @map("ig_followers")
-  igFollowing      Int?     @map("ig_following")
-  igPosts          Int?     @map("ig_posts")
-  igReach          Int?     @map("ig_reach")
-  igEngagementRate Decimal? @map("ig_engagement_rate") @db.Decimal(5, 2)
-
-  // Facebook
-  fbFollowers      Int?     @map("fb_followers")
-  fbPosts          Int?     @map("fb_posts")
-  fbReach          Int?     @map("fb_reach")
-  fbEngagementRate Decimal? @map("fb_engagement_rate") @db.Decimal(5, 2)
-
-  // LinkedIn Organic
-  liFollowers      Int?     @map("li_followers")
-  liPosts          Int?     @map("li_posts")
-  liImpressions    Int?     @map("li_impressions")
-  liEngagementRate Decimal? @map("li_engagement_rate") @db.Decimal(5, 2)
-
-  // TikTok Organic
-  ttFollowers      Int?     @map("tt_followers")
-  ttVideos         Int?     @map("tt_videos")
-  ttViews          Int?     @map("tt_views")
-  ttEngagementRate Decimal? @map("tt_engagement_rate") @db.Decimal(5, 2)
-
-  // Twitter/X
-  twFollowers      Int?     @map("tw_followers")
-  twTweets         Int?     @map("tw_tweets")
-  twImpressions    Int?     @map("tw_impressions")
-  twEngagementRate Decimal? @map("tw_engagement_rate") @db.Decimal(5, 2)
-
-  // Content Deliverables
-  contentBlogPosts       Int? @map("content_blog_posts")
-  contentSocialPosts     Int? @map("content_social_posts")
-  contentEmailsSent      Int? @map("content_emails_sent")
-  contentVideosProduced  Int? @map("content_videos_produced")
-  contentGraphicsCreated Int? @map("content_graphics_created")
-  contentLandingPages    Int? @map("content_landing_pages")
-
-  // Hours Worked
-  hoursSeo         Decimal? @map("hours_seo") @db.Decimal(5, 1)
-  hoursContent     Decimal? @map("hours_content") @db.Decimal(5, 1)
-  hoursPaidMedia   Decimal? @map("hours_paid_media") @db.Decimal(5, 1)
-  hoursSocial      Decimal? @map("hours_social") @db.Decimal(5, 1)
-  hoursDesign      Decimal? @map("hours_design") @db.Decimal(5, 1)
-  hoursMaintenance Decimal? @map("hours_maintenance") @db.Decimal(5, 1)
-  hoursStrategy    Decimal? @map("hours_strategy") @db.Decimal(5, 1)
-
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  month           DateTime @db.Date
+  gaSessions      Int?
+  gaUsers         Int?
+  gaPageviews     Int?
+  gaAvgSessionDuration Float?
+  gaBounceRate    Float?
+  gscClicks       Int?
+  gscImpressions  Int?
+  gscCtr          Float?
+  gscPosition     Float?
+  metaSpend       Decimal? @db.Decimal(10, 2)
+  metaImpressions Int?
+  metaClicks      Int?
+  metaConversions Int?
+  metaCpl         Decimal? @db.Decimal(10, 2)
+  metaRoas        Float?
+  googleAdsSpend  Decimal? @db.Decimal(10, 2)
+  googleAdsClicks Int?
+  googleAdsConversions Int?
+  googleAdsCpl    Decimal? @db.Decimal(10, 2)
+  googleAdsRoas   Float?
+  seoKeywordsTop3   Int?
+  seoKeywordsTop10  Int?
+  seoKeywordsTop100 Int?
+  seoBacklinks      Int?
+  seoDomainAuthority Int?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@unique([clientId, month])
   @@map("client_metrics")
 }
 
-model TaskStatusOption {
+model ClientResource {
   id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#6B7280")
+  name      String
+  url       String
+  type      String   @default("LINK")
   order     Int      @default(0)
-  isDefault Boolean  @default(false)
+  clientId  String
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@map("task_status_options")
-}
-
-model TaskPriorityOption {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  color     String   @default("#6B7280")
-  order     Int      @default(0)
-  isDefault Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("task_priority_options")
+  @@map("client_resources")
 }
 
 model Agency {
@@ -384,11 +261,11 @@ model Agency {
 
 model ClientAgency {
   id        String   @id @default(cuid())
-  clientId  String   @map("client_id")
+  clientId  String
   client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  agencyId  String   @map("agency_id")
+  agencyId  String
   agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now())
 
   @@unique([clientId, agencyId])
   @@map("client_agencies")
@@ -406,60 +283,69 @@ model ClientTeamMember {
   @@map("client_team_members")
 }
 
+model TimeEntry {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  date        DateTime @db.Date
+  duration    Int      // Duration in seconds
+  description String?
+  billable    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, date])
+  @@index([clientId])
+  @@index([projectId])
+  @@map("time_entries")
+}
+
+model ActiveTimer {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  projectId   String
+  taskId      String
+  description String?
+  startedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@map("active_timers")
+}
+
 enum ClientStatus {
   LEAD
   ONBOARDING
   ACTIVE
   PAUSED
   CHURNED
-
-  @@map("client_status")
 }
 
 enum ProjectStatus {
   DRAFT
-  PENDING_APPROVAL
+  PLANNING
   IN_PROGRESS
   ON_HOLD
   COMPLETED
   CANCELLED
-
-  @@map("project_status")
 }
 
 enum ServiceType {
   SEO
-  AEO
-  WEB_DEVELOPMENT
+  WEB_DEV
   PAID_MEDIA
-  SOCIAL_MEDIA
+  SOCIAL
   CONTENT
   BRANDING
   CONSULTING
-
-  @@map("service_type")
-}
-
-enum TaskPriority {
-  HIGH
-  MEDIUM
-  LOW
-
-  @@map("priority")
-}
-
-enum TaskStatus {
-  PENDING
-  TODO
-  IN_PROGRESS
-  IN_REVIEW
-  ONGOING
-  ON_HOLD
-  COMPLETED
-  BLOCKED
-  FUTURE_PLAN
-
-  @@map("task_status")
+  OTHER
 }
 
 enum UserRole {
@@ -468,6 +354,19 @@ enum UserRole {
   MANAGER
   MEMBER
   CLIENT
+}
 
-  @@map("user_role")
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
 }
