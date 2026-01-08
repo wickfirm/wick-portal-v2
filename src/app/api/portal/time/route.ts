@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET - Get time entries for the client user's client
 export async function GET(request: Request) {
   try {
@@ -10,33 +12,26 @@ export async function GET(request: Request) {
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
       include: { client: true },
     });
-
     if (!user || !user.client) {
       return NextResponse.json({ error: "No client linked" }, { status: 404 });
     }
-
     // Check if time is enabled for this client
     if (!user.client.showTimeInPortal) {
       return NextResponse.json({ enabled: false, timeEntries: [], total: 0 });
     }
-
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
-
     // Build where clause
     const where: any = {
       clientId: user.client.id,
     };
-
     if (projectId) {
       where.projectId = projectId;
     }
-
     const timeEntries = await prisma.timeEntry.findMany({
       where,
       include: {
@@ -46,7 +41,6 @@ export async function GET(request: Request) {
       },
       orderBy: { date: "desc" },
     });
-
     // Calculate totals by project
     const byProject: Record<string, { project: any; total: number }> = {};
     
@@ -59,9 +53,7 @@ export async function GET(request: Request) {
       }
       byProject[entry.projectId].total += entry.duration;
     });
-
     const totalTime = timeEntries.reduce((sum, e) => sum + e.duration, 0);
-
     return NextResponse.json({
       enabled: true,
       timeEntries: timeEntries.map((e) => ({
