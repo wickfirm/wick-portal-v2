@@ -4,9 +4,11 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import ClientOnboardingView from "@/components/ClientOnboardingView";
 
-export const dynamic = "force-dynamic";
-
-export default async function ClientOnboardingPage({ params }: { params: { id: string } }) {
+export default async function ClientOnboardingPage({
+  params,
+}: {
+  params: { id: string };
+}) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
@@ -14,85 +16,53 @@ export default async function ClientOnboardingPage({ params }: { params: { id: s
     where: { id: params.id },
   });
 
-  if (!client) {
-    return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
-  }
+  if (!client) redirect("/clients");
 
   const onboardingItems = await prisma.onboardingItem.findMany({
     where: { clientId: params.id },
-    orderBy: { order: "asc" },
+    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
   });
 
   const templates = await prisma.onboardingTemplate.findMany({
+    where: { isActive: true },
     include: {
-      items: { orderBy: { order: "asc" } },
+      items: {
+        orderBy: { order: "asc" },
+      },
     },
-    orderBy: { name: "asc" },
+    orderBy: { order: "asc" },
   });
 
-  // Group items by a default "GENERAL" service type since the model doesn't have serviceType
-  const groupedItems: Record<string, any[]> = {};
-  
-  onboardingItems.forEach(item => {
-    const serviceType = "GENERAL";
-    if (!groupedItems[serviceType]) {
-      groupedItems[serviceType] = [];
+  // Group items by service type
+  const groupedItems = onboardingItems.reduce((acc: Record<string, any[]>, item) => {
+    if (!acc[item.serviceType]) {
+      acc[item.serviceType] = [];
     }
-    groupedItems[serviceType].push({
-      id: item.id,
-      name: item.title,
-      description: item.description,
-      serviceType: "GENERAL",
-      itemType: "CHECKBOX",
-      order: item.order,
-      isRequired: false,
-      isCompleted: item.isCompleted,
-      completedAt: item.completedAt ? item.completedAt.toISOString() : null,
-      completedBy: null,
-      inputValue: null,
-      fileUrl: null,
-      notes: null,
-      resourceUrl: null,
-      resourceLabel: null,
-    });
-  });
+    acc[item.serviceType].push(item);
+    return acc;
+  }, {});
 
+  // Calculate progress
   const totalItems = onboardingItems.length;
   const completedItems = onboardingItems.filter(i => i.isCompleted).length;
+  const requiredItems = onboardingItems.filter(i => i.isRequired);
+  const completedRequired = requiredItems.filter(i => i.isCompleted).length;
 
   const progress = {
     total: totalItems,
     completed: completedItems,
     percentage: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
-    requiredTotal: 0,
-    requiredCompleted: 0,
-    requiredPercentage: 100,
+    requiredTotal: requiredItems.length,
+    requiredCompleted: completedRequired,
+    requiredPercentage: requiredItems.length > 0 ? Math.round((completedRequired / requiredItems.length) * 100) : 100,
   };
 
-  const serializedTemplates = templates.map(template => ({
-    id: template.id,
-    name: template.name,
-    description: null,
-    serviceType: "GENERAL",
-    items: template.items.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description,
-      order: item.order,
-      isRequired: false,
-    })),
-  }));
-
   return (
-    <ClientOnboardingView
-      client={{
-        id: client.id,
-        name: client.name,
-        status: client.status,
-      }}
+    <ClientOnboardingView 
+      client={client}
       groupedItems={groupedItems}
       progress={progress}
-      templates={serializedTemplates}
+      templates={templates}
       hasItems={onboardingItems.length > 0}
     />
   );
