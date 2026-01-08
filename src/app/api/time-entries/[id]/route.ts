@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET - Get a single time entry
 export async function GET(
   request: Request,
@@ -83,19 +85,18 @@ export async function PUT(
     const body = await request.json();
     const { clientId, projectId, taskId, date, duration, description, billable } = body;
 
-    // If changing task, verify it belongs to the project and client
-    if (taskId && (taskId !== existingEntry.taskId || projectId !== existingEntry.projectId)) {
+    // If changing task, verify it belongs to the client
+    if (taskId && taskId !== existingEntry.taskId) {
       const task = await prisma.clientTask.findFirst({
         where: {
           id: taskId,
-          projectId: projectId || existingEntry.projectId,
           clientId: clientId || existingEntry.clientId,
         },
       });
 
       if (!task) {
         return NextResponse.json(
-          { error: "Invalid task, project, or client combination" },
+          { error: "Invalid task or client combination" },
           { status: 400 }
         );
       }
