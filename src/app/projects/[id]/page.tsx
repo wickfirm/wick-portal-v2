@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import StageManager from "./stage-manager";
 import ProjectTasks from "./project-tasks";
 import ProjectResources from "./project-resources";
+import ProjectTimeTracking from "./project-time-tracking";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +27,13 @@ export default async function ProjectViewPage({ params }: { params: { id: string
         orderBy: { createdAt: "desc" }
       },
       resources: { orderBy: { order: "asc" } },
+      timeEntries: {
+        include: {
+          user: { select: { id: true, name: true, email: true } },
+          task: { select: { id: true, name: true } },
+        },
+        orderBy: { date: "desc" },
+      },
     },
   });
 
@@ -57,6 +65,18 @@ export default async function ProjectViewPage({ params }: { params: { id: string
     type: resource.type,
     order: resource.order,
   }));
+
+  // Serialize time entries
+  const timeEntriesForProject = project.timeEntries.map(entry => ({
+    id: entry.id,
+    duration: entry.duration,
+    date: entry.date.toISOString(),
+    description: entry.description,
+    user: entry.user,
+    task: entry.task,
+  }));
+
+  const totalProjectTime = project.timeEntries.reduce((sum, e) => sum + e.duration, 0);
 
   const completed = project.stages.filter(s => s.isCompleted).length;
   const total = project.stages.length;
@@ -156,6 +176,13 @@ export default async function ProjectViewPage({ params }: { params: { id: string
 
           {/* Sidebar */}
           <div>
+            {/* Time Tracking */}
+            <ProjectTimeTracking
+              projectId={project.id}
+              totalTime={totalProjectTime}
+              entries={timeEntriesForProject}
+            />
+
             {/* Resources */}
             <ProjectResources
               projectId={project.id}
