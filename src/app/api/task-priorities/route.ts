@@ -1,28 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import prisma from "@/lib/prisma";
 
-// Task priorities are defined as an enum in the schema, not a database table
-// This API returns static priority options
-
-const PRIORITIES = [
-  { id: "LOW", name: "Low", color: "#6B7280", order: 1 },
-  { id: "MEDIUM", name: "Medium", color: "#F59E0B", order: 2 },
-  { id: "HIGH", name: "High", color: "#F97316", order: 3 },
-  { id: "URGENT", name: "Urgent", color: "#EF4444", order: 4 },
-];
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  return NextResponse.json(PRIORITIES);
+  const priorities = await prisma.taskPriorityOption.findMany({
+    orderBy: { order: "asc" },
+  });
+
+  return NextResponse.json(priorities);
 }
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  // Priorities are enum-based, cannot be added
-  return NextResponse.json({ error: "Priorities are system-defined and cannot be added" }, { status: 400 });
+  const { name, color } = await req.json();
+
+  const lastPriority = await prisma.taskPriorityOption.findFirst({
+    orderBy: { order: "desc" },
+  });
+
+  const priority = await prisma.taskPriorityOption.create({
+    data: {
+      name: name.toUpperCase().replace(/\s+/g, "_"),
+      color: color || "#6B7280",
+      order: (lastPriority?.order ?? 0) + 1,
+    },
+  });
+
+  return NextResponse.json(priority);
 }
