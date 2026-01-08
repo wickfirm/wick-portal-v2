@@ -7,8 +7,12 @@ export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { searchParams } = new URL(req.url);
+  const serviceType = searchParams.get("serviceType");
+
   const templates = await prisma.stageTemplate.findMany({
-    orderBy: { name: "asc" },
+    where: serviceType ? { serviceType: serviceType as any } : undefined,
+    orderBy: { order: "asc" },
   });
 
   return NextResponse.json(templates);
@@ -21,16 +25,21 @@ export async function POST(req: NextRequest) {
   try {
     const data = await req.json();
 
+    const lastTemplate = await prisma.stageTemplate.findFirst({
+      where: { serviceType: data.serviceType },
+      orderBy: { order: "desc" },
+    });
+
     const template = await prisma.stageTemplate.create({
       data: {
+        serviceType: data.serviceType,
         name: data.name,
-        stages: data.stages || [],
+        order: (lastTemplate?.order ?? 0) + 1,
       },
     });
 
     return NextResponse.json(template);
   } catch (error) {
-    console.error("Failed to create template:", error);
-    return NextResponse.json({ error: "Failed to create" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to create template" }, { status: 500 });
   }
 }
