@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 import Header from "@/components/Header";
 import TimesheetGrid from "./timesheet-grid";
 import { theme } from "@/lib/theme";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 function getWeekDates(dateInWeek: Date) {
   const date = new Date(dateInWeek);
   const day = date.getDay();
-  const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday start
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   
   const monday = new Date(date.setDate(diff));
   monday.setHours(0, 0, 0, 0);
@@ -41,18 +42,15 @@ export default async function TimesheetPage({
 
   if (!dbUser) redirect("/login");
 
-  // Determine which week to show
   const weekParam = searchParams.week;
   const targetDate = weekParam ? new Date(weekParam) : new Date();
   const weekDates = getWeekDates(targetDate);
   const weekStart = weekDates[0];
   const weekEnd = weekDates[6];
 
-  // Determine which user's timesheet to show
   const canViewOthers = ["SUPER_ADMIN", "ADMIN"].includes(dbUser.role);
   const viewUserId = canViewOthers && searchParams.userId ? searchParams.userId : dbUser.id;
 
-  // Get team members for selector (if admin)
   let teamMembers: any[] = [];
   if (canViewOthers) {
     teamMembers = await prisma.user.findMany({
@@ -62,7 +60,6 @@ export default async function TimesheetPage({
     });
   }
 
-  // Get the user being viewed
   const viewUser = viewUserId === dbUser.id 
     ? dbUser 
     : await prisma.user.findUnique({
@@ -70,7 +67,6 @@ export default async function TimesheetPage({
         select: { id: true, name: true, email: true },
       });
 
-  // Fetch time entries for the week
   const timeEntries = await prisma.timeEntry.findMany({
     where: {
       userId: viewUserId,
@@ -87,7 +83,6 @@ export default async function TimesheetPage({
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
   });
 
-  // Group entries by project+task combination
   const entriesByRow: Record<string, any> = {};
   
   timeEntries.forEach((entry) => {
@@ -110,14 +105,12 @@ export default async function TimesheetPage({
     entriesByRow[rowKey].total += entry.duration;
   });
 
-  // Fetch clients for the add row functionality
   const clients = await prisma.client.findMany({
     where: { status: { in: ["ACTIVE", "ONBOARDING"] } },
     select: { id: true, name: true, nickname: true },
     orderBy: { name: "asc" },
   });
 
-  // Calculate week navigation dates
   const prevWeek = new Date(weekStart);
   prevWeek.setDate(prevWeek.getDate() - 7);
   const nextWeek = new Date(weekStart);
@@ -128,7 +121,6 @@ export default async function TimesheetPage({
     return `${start.toLocaleDateString("en-US", options)} - ${end.toLocaleDateString("en-US", { ...options, year: "numeric" })}`;
   };
 
-  // Serialize data for client component
   const serializedEntries = Object.entries(entriesByRow).map(([key, data]) => ({
     key,
     client: data.client,
@@ -150,26 +142,18 @@ export default async function TimesheetPage({
 
   const serializedWeekDates = weekDates.map((d) => d.toISOString());
 
+  const prevWeekUrl = `/timesheet?week=${prevWeek.toISOString().split("T")[0]}${viewUserId !== dbUser.id ? "&userId=" + viewUserId : ""}`;
+  const nextWeekUrl = `/timesheet?week=${nextWeek.toISOString().split("T")[0]}${viewUserId !== dbUser.id ? "&userId=" + viewUserId : ""}`;
+  const todayUrl = `/timesheet${viewUserId !== dbUser.id ? "?userId=" + viewUserId : ""}`;
+
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Page Header */}
-        <div style={{ 
-          display: "flex", 
-          justifyContent: "space-between", 
-          alignItems: "center", 
-          marginBottom: 24 
-        }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>
-            <h1 style={{ 
-              fontSize: 28, 
-              fontWeight: 600, 
-              color: theme.colors.textPrimary, 
-              margin: 0,
-              marginBottom: 4,
-            }}>
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 4 }}>
               Weekly Timesheet
             </h1>
             {viewUser && viewUserId !== dbUser.id && (
@@ -179,110 +163,51 @@ export default async function TimesheetPage({
             )}
           </div>
 
-          {/* User Selector (for admins) */}
           {canViewOthers && teamMembers.length > 0 && (
-            <select
-              defaultValue={viewUserId}
-              onChange={(e) => {
-                const params = new URLSearchParams();
-                if (e.target.value !== dbUser.id) {
-                  params.set("userId", e.target.value);
-                }
-                if (weekParam) {
-                  params.set("week", weekParam);
-                }
-                window.location.href = `/timesheet${params.toString() ? "?" + params.toString() : ""}`;
-              }}
-              style={{
-                padding: "10px 16px",
-                borderRadius: theme.borderRadius.md,
-                border: "1px solid " + theme.colors.borderLight,
-                background: theme.colors.bgSecondary,
-                fontSize: 14,
-                minWidth: 200,
-              }}
-            >
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {teamMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name || member.email} {member.id === dbUser.id ? "(me)" : ""}
-                </option>
+                <Link
+                  key={member.id}
+                  href={`/timesheet${weekParam ? "?week=" + weekParam + "&" : "?"}userId=${member.id}`}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: theme.borderRadius.sm,
+                    border: "1px solid " + theme.colors.borderLight,
+                    background: viewUserId === member.id ? theme.colors.primary : theme.colors.bgSecondary,
+                    color: viewUserId === member.id ? "white" : theme.colors.textSecondary,
+                    textDecoration: "none",
+                    fontSize: 13,
+                    fontWeight: 500,
+                  }}
+                >
+                  {member.name || member.email.split("@")[0]}
+                </Link>
               ))}
-            </select>
+            </div>
           )}
         </div>
 
-        {/* Week Navigation */}
-        <div style={{ 
-          display: "flex", 
-          alignItems: "center", 
-          gap: 16, 
-          marginBottom: 24,
-          background: theme.colors.bgSecondary,
-          padding: "12px 20px",
-          borderRadius: theme.borderRadius.lg,
-          border: "1px solid " + theme.colors.borderLight,
-        }}>
-          
-            href={`/timesheet?week=${prevWeek.toISOString().split("T")[0]}${viewUserId !== dbUser.id ? "&userId=" + viewUserId : ""}`}
-            style={{
-              padding: "8px 12px",
-              borderRadius: theme.borderRadius.sm,
-              border: "1px solid " + theme.colors.borderLight,
-              background: theme.colors.bgPrimary,
-              textDecoration: "none",
-              color: theme.colors.textSecondary,
-              fontSize: 14,
-            }}
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, background: theme.colors.bgSecondary, padding: "12px 20px", borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <Link href={prevWeekUrl} style={{ padding: "8px 12px", borderRadius: theme.borderRadius.sm, border: "1px solid " + theme.colors.borderLight, background: theme.colors.bgPrimary, textDecoration: "none", color: theme.colors.textSecondary, fontSize: 14 }}>
             ← Previous
-          </a>
+          </Link>
           
-          <div style={{ 
-            display: "flex", 
-            alignItems: "center", 
-            gap: 8,
-            padding: "8px 16px",
-            background: theme.colors.bgTertiary,
-            borderRadius: theme.borderRadius.md,
-          }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 16px", background: theme.colors.bgTertiary, borderRadius: theme.borderRadius.md }}>
             <span style={{ fontSize: 14, fontWeight: 500 }}>📅</span>
             <span style={{ fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>
               {formatWeekRange(weekStart, weekEnd)}
             </span>
           </div>
           
-          
-            href={`/timesheet?week=${nextWeek.toISOString().split("T")[0]}${viewUserId !== dbUser.id ? "&userId=" + viewUserId : ""}`}
-            style={{
-              padding: "8px 12px",
-              borderRadius: theme.borderRadius.sm,
-              border: "1px solid " + theme.colors.borderLight,
-              background: theme.colors.bgPrimary,
-              textDecoration: "none",
-              color: theme.colors.textSecondary,
-              fontSize: 14,
-            }}
-          >
+          <Link href={nextWeekUrl} style={{ padding: "8px 12px", borderRadius: theme.borderRadius.sm, border: "1px solid " + theme.colors.borderLight, background: theme.colors.bgPrimary, textDecoration: "none", color: theme.colors.textSecondary, fontSize: 14 }}>
             Next →
-          </a>
+          </Link>
 
-          
-            href={`/timesheet${viewUserId !== dbUser.id ? "?userId=" + viewUserId : ""}`}
-            style={{
-              padding: "8px 16px",
-              borderRadius: theme.borderRadius.sm,
-              background: theme.colors.infoBg,
-              color: theme.colors.info,
-              textDecoration: "none",
-              fontSize: 13,
-              fontWeight: 500,
-            }}
-          >
+          <Link href={todayUrl} style={{ padding: "8px 16px", borderRadius: theme.borderRadius.sm, background: theme.colors.infoBg, color: theme.colors.info, textDecoration: "none", fontSize: 13, fontWeight: 500 }}>
             Today
-          </a>
+          </Link>
         </div>
 
-        {/* Timesheet Grid */}
         <TimesheetGrid
           weekDates={serializedWeekDates}
           entries={serializedEntries}
