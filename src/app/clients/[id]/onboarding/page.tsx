@@ -2,13 +2,14 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
+import Header from "@/components/Header";
 import ClientOnboardingView from "@/components/ClientOnboardingView";
+import { theme } from "@/lib/theme";
 
-export default async function ClientOnboardingPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+export const dynamic = "force-dynamic";
+
+export default async function ClientOnboardingPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
 
@@ -16,54 +17,68 @@ export default async function ClientOnboardingPage({
     where: { id: params.id },
   });
 
-  if (!client) redirect("/clients");
+  if (!client) {
+    return <div style={{ padding: 48, textAlign: "center" }}>Client not found</div>;
+  }
 
   const onboardingItems = await prisma.onboardingItem.findMany({
     where: { clientId: params.id },
-    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
-  });
-
-  const templates = await prisma.onboardingTemplate.findMany({
-    where: { isActive: true },
-    include: {
-      items: {
-        orderBy: { order: "asc" },
-      },
-    },
     orderBy: { order: "asc" },
   });
 
-  // Group items by service type
-  const groupedItems = onboardingItems.reduce((acc: Record<string, any[]>, item) => {
-    if (!acc[item.serviceType]) {
-      acc[item.serviceType] = [];
-    }
-    acc[item.serviceType].push(item);
-    return acc;
-  }, {});
+  const templates = await prisma.onboardingTemplate.findMany({
+    include: {
+      items: { orderBy: { order: "asc" } },
+    },
+    orderBy: { name: "asc" },
+  });
 
-  // Calculate progress
-  const totalItems = onboardingItems.length;
-  const completedItems = onboardingItems.filter(i => i.isCompleted).length;
-  const requiredItems = onboardingItems.filter(i => i.isRequired);
-  const completedRequired = requiredItems.filter(i => i.isCompleted).length;
+  const serializedItems = onboardingItems.map(item => ({
+    id: item.id,
+    title: item.title,
+    description: item.description,
+    order: item.order,
+    isCompleted: item.isCompleted,
+    completedAt: item.completedAt ? item.completedAt.toISOString() : null,
+  }));
 
-  const progress = {
-    total: totalItems,
-    completed: completedItems,
-    percentage: totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0,
-    requiredTotal: requiredItems.length,
-    requiredCompleted: completedRequired,
-    requiredPercentage: requiredItems.length > 0 ? Math.round((completedRequired / requiredItems.length) * 100) : 100,
-  };
+  const serializedTemplates = templates.map(template => ({
+    id: template.id,
+    name: template.name,
+    items: template.items.map(item => ({
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      order: item.order,
+    })),
+  }));
 
   return (
-    <ClientOnboardingView 
-      client={client}
-      groupedItems={groupedItems}
-      progress={progress}
-      templates={templates}
-      hasItems={onboardingItems.length > 0}
-    />
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <Header />
+
+      <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <Link href={`/clients/${params.id}`} style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
+            ← Back to {client.name}
+          </Link>
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+            Onboarding Checklist
+          </h1>
+          <p style={{ color: theme.colors.textSecondary, marginTop: 8 }}>
+            Manage onboarding tasks for {client.name}
+          </p>
+        </div>
+
+        <ClientOnboardingView
+          clientId={params.id}
+          initialItems={serializedItems}
+          templates={serializedTemplates}
+        />
+      </main>
+    </div>
   );
 }
