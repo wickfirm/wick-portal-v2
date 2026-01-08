@@ -7,26 +7,28 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const clientId = params.id;
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("projectId");
 
-  const where: any = { clientId: params.id };
-  if (projectId) where.projectId = projectId;
-
   try {
+    const where: any = { clientId };
+    if (projectId) {
+      where.projectId = projectId;
+    }
+
     const tasks = await prisma.clientTask.findMany({
       where,
-      include: { 
+      include: {
         category: true,
-        client: { 
-          select: { 
-            nickname: true, 
-            name: true, 
-            agencies: { include: { agency: true } } 
-          } 
+        assignee: {
+          select: { id: true, name: true, email: true },
+        },
+        project: {
+          select: { id: true, name: true },
         },
       },
-      orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
+      orderBy: [{ category: { name: "asc" } }, { order: "asc" }],
     });
 
     return NextResponse.json(tasks);
@@ -40,33 +42,38 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const clientId = params.id;
+
   try {
     const data = await req.json();
 
-    const lastTask = await prisma.clientTask.findFirst({
-      where: { clientId: params.id, categoryId: data.categoryId },
+    // Get max order for this client
+    const maxOrder = await prisma.clientTask.findFirst({
+      where: { clientId },
       orderBy: { order: "desc" },
+      select: { order: true },
     });
 
     const task = await prisma.clientTask.create({
       data: {
+        clientId,
         name: data.name,
-        clientId: params.id,
-        projectId: data.projectId || null,
         categoryId: data.categoryId || null,
+        assigneeId: data.assigneeId || null,
+        projectId: data.projectId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
         status: data.status || "PENDING",
         notes: data.notes || null,
-        nextSteps: data.nextSteps || null,
-        externalLink: data.externalLink || null,
-        externalLinkLabel: data.externalLinkLabel || null,
-        internalLink: data.internalLink || null,
-        internalLinkLabel: data.internalLinkLabel || null,
+        order: (maxOrder?.order ?? -1) + 1,
         ownerType: data.ownerType || "AGENCY",
-        order: (lastTask?.order ?? 0) + 1,
       },
-      include: { category: true },
+      include: {
+        category: true,
+        assignee: {
+          select: { id: true, name: true, email: true },
+        },
+      },
     });
 
     return NextResponse.json(task);
