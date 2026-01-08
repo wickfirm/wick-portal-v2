@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           select: { id: true, name: true },
         },
       },
-      orderBy: [{ category: { name: "asc" } }, { order: "asc" }],
+      orderBy: [{ category: { name: "asc" } }, { createdAt: "desc" }],
     });
 
     return NextResponse.json(tasks);
@@ -47,7 +47,6 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const data = await req.json();
 
-    // Get max order for this client
     const maxOrder = await prisma.clientTask.findFirst({
       where: { clientId },
       orderBy: { order: "desc" },
