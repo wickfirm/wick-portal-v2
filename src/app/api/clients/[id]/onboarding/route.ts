@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const items = await prisma.onboardingItem.findMany({
     where: { clientId },
-    orderBy: [{ serviceType: "asc" }, { order: "asc" }],
+    orderBy: { order: "asc" },
   });
 
   // Group by service type
