@@ -160,8 +160,8 @@ export default function RatesManager({ teamMembers: initialTeam, clients: initia
     borderBottom: isActive ? `2px solid ${theme.colors.primary}` : "2px solid transparent",
     color: isActive ? theme.colors.primary : theme.colors.textSecondary,
     fontSize: 14,
-    fontWeight: 500,
-    cursor: "pointer",
+    fontWeight: 500 as const,
+    cursor: "pointer" as const,
   });
 
   return (
@@ -259,7 +259,7 @@ export default function RatesManager({ teamMembers: initialTeam, clients: initia
                         color: member.hourlyRate ? theme.colors.textPrimary : theme.colors.textMuted,
                         fontSize: 15,
                       }}>
-                        {formatCurrency(effectiveRate ?? null)}/hr
+                        {formatCurrency(member.hourlyRate)}/hr
                       </span>
                     )}
                   </td>
@@ -461,7 +461,7 @@ export default function RatesManager({ teamMembers: initialTeam, clients: initia
           }}>
             <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>Project Bill Rates</h2>
             <p style={{ margin: "4px 0 0 0", fontSize: 13, color: theme.colors.textSecondary }}>
-              Override the client's default rate for specific projects (leave blank to use client rate)
+              Override the client&apos;s default rate for specific projects (leave blank to use client rate)
             </p>
           </div>
 
@@ -476,7 +476,7 @@ export default function RatesManager({ teamMembers: initialTeam, clients: initia
             </thead>
             <tbody>
               {projects.map((project) => {
-                const clientBillRate = clients.find(c => c.id === project.clientId)?.billRate;
+                const clientBillRate = clients.find(c => c.id === project.clientId)?.billRate ?? null;
                 const effectiveRate = project.billRate ?? clientBillRate;
                 const isOverride = project.billRate !== null;
 
