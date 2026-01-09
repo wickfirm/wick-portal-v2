@@ -428,6 +428,7 @@ model TimeEntry {
   duration    Int        // Duration in seconds
   description String?
   billable    Boolean    @default(true)
+  source      String     @default("MANUAL")  // "MANUAL" or "TIMER"
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
