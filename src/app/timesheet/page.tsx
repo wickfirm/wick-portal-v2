@@ -134,6 +134,7 @@ export default async function TimesheetPage({
           duration: e.duration,
           description: e.description,
           billable: e.billable,
+          source: e.source,
         })),
       ])
     ),
