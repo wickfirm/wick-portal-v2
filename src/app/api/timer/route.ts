@@ -203,7 +203,7 @@ export async function DELETE(request: Request) {
     entryDate.setHours(0, 0, 0, 0);
 
     // Create time entry and delete active timer in a transaction
-    const [timeEntry] = await prisma.$transaction([
+    const [timeEntry] = await prisma.$transaction([ 
       prisma.timeEntry.create({
         data: {
           userId: user.id,
@@ -214,6 +214,7 @@ export async function DELETE(request: Request) {
           duration,
           description,
           billable: true,
+          source: "TIMER",
         },
         include: {
           client: { select: { id: true, name: true, nickname: true } },
