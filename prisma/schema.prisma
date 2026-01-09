@@ -26,6 +26,7 @@ model User {
   clientAssignments ClientTeamMember[]
   timeEntries       TimeEntry[]
   activeTimer       ActiveTimer?
+  hourlyRate  Decimal?  @db.Decimal(10, 2)
 
   @@map("users")
 }
@@ -56,6 +57,7 @@ model Client {
   teamMembers     ClientTeamMember[]
   agencies        ClientAgency[]
   timeEntries     TimeEntry[]
+  billRate    Decimal?  @db.Decimal(10, 2)
 
   @@map("clients")
 }
@@ -91,6 +93,7 @@ model Project {
   timeEntries TimeEntry[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
+  billRate    Decimal?  @db.Decimal(10, 2)
 
   @@map("projects")
 }
