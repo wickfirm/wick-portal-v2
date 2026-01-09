@@ -8,6 +8,7 @@ interface TimeEntryData {
   duration: number;
   description: string | null;
   billable: boolean;
+  source?: string; 
   createdAt?: string;
 }
 
