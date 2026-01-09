@@ -54,7 +54,7 @@ export default async function RatesPage() {
 
   // Fetch projects with their bill rates
   const projects = await prisma.project.findMany({
-    where: { status: "ACTIVE" },
+    where: {},
     select: {
       id: true,
       name: true,
