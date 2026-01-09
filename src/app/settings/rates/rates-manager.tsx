@@ -259,7 +259,7 @@ export default function RatesManager({ teamMembers: initialTeam, clients: initia
                         color: member.hourlyRate ? theme.colors.textPrimary : theme.colors.textMuted,
                         fontSize: 15,
                       }}>
-                        {formatCurrency(member.hourlyRate)}/hr
+                        {formatCurrency(effectiveRate ?? null)}/hr
                       </span>
                     )}
                   </td>
