@@ -223,7 +223,7 @@ export async function DELETE(request: Request) {
         },
       }),
       prisma.activeTimer.delete({
-        where: { odId: user.id },
+        where: { userId: user.id },
       }),
     ]);
 
