@@ -81,6 +81,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.primaryEmail !== undefined) updateData.primaryEmail = data.primaryEmail || null;
     if (data.monthlyRetainer !== undefined) updateData.monthlyRetainer = data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null;
     if (data.showTimeInPortal !== undefined) updateData.showTimeInPortal = Boolean(data.showTimeInPortal);
+    if (data.billRate !== undefined) updateData.billRate = data.billRate !== null ? parseFloat(data.billRate) : null;
 
     const client = await prisma.client.update({
       where: { id: clientId },
