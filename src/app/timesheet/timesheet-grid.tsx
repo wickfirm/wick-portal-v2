@@ -8,7 +8,7 @@ interface TimeEntryData {
   duration: number;
   description: string | null;
   billable: boolean;
-  source?: string; 
+  source?: string;
   createdAt?: string;
 }
 
@@ -281,6 +281,7 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
           duration: data.timeEntry.duration,
           description: data.timeEntry.description,
           billable: data.timeEntry.billable,
+          source: data.timeEntry.source || "MANUAL",
         };
         const newEntries = [...detailModal.entries, newEntry];
         updateRowEntries(detailModal.row.key, detailModal.dateKey, newEntries);
@@ -377,7 +378,10 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
             <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 2 }}>
               {dayNames[i]}, {date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: dailyTotals[i] > 0 ? theme.colors.textPrimary : theme.colors.textMuted }}>
+            <div 
+              style={{ fontSize: 15, fontWeight: 600, color: dailyTotals[i] > 0 ? theme.colors.textPrimary : theme.colors.textMuted }}
+              title="Hours:Minutes"
+            >
               {formatDuration(dailyTotals[i])}
             </div>
           </div>
@@ -391,7 +395,10 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
           background: theme.colors.infoBg,
         }}>
           <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 2 }}>Total</div>
-          <div style={{ fontSize: 15, fontWeight: 700, color: theme.colors.info }}>
+          <div 
+            style={{ fontSize: 15, fontWeight: 700, color: theme.colors.info }}
+            title="Hours:Minutes"
+          >
             {formatDuration(weekTotal)}
           </div>
         </div>
@@ -457,14 +464,17 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                       e.currentTarget.style.background = "transparent";
                     }}
                   >
-                    <span style={{
-                      fontSize: 14,
-                      fontWeight: dayDuration > 0 ? 500 : 400,
-                      color: dayDuration > 0 ? theme.colors.textPrimary : theme.colors.textMuted,
-                      padding: "6px 12px",
-                      borderRadius: theme.borderRadius.sm,
-                      background: dayDuration > 0 ? theme.colors.bgTertiary : "transparent",
-                    }}>
+                    <span 
+                      style={{
+                        fontSize: 14,
+                        fontWeight: dayDuration > 0 ? 500 : 400,
+                        color: dayDuration > 0 ? theme.colors.textPrimary : theme.colors.textMuted,
+                        padding: "6px 12px",
+                        borderRadius: theme.borderRadius.sm,
+                        background: dayDuration > 0 ? theme.colors.bgTertiary : "transparent",
+                      }}
+                      title={dayDuration > 0 ? "Hours:Minutes — Click to view details" : "Click to add time"}
+                    >
                       {dayDuration > 0 ? formatDuration(dayDuration) : "—"}
                     </span>
                     {entryCount > 1 && (
@@ -477,16 +487,19 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
               })}
 
               {/* Row Total */}
-              <div style={{
-                padding: "12px",
-                borderLeft: "1px solid " + theme.colors.borderLight,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontWeight: 600,
-                fontSize: 14,
-                color: rowTotal > 0 ? theme.colors.textPrimary : theme.colors.textMuted,
-              }}>
+              <div 
+                style={{
+                  padding: "12px",
+                  borderLeft: "1px solid " + theme.colors.borderLight,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontWeight: 600,
+                  fontSize: 14,
+                  color: rowTotal > 0 ? theme.colors.textPrimary : theme.colors.textMuted,
+                }}
+                title="Hours:Minutes"
+              >
                 {formatDuration(rowTotal)}
               </div>
             </div>
@@ -702,7 +715,8 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                               type="text"
                               value={editDuration}
                               onChange={(e) => setEditDuration(e.target.value)}
-                              placeholder="0:00"
+                              placeholder="h:mm"
+                              title="Enter time as hours:minutes (e.g. 1:30 for 1 hour 30 minutes)"
                               style={{
                                 width: 80,
                                 padding: "8px 12px",
@@ -760,8 +774,20 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                       ) : (
                         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                           <div>
-                            <div style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>
-                              {formatDurationLong(entry.duration)}
+                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <span style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>
+                                {formatDurationLong(entry.duration)}
+                              </span>
+                              <span style={{
+                                fontSize: 10,
+                                padding: "2px 6px",
+                                borderRadius: 4,
+                                background: entry.source === "TIMER" ? theme.colors.successBg : theme.colors.infoBg,
+                                color: entry.source === "TIMER" ? theme.colors.success : theme.colors.info,
+                                fontWeight: 500,
+                              }}>
+                                {entry.source === "TIMER" ? "⏱ Timer" : "✏️ Manual"}
+                              </span>
                             </div>
                             {entry.description && (
                               <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
@@ -839,7 +865,8 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                     type="text"
                     value={newDuration}
                     onChange={(e) => setNewDuration(e.target.value)}
-                    placeholder="1:30"
+                    placeholder="h:mm"
+                    title="Enter time as hours:minutes (e.g. 1:30 for 1 hour 30 minutes)"
                     style={{
                       width: 80,
                       padding: "8px 12px",
@@ -861,6 +888,9 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
                       fontSize: 14,
                     }}
                   />
+                </div>
+                <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 8 }}>
+                  Format: h:mm (e.g. 1:30 = 1 hour 30 minutes)
                 </div>
                 <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                   <button
