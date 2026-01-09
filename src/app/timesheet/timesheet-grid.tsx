@@ -125,6 +125,26 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
     setEditValue(currentDuration > 0 ? formatDuration(currentDuration) : "");
   };
 
+  const updateRowEntries = (rowKey: string, dateKey: string, newEntry: TimeEntryData | null) => {
+    setRows(prevRows => prevRows.map(row => {
+      if (row.key !== rowKey) return row;
+      
+      const newEntries = { ...row.entries };
+      if (newEntry) {
+        newEntries[dateKey] = [newEntry];
+      } else {
+        delete newEntries[dateKey];
+      }
+      
+      // Recalculate total
+      const total = Object.values(newEntries).reduce((sum, entries) => {
+        return sum + entries.reduce((s, e) => s + e.duration, 0);
+      }, 0);
+      
+      return { ...row, entries: newEntries, total };
+    }));
+  };
+
   const handleCellSave = async (row: RowData, dateKey: string) => {
     const duration = parseDuration(editValue);
     
@@ -143,11 +163,16 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
       return;
     }
 
+    // If same value, just close
+    if (existingEntry && duration === existingEntry.duration) {
+      setEditingCell(null);
+      setEditValue("");
+      return;
+    }
+
     setIsSaving(true);
 
     try {
-      let success = false;
-
       if (duration && duration > 0) {
         if (existingEntry) {
           // Update existing entry
@@ -156,10 +181,19 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ duration }),
           });
-          success = res.ok;
-          if (!success) {
+          
+          if (res.ok) {
+            const data = await res.json();
+            updateRowEntries(row.key, dateKey, {
+              id: data.timeEntry.id,
+              duration: data.timeEntry.duration,
+              description: data.timeEntry.description,
+              billable: data.timeEntry.billable,
+            });
+          } else {
             const error = await res.json();
             console.error("Update error:", error);
+            alert("Failed to update time entry: " + (error.error || "Unknown error"));
           }
         } else {
           // Create new entry
@@ -175,10 +209,19 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
               billable: true,
             }),
           });
-          success = res.ok;
-          if (!success) {
+          
+          if (res.ok) {
+            const data = await res.json();
+            updateRowEntries(row.key, dateKey, {
+              id: data.timeEntry.id,
+              duration: data.timeEntry.duration,
+              description: data.timeEntry.description,
+              billable: data.timeEntry.billable,
+            });
+          } else {
             const error = await res.json();
             console.error("Create error:", error);
+            alert("Failed to create time entry: " + (error.error || "Unknown error"));
           }
         }
       } else if (existingEntry && (!editValue || duration === 0)) {
@@ -186,26 +229,23 @@ export default function TimesheetGrid({ weekDates, entries: initialEntries, clie
         const res = await fetch(`/api/time-entries/${existingEntry.id}`, {
           method: "DELETE",
         });
-        success = res.ok;
-      } else {
-        success = true; // No action needed
-      }
-
-      if (success) {
-        // Refresh page to get updated data
-        window.location.reload();
-      } else {
-        alert("Failed to save time entry. Please try again.");
-        setIsSaving(false);
+        
+        if (res.ok) {
+          updateRowEntries(row.key, dateKey, null);
+        } else {
+          const error = await res.json();
+          console.error("Delete error:", error);
+          alert("Failed to delete time entry: " + (error.error || "Unknown error"));
+        }
       }
     } catch (error) {
       console.error("Error saving time entry:", error);
-      alert("Failed to save time entry");
-      setIsSaving(false);
+      alert("Network error. Please try again.");
     }
 
     setEditingCell(null);
     setEditValue("");
+    setIsSaving(false);
   };
 
   const handleAddRow = async () => {
