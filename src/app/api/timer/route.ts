@@ -3,6 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
+export const dynamic = "force-dynamic";
+
 // GET - Get current active timer for logged-in user
 export async function GET() {
   try {
@@ -21,9 +23,6 @@ export async function GET() {
 
     const activeTimer = await prisma.activeTimer.findUnique({
       where: { userId: user.id },
-      include: {
-        user: { select: { id: true, name: true, email: true } },
-      },
     });
 
     if (!activeTimer) {
@@ -99,18 +98,32 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify the task belongs to the project and client
+    // Verify the task exists and belongs to the client
     const task = await prisma.clientTask.findFirst({
       where: {
         id: taskId,
-        projectId: projectId,
         clientId: clientId,
       },
     });
 
     if (!task) {
       return NextResponse.json(
-        { error: "Invalid task, project, or client combination" },
+        { error: "Task not found or does not belong to this client" },
+        { status: 400 }
+      );
+    }
+
+    // Verify the project exists and belongs to the client
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        clientId: clientId,
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        { error: "Project not found or does not belong to this client" },
         { status: 400 }
       );
     }
@@ -126,33 +139,23 @@ export async function POST(request: Request) {
       },
     });
 
-    // Fetch related data for response
-    const [client, project, taskData] = await Promise.all([
-      prisma.client.findUnique({
-        where: { id: clientId },
-        select: { id: true, name: true, nickname: true },
-      }),
-      prisma.project.findUnique({
-        where: { id: projectId },
-        select: { id: true, name: true },
-      }),
-      prisma.clientTask.findUnique({
-        where: { id: taskId },
-        select: { id: true, name: true },
-      }),
-    ]);
+    // Fetch client data for response
+    const clientData = await prisma.client.findUnique({
+      where: { id: clientId },
+      select: { id: true, name: true, nickname: true },
+    });
 
     return NextResponse.json({
       timer: {
         ...newTimer,
-        client,
-        project,
-        task: taskData,
+        client: clientData,
+        project: { id: project.id, name: project.name },
+        task: { id: task.id, name: task.name },
       },
     });
   } catch (error) {
     console.error("Error starting timer:", error);
-    return NextResponse.json({ error: "Failed to start timer" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to start timer", details: String(error) }, { status: 500 });
   }
 }
 
@@ -195,6 +198,10 @@ export async function DELETE(request: Request) {
       // No body provided, use existing description
     }
 
+    // Use the date when timer was started (just the date part)
+    const entryDate = new Date(activeTimer.startedAt);
+    entryDate.setHours(0, 0, 0, 0);
+
     // Create time entry and delete active timer in a transaction
     const [timeEntry] = await prisma.$transaction([
       prisma.timeEntry.create({
@@ -203,7 +210,7 @@ export async function DELETE(request: Request) {
           clientId: activeTimer.clientId,
           projectId: activeTimer.projectId,
           taskId: activeTimer.taskId,
-          date: activeTimer.startedAt,
+          date: entryDate,
           duration,
           description,
           billable: true,
@@ -216,13 +223,13 @@ export async function DELETE(request: Request) {
         },
       }),
       prisma.activeTimer.delete({
-        where: { userId: user.id },
+        where: { odId: user.id },
       }),
     ]);
 
     return NextResponse.json({ timeEntry });
   } catch (error) {
     console.error("Error stopping timer:", error);
-    return NextResponse.json({ error: "Failed to stop timer" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to stop timer", details: String(error) }, { status: 500 });
   }
 }
