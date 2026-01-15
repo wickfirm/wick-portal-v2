@@ -38,6 +38,7 @@ export async function GET(
         role: true,
         isActive: true,
         hourlyRate: true,
+        billRate: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -76,7 +77,7 @@ export async function PUT(
     // Only SUPER_ADMIN can update hourly rates
     // Users can update their own profile (but not rates)
     const body = await request.json();
-    const { hourlyRate, name, role, isActive } = body;
+    const { hourlyRate, billRate, name, role, isActive } = body;
 
     // Check permissions
     const isOwnProfile = currentUser.id === params.id;
@@ -86,9 +87,12 @@ export async function PUT(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // Only SUPER_ADMIN can update hourly rates
+    // Only SUPER_ADMIN can update rates
     if (hourlyRate !== undefined && !isSuperAdmin) {
       return NextResponse.json({ error: "Only super admins can update hourly rates" }, { status: 403 });
+    }
+    if (billRate !== undefined && !isSuperAdmin) {
+      return NextResponse.json({ error: "Only super admins can update bill rates" }, { status: 403 });
     }
 
     // Build update data
@@ -96,6 +100,7 @@ export async function PUT(
     
     if (name !== undefined) updateData.name = name;
     if (hourlyRate !== undefined) updateData.hourlyRate = hourlyRate;
+    if (billRate !== undefined) updateData.billRate = billRate;
     
     // Only admins can change roles and active status
     if (isSuperAdmin || currentUser.role === "ADMIN") {
@@ -113,6 +118,7 @@ export async function PUT(
         role: true,
         isActive: true,
         hourlyRate: true,
+        billRate: true,
         updatedAt: true,
       },
     });
