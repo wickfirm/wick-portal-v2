@@ -27,6 +27,7 @@ model User {
   timeEntries       TimeEntry[]
   activeTimer       ActiveTimer?
   hourlyRate  Decimal?  @db.Decimal(10, 2)
+  billRate    Decimal?  @db.Decimal(10, 2)
 
   @@map("users")
 }
