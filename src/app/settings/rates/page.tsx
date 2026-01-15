@@ -36,6 +36,7 @@ export default async function RatesPage() {
       email: true,
       role: true,
       hourlyRate: true,
+      billRate: true,
     },
     orderBy: { name: "asc" },
   });
@@ -54,11 +55,11 @@ export default async function RatesPage() {
 
   // Fetch projects with their bill rates
   const projects = await prisma.project.findMany({
-  where: { 
-    status: { 
-      in: ["DRAFT", "PENDING_APPROVAL", "IN_PROGRESS"] 
-    } 
-  },
+    where: { 
+      status: { 
+        in: ["DRAFT", "PENDING_APPROVAL", "IN_PROGRESS"] 
+      } 
+    },
     select: {
       id: true,
       name: true,
@@ -75,6 +76,7 @@ export default async function RatesPage() {
   const serializedTeam = teamMembers.map(m => ({
     ...m,
     hourlyRate: m.hourlyRate ? Number(m.hourlyRate) : null,
+    billRate: m.billRate ? Number(m.billRate) : null,
   }));
 
   const serializedClients = clients.map(c => ({
