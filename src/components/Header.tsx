@@ -19,6 +19,7 @@ export default function Header() {
     { href: "/projects", label: "Projects" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/team", label: "Team" },
+    { href: "/agencies", label: "Agencies" },
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ];
