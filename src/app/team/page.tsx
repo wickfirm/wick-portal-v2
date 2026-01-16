@@ -436,30 +436,30 @@ export default function TeamPage() {
                         </div>
                       </div>
                     </td>
-                    <td style={{ padding: 16 }}>
-                      {user.agency ? (
-                        <span 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // TODO: Navigate to agency page when it exists
-                            // window.location.href = `/agencies/${user.agency?.id}`;
-                          }}
-                          style={{
-                            padding: "4px 10px",
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 500,
-                            background: theme.colors.infoBg,
-                            color: theme.colors.info,
-                            cursor: "default", // Change to "pointer" when agency page exists
-                          }}
-                        >
-                          {user.agency.name}
-                        </span>
-                      ) : (
-                        <span style={{ color: theme.colors.textMuted, fontSize: 13 }}>—</span>
-                      )}
-                    </td>
+<td style={{ padding: 16 }}>
+  {user.agency ? (
+    <Link
+      href={`/agencies/${user.agency.id}`}
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        padding: "4px 10px",
+        borderRadius: 6,
+        fontSize: 12,
+        fontWeight: 500,
+        background: theme.colors.infoBg,
+        color: theme.colors.info,
+        textDecoration: "none",
+        transition: "opacity 150ms",
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
+      onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
+    >
+      {user.agency.name}
+    </Link>
+  ) : (
+    <span style={{ color: theme.colors.textMuted, fontSize: 13 }}>—</span>
+  )}
+</td>
                     <td style={{ padding: 16 }}>
                       {user.clientAssignments && user.clientAssignments.length > 0 ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
