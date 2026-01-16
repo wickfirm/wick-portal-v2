@@ -22,6 +22,9 @@ interface AIConfig {
   caseStudies: Array<{ client: string; result: string }>;
 }
 
+// Define BANT weight keys for type safety
+type BANTWeightKey = 'budgetWeight' | 'authorityWeight' | 'needWeight' | 'timelineWeight';
+
 const SERVICE_OPTIONS = [
   'SEO',
   'AEO',
@@ -357,21 +360,21 @@ export default function AISettingsPage() {
           Total should equal 100 points
         </p>
         <div style={{ display: 'grid', gap: '1rem' }}>
-          {[
+          {([
             { key: 'budgetWeight', label: 'Budget' },
             { key: 'authorityWeight', label: 'Authority' },
             { key: 'needWeight', label: 'Need' },
             { key: 'timelineWeight', label: 'Timeline' },
-          ].map(({ key, label }) => (
+          ] as const).map(({ key, label }) => (
             <div key={key}>
               <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500' }}>
-                {label}: {config[key as keyof AIConfig]} points
+                {label}: {config[key]} points
               </label>
               <input
                 type="range"
                 min="0"
                 max="40"
-                value={config[key as keyof AIConfig] as number}
+                value={config[key]}
                 onChange={(e) => setConfig(prev => ({ ...prev, [key]: parseInt(e.target.value) }))}
                 style={{ width: '100%' }}
               />
