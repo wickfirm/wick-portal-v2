@@ -1,4 +1,4 @@
-# Wick Portal
+# Omnixia
 
 A full-stack agency operations platform built for **The Wick Firm** to manage clients, projects, tasks, onboarding, and performance metrics.
 
