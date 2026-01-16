@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Header from "@/components/Header";
 import { theme, ROLE_STYLES } from "@/lib/theme";
+import Link from "next/link";
 
 type Agency = {
   id: string;
@@ -174,6 +175,10 @@ export default function TeamPage() {
         setNewUser({ ...newUser, clientIds: [...newUser.clientIds, clientId] });
       }
     }
+  }
+
+  function navigateToUser(userId: string) {
+    window.location.href = `/team/${userId}`;
   }
 
   const inputStyle = {
@@ -399,16 +404,16 @@ export default function TeamPage() {
               <tbody>
                 {displayUsers.map((user) => (
                   <tr 
-  key={user.id} 
-  style={{ 
-    borderBottom: "1px solid " + theme.colors.bgTertiary,
-    cursor: "pointer",
-    transition: "background 150ms",
-  }}
-  onClick={() => window.location.href = `/team/${user.id}`}
-  onMouseEnter={(e) => e.currentTarget.style.background = theme.colors.bgTertiary}
-  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
->
+                    key={user.id} 
+                    onClick={() => navigateToUser(user.id)}
+                    style={{ 
+                      borderBottom: "1px solid " + theme.colors.bgTertiary,
+                      cursor: "pointer",
+                      transition: "background 150ms",
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = theme.colors.bgTertiary}
+                    onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                  >
                     <td style={{ padding: 16 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{
@@ -433,14 +438,22 @@ export default function TeamPage() {
                     </td>
                     <td style={{ padding: 16 }}>
                       {user.agency ? (
-                        <span style={{
-                          padding: "4px 10px",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          background: theme.colors.infoBg,
-                          color: theme.colors.info,
-                        }}>
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Navigate to agency page when it exists
+                            // window.location.href = `/agencies/${user.agency?.id}`;
+                          }}
+                          style={{
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            background: theme.colors.infoBg,
+                            color: theme.colors.info,
+                            cursor: "default", // Change to "pointer" when agency page exists
+                          }}
+                        >
                           {user.agency.name}
                         </span>
                       ) : (
@@ -451,8 +464,10 @@ export default function TeamPage() {
                       {user.clientAssignments && user.clientAssignments.length > 0 ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                           {user.clientAssignments.slice(0, 3).map(ca => (
-                            <span 
-                              key={ca.id} 
+                            <Link 
+                              key={ca.id}
+                              href={`/clients/${ca.client.id}`}
+                              onClick={(e) => e.stopPropagation()}
                               style={{
                                 padding: "3px 8px",
                                 borderRadius: 4,
@@ -460,10 +475,14 @@ export default function TeamPage() {
                                 fontWeight: 500,
                                 background: theme.colors.successBg,
                                 color: theme.colors.success,
+                                textDecoration: "none",
+                                transition: "opacity 150ms",
                               }}
+                              onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
+                              onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                             >
                               {ca.client.nickname || ca.client.name}
-                            </span>
+                            </Link>
                           ))}
                           {user.clientAssignments.length > 3 && (
                             <span style={{ fontSize: 11, color: theme.colors.textMuted, padding: "3px 4px" }}>
@@ -502,7 +521,10 @@ export default function TeamPage() {
                     {!isClientRole && (
                       <td style={{ padding: 16, textAlign: "right" }}>
                         <button
-                          onClick={() => openEditModal(user)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditModal(user);
+                          }}
                           style={{
                             padding: "6px 12px",
                             marginRight: 8,
@@ -518,7 +540,10 @@ export default function TeamPage() {
                           Edit
                         </button>
                         <button
-                          onClick={() => toggleActive(user)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleActive(user);
+                          }}
                           style={{
                             padding: "6px 12px",
                             marginRight: 8,
@@ -534,7 +559,10 @@ export default function TeamPage() {
                           {user.isActive ? "Deactivate" : "Activate"}
                         </button>
                         <button
-                          onClick={() => deleteUser(user)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteUser(user);
+                          }}
                           style={{
                             padding: "6px 12px",
                             background: theme.colors.errorBg,
