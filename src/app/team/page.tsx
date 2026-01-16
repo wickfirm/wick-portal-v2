@@ -398,7 +398,17 @@ export default function TeamPage() {
               </thead>
               <tbody>
                 {displayUsers.map((user) => (
-                  <tr key={user.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
+                  <tr 
+  key={user.id} 
+  style={{ 
+    borderBottom: "1px solid " + theme.colors.bgTertiary,
+    cursor: "pointer",
+    transition: "background 150ms",
+  }}
+  onClick={() => window.location.href = `/team/${user.id}`}
+  onMouseEnter={(e) => e.currentTarget.style.background = theme.colors.bgTertiary}
+  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+>
                     <td style={{ padding: 16 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                         <div style={{
