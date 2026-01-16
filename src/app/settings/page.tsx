@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
+
   const user = session.user as any;
 
   const settingsItems = [
@@ -30,6 +31,14 @@ export default async function SettingsPage() {
       roles: ["SUPER_ADMIN"],
     },
     {
+      title: "Rates",
+      description: "Manage team member hourly and billing rates",
+      href: "/settings/rates",
+      icon: "💰",
+      color: theme.colors.success,
+      roles: ["SUPER_ADMIN", "ADMIN"],
+    },
+    {
       title: "Stage Templates",
       description: "Configure default project stages for each service type",
       href: "/settings/stage-templates",
@@ -42,15 +51,15 @@ export default async function SettingsPage() {
       description: "Set up default onboarding checklists for new clients",
       href: "/settings/onboarding",
       icon: "✅",
-      color: theme.colors.success,
+      color: theme.colors.info,
       roles: ["SUPER_ADMIN", "ADMIN"],
     },
     {
       title: "Task Categories",
       description: "Manage categories for client tasks",
-      href: "/settings/task-categories",
+      href: "/settings/tasks",
       icon: "📁",
-      color: theme.colors.info,
+      color: theme.colors.warning,
       roles: ["SUPER_ADMIN", "ADMIN"],
     },
   ];
