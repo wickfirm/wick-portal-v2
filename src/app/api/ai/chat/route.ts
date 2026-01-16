@@ -84,14 +84,21 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Get AI configuration
-    const aiConfig = conversation.agency?.aiConfigurations?.[0];
-    if (!aiConfig) {
-      return NextResponse.json(
-        { error: 'AI configuration not found for agency' },
-        { status: 404 }
-      );
-    }
+// Get AI configuration
+if (!conversation.agency) {
+  return NextResponse.json(
+    { error: 'Agency not found for conversation' },
+    { status: 404 }
+  );
+}
+
+const aiConfig = conversation.agency.aiConfigurations?.[0];
+if (!aiConfig) {
+  return NextResponse.json(
+    { error: 'AI configuration not found for agency' },
+    { status: 404 }
+  );
+}
 
     // Save user message
     await prisma.message.create({
