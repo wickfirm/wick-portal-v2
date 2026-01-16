@@ -84,7 +84,6 @@ export default async function AgencyPage({
   const serializedAgency = {
     id: agency.id,
     name: agency.name,
-    description: agency.description,
     createdAt: agency.createdAt.toISOString(),
     stats: {
       totalMembers,
