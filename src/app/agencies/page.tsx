@@ -250,14 +250,14 @@ export default function AgenciesPage() {
                   cursor: "pointer",
                   transition: "all 150ms",
                 }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.boxShadow = theme.shadows.card;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = theme.colors.borderLight;
-                  e.currentTarget.style.boxShadow = "none";
-                }}
+onMouseEnter={(e) => {
+  e.currentTarget.style.borderColor = theme.colors.primary;
+  e.currentTarget.style.boxShadow = theme.shadows.md;
+}}
+onMouseLeave={(e) => {
+  e.currentTarget.style.borderColor = theme.colors.borderLight;
+  e.currentTarget.style.boxShadow = "none";
+}}
               >
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
