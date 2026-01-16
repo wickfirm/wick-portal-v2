@@ -28,6 +28,11 @@ model User {
   activeTimer       ActiveTimer?
   hourlyRate  Decimal?  @db.Decimal(10, 2)
   billRate    Decimal?  @db.Decimal(10, 2)
+  assignedConversations  Conversation[]
+  assignedLeads          Lead[]  @relation("AssignedLeads")
+  bookings               Booking[]  @relation("UserBookings")
+  calendarConnected      Boolean @default(false) @map("calendar_connected")
+  googleCalendarId       String? @map("google_calendar_id")  
 
   @@map("users")
 }
@@ -59,6 +64,7 @@ model Client {
   agencies        ClientAgency[]
   timeEntries     TimeEntry[]
   billRate    Decimal?  @db.Decimal(10, 2)
+  lead                   Lead?
 
   @@map("clients")
 }
@@ -388,6 +394,11 @@ model Agency {
   clients   ClientAgency[]
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
+  aiConfigurations        AIConfiguration[]
+  conversations           Conversation[]
+  leads                   Lead[]
+  bookings                Booking[]
+  conversationAnalytics   ConversationAnalytics[]  
 
   @@map("agencies")
 }
@@ -456,6 +467,176 @@ model ActiveTimer {
   @@map("active_timers")
 }
 
+
+model AIConfiguration {
+  id        String   @id @default(cuid())
+  agencyId  String?  @map("agency_id")
+  agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  
+  // Services & Positioning
+  services          Json     // ["SEO", "AEO", "WEB_DEVELOPMENT"]
+  targetIndustries  Json     // ["Hospitality", "F&B", "SaaS"]
+  minBudget         Int      @default(5000)
+  targetCompanySize String   @default("SMB") // "SMB", "MID_MARKET", "ENTERPRISE"
+  
+  // Qualification Criteria (BANT weights)
+  budgetWeight            Int @default(30)
+  authorityWeight         Int @default(25)
+  needWeight              Int @default(25)
+  timelineWeight          Int @default(20)
+  qualificationThreshold  Int @default(70)
+  
+  // Brand Voice
+  tone              String @default("consultative") // "professional", "casual", "consultative"
+  greetingMessage   String @default("Hi! I'm here to help you learn more about our services. What brings you here today?") @db.Text
+  caseStudies       Json   // [{ client: "Company X", result: "847% traffic growth" }]
+  
+  // Advanced
+  customPrompt      String? @db.Text
+  activeVersion     Int     @default(1)
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@map("ai_configurations")
+}
+
+model Conversation {
+  id          String   @id @default(cuid())
+  agencyId    String?  @map("agency_id")
+  agency      Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  visitorId   String   @map("visitor_id")
+  
+  // Channel & Source
+  channel     String   // "website", "sms", "whatsapp", "email"
+  sourceUrl   String?  @map("source_url") @db.Text
+  utmParams   Json?    @map("utm_params")
+  
+  // Status & Scoring
+  status      ConversationStatus @default(ACTIVE)
+  leadScore   Int?     @map("lead_score")
+  
+  // Assignment
+  assignedToId String? @map("assigned_to_id")
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  // Relations
+  messages   Message[]
+  lead       Lead?
+  analytics  ConversationAnalytics?
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([agencyId, createdAt])
+  @@map("conversations")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  role           MessageRole
+  content        String   @db.Text
+  timestamp      DateTime @default(now())
+  
+  // Track AI version for A/B testing
+  aiConfigVersion Int?   @map("ai_config_version")
+  
+  @@index([conversationId, timestamp])
+  @@map("messages")
+}
+
+model Lead {
+  id             String   @id @default(cuid())
+  agencyId       String?  @map("agency_id")
+  agency         Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  conversationId String   @unique @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  // Contact Info
+  name           String
+  email          String
+  company        String?
+  phone          String?
+  
+  // BANT Framework
+  budgetRange    String?  @map("budget_range") // "$5K-10K", "$10K-25K", etc.
+  authority      String?  // "Decision Maker", "Influencer", "End User"
+  need           String?  @db.Text
+  timeline       String?  // "Immediate", "1-3 months", "3-6 months", "6+ months"
+  
+  // Industry Context
+  industry       String?
+  customFields   Json?    @map("custom_fields")
+  
+  // Scoring
+  qualificationScore Int?  @map("qualification_score")
+  intentScore        Int?  @map("intent_score")
+  
+  // Assignment & Status
+  assignedToId   String?  @map("assigned_to_id")
+  assignedTo     User?    @relation("AssignedLeads", fields: [assignedToId], references: [id], onDelete: SetNull)
+  
+  // Convert to Client
+  clientId       String?  @unique @map("client_id")
+  client         Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  // Relations
+  bookings       Booking[]
+  
+  createdAt      DateTime @default(now()) @map("created_at")
+  qualifiedAt    DateTime? @map("qualified_at")
+  
+  @@index([agencyId, createdAt])
+  @@map("leads")
+}
+
+model Booking {
+  id              String   @id @default(cuid())
+  agencyId        String?  @map("agency_id")
+  agency          Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  leadId          String   @map("lead_id")
+  lead            Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id")
+  user            User     @relation("UserBookings", fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Calendar Integration
+  calendarEventId String?  @map("calendar_event_id")
+  scheduledTime   DateTime @map("scheduled_time")
+  status          BookingStatus @default(SCHEDULED)
+  meetingType     String   @default("discovery_call") @map("meeting_type")
+  
+  // Pre-call Brief
+  notes           String?  @db.Text
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  
+  @@index([agencyId, scheduledTime])
+  @@map("bookings")
+}
+
+model ConversationAnalytics {
+  id                      String   @id @default(cuid())
+  agencyId                String?  @map("agency_id")
+  agency                  Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
+  conversationId          String   @unique @map("conversation_id")
+  conversation            Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  // Metrics
+  sessionDuration         Int?     @map("session_duration") // seconds
+  messagesExchanged       Int      @default(0) @map("messages_exchanged")
+  qualificationCompleted  Boolean  @default(false) @map("qualification_completed")
+  dropOffStage            String?  @map("drop_off_stage")
+  conversionPath          Json?    @map("conversion_path")
+  
+  createdAt               DateTime @default(now()) @map("created_at")
+  
+  @@index([agencyId, createdAt])
+  @@map("conversation_analytics")
+}
+
 // ============ ENUMS ============
 
 enum ClientStatus {
@@ -522,4 +703,31 @@ enum UserRole {
   CLIENT
 
   @@map("user_role")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  QUALIFIED
+  DISQUALIFIED
+  BOOKED
+  
+  @@map("conversation_status")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  
+  @@map("message_role")
+}
+
+enum BookingStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  
+  @@map("booking_status")
 }
