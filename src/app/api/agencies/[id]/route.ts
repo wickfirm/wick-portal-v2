@@ -45,7 +45,6 @@ export async function PUT(
       where: { id },
       data: {
         name: body.name,
-        description: body.description || null,
       },
     });
 
