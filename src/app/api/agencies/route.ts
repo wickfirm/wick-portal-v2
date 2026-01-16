@@ -37,7 +37,6 @@ export async function POST(request: NextRequest) {
     const agency = await prisma.agency.create({
       data: {
         name: body.name,
-        description: body.description || null,
       },
     });
 
