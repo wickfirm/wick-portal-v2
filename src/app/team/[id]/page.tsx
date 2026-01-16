@@ -1,57 +1,44 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import Header from "@/components/Header";
+"use client";
+
 import { theme } from "@/lib/theme";
 import Link from "next/link";
+import Header from "@/components/Header";
 
-export const dynamic = "force-dynamic";
+interface TeamMember {
+  id: string;
+  name: string | null;
+  email: string;
+  role: string;
+  hourlyRate: number | null;
+  billRate: number | null;
+  agency: { id: string; name: string } | null;
+  clientAssignments: {
+    id: string;
+    client: { id: string; name: string; nickname: string | null };
+  }[];
+  assignedTasks: {
+    id: string;
+    name: string;
+    status: string;
+    priority: string;
+    client: { id: string; name: string; nickname: string | null };
+    project: { id: string; name: string; serviceType: string; clientId: string } | null;
+  }[];
+  timeEntries: {
+    id: string;
+    date: string;
+    duration: number;
+    client: { id: string; name: string; nickname: string | null };
+    project: { id: string; name: string };
+    task: { id: string; name: string };
+  }[];
+}
 
-export default async function TeamMemberPage({ params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+interface Props {
+  member: TeamMember;
+}
 
-  const currentUser = session.user as any;
-  const dbUser = await prisma.user.findUnique({
-    where: { email: currentUser.email },
-  });
-
-  if (!dbUser) redirect("/login");
-
-  // Fetch team member with all related data
-  const member = await prisma.user.findUnique({
-    where: { id: params.id },
-    include: {
-      agency: true,
-      clientAssignments: {
-        include: {
-          client: true,
-        },
-      },
-      assignedTasks: {
-        include: {
-          client: true,
-          project: true,
-        },
-        orderBy: { createdAt: "desc" },
-      },
-      timeEntries: {
-        include: {
-          client: true,
-          project: true,
-          task: true,
-        },
-        orderBy: { date: "desc" },
-        take: 50,
-      },
-    },
-  });
-
-  if (!member) {
-    redirect("/team");
-  }
-
+export default function TeamMemberView({ member }: Props) {
   // Calculate time stats
   const now = new Date();
   const startOfWeek = new Date(now);
@@ -65,7 +52,6 @@ export default async function TeamMemberPage({ params }: { params: { id: string 
 
   const weekSeconds = weekEntries.reduce((sum, e) => sum + e.duration, 0);
   const monthSeconds = monthEntries.reduce((sum, e) => sum + e.duration, 0);
-  const totalSeconds = member.timeEntries.reduce((sum, e) => sum + e.duration, 0);
 
   const formatHours = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
@@ -74,8 +60,8 @@ export default async function TeamMemberPage({ params }: { params: { id: string 
   };
 
   // Calculate earnings
-  const hourlyRate = member.hourlyRate ? Number(member.hourlyRate) : 0;
-  const billRate = member.billRate ? Number(member.billRate) : 0;
+  const hourlyRate = member.hourlyRate || 0;
+  const billRate = member.billRate || 0;
   
   const weekHours = weekSeconds / 3600;
   const monthHours = monthSeconds / 3600;
@@ -366,17 +352,13 @@ export default async function TeamMemberPage({ params }: { params: { id: string 
                   <Link 
                     key={project.id}
                     href={`/clients/${project.clientId}`}
-                    style={{ textDecoration: "none", color: "inherit" }}
+                    style={{ textDecoration: "none", color: "inherit", display: "block" }}
                   >
                     <div 
                       style={{ 
                         padding: "14px 20px", 
                         borderBottom: "1px solid " + theme.colors.borderLight,
-                        cursor: "pointer",
-                        transition: "background 150ms",
                       }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = theme.colors.bgTertiary}
-                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                     >
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                         <div style={{ fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary }}>
