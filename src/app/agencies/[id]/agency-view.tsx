@@ -27,7 +27,6 @@ interface AgencyClient {
 interface Agency {
   id: string;
   name: string;
-  description: string | null;
   createdAt: string;
   stats: {
     totalMembers: number;
@@ -93,11 +92,6 @@ export default function AgencyView({ agency }: Props) {
               <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0, marginBottom: 4 }}>
                 {agency.name}
               </h1>
-              {agency.description && (
-                <p style={{ color: theme.colors.textMuted, margin: 0, marginBottom: 8 }}>
-                  {agency.description}
-                </p>
-              )}
               <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
                 Created {new Date(agency.createdAt).toLocaleDateString("en-US", { 
                   month: "long", 
