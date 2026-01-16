@@ -14,7 +14,7 @@ interface CaseStudy {
 export function buildSystemPrompt(config: AIConfiguration, agencyName: string): string {
   const services = Array.isArray(config.services) ? config.services : [];
   const industries = Array.isArray(config.targetIndustries) ? config.targetIndustries : [];
-  const caseStudies = Array.isArray(config.caseStudies) ? config.caseStudies as CaseStudy[] : [];
+  const caseStudies = Array.isArray(config.caseStudies) ? (config.caseStudies as unknown as CaseStudy[]) : [];
 
   // If agency has custom prompt, use it
   if (config.customPrompt) {
@@ -29,7 +29,7 @@ PRIMARY OBJECTIVE:
 Qualify inbound leads using the BANT framework (Budget, Authority, Need, Timeline) and guide qualified prospects toward booking discovery calls.
 
 SERVICES OFFERED:
-${services.map(s => `- ${formatServiceName(s)}`).join('\n')}
+${services.map(s => `- ${formatServiceName(s as string)}`).join('\n')}
 
 TARGET CLIENTS:
 - Industries: ${industries.join(', ')}
