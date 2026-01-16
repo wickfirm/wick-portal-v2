@@ -4,12 +4,10 @@ import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
-import Link from "next/link";
 
 type Agency = {
   id: string;
   name: string;
-  description: string | null;
   createdAt: string;
   _count?: {
     users: number;
@@ -23,12 +21,12 @@ export default function AgenciesPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [newAgency, setNewAgency] = useState({ name: "", description: "" });
+  const [newAgency, setNewAgency] = useState({ name: "" });
   const [adding, setAdding] = useState(false);
 
   // Edit state
   const [editingAgency, setEditingAgency] = useState<Agency | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", description: "" });
+  const [editForm, setEditForm] = useState({ name: "" });
   const [saving, setSaving] = useState(false);
 
   const isAdmin = ["ADMIN", "SUPER_ADMIN"].includes(currentUser?.role);
@@ -59,7 +57,7 @@ export default function AgenciesPage() {
     });
 
     if (res.ok) {
-      setNewAgency({ name: "", description: "" });
+      setNewAgency({ name: "" });
       setShowForm(false);
       fetchAgencies();
     } else {
@@ -71,10 +69,7 @@ export default function AgenciesPage() {
 
   function openEditModal(agency: Agency) {
     setEditingAgency(agency);
-    setEditForm({
-      name: agency.name,
-      description: agency.description || "",
-    });
+    setEditForm({ name: agency.name });
   }
 
   async function saveEdit() {
@@ -183,26 +178,15 @@ export default function AgenciesPage() {
           }}>
             <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Add New Agency</h3>
             <form onSubmit={addAgency}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name *</label>
-                  <input
-                    value={newAgency.name}
-                    onChange={(e) => setNewAgency({ ...newAgency, name: e.target.value })}
-                    required
-                    style={inputStyle}
-                    placeholder="Agency Name"
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Description</label>
-                  <input
-                    value={newAgency.description}
-                    onChange={(e) => setNewAgency({ ...newAgency, description: e.target.value })}
-                    style={inputStyle}
-                    placeholder="Brief description of the agency"
-                  />
-                </div>
+              <div style={{ maxWidth: 400, marginBottom: 16 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name *</label>
+                <input
+                  value={newAgency.name}
+                  onChange={(e) => setNewAgency({ ...newAgency, name: e.target.value })}
+                  required
+                  style={inputStyle}
+                  placeholder="Agency Name"
+                />
               </div>
 
               <div style={{ display: "flex", gap: 12 }}>
@@ -295,11 +279,6 @@ export default function AgenciesPage() {
                       <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary }}>
                         {agency.name}
                       </h3>
-                      {agency.description && (
-                        <p style={{ margin: "4px 0 0 0", fontSize: 13, color: theme.colors.textMuted }}>
-                          {agency.description}
-                        </p>
-                      )}
                     </div>
                   </div>
                 </div>
@@ -386,7 +365,7 @@ export default function AgenciesPage() {
             background: theme.colors.bgSecondary,
             borderRadius: 12,
             padding: 32,
-            width: 450,
+            width: 400,
             zIndex: 1001,
             boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
           }}>
@@ -394,23 +373,13 @@ export default function AgenciesPage() {
               Edit Agency
             </h3>
 
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 24 }}>
               <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name *</label>
               <input
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 style={inputStyle}
                 placeholder="Agency Name"
-              />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Description</label>
-              <input
-                value={editForm.description}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                style={inputStyle}
-                placeholder="Brief description"
               />
             </div>
 
