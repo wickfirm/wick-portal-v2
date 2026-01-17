@@ -185,10 +185,14 @@ export async function POST(request: NextRequest) {
       });
 
       if (existingLead) {
-        // Update existing lead
+        // Update existing lead with any new info
         await prisma.lead.update({
           where: { id: existingLead.id },
           data: {
+            name: leadData.name || existingLead.name,
+            email: leadData.email || existingLead.email,
+            company: leadData.company || existingLead.company,
+            phone: leadData.phone || existingLead.phone,
             budgetRange: leadData.budgetRange,
             authority: leadData.authority,
             need: leadData.need,
@@ -197,27 +201,24 @@ export async function POST(request: NextRequest) {
           }
         });
       } else {
-        // Create new lead if qualified or warm
+        // Create new lead if qualified or warm - even without email initially
         if (recommendation === 'qualified' || recommendation === 'warm') {
-          // Need at least email to create lead
-          if (leadData.email) {
-            await prisma.lead.create({
-              data: {
-                conversationId: conversation.id,
-                agencyId: conversation.agencyId,
-                name: leadData.name || 'Unknown',
-                email: leadData.email,
-                company: leadData.company,
-                phone: leadData.phone,
-                budgetRange: leadData.budgetRange,
-                authority: leadData.authority,
-                need: leadData.need,
-                timeline: leadData.timeline,
-                qualificationScore: leadData.leadScore,
-                qualifiedAt: recommendation === 'qualified' ? new Date() : null,
-              }
-            });
-          }
+          await prisma.lead.create({
+            data: {
+              conversationId: conversation.id,
+              agencyId: conversation.agencyId,
+              name: leadData.name || 'Unknown',
+              email: leadData.email || 'pending@collection.com', // Placeholder if not yet provided
+              company: leadData.company,
+              phone: leadData.phone,
+              budgetRange: leadData.budgetRange,
+              authority: leadData.authority,
+              need: leadData.need,
+              timeline: leadData.timeline,
+              qualificationScore: leadData.leadScore,
+              qualifiedAt: recommendation === 'qualified' ? new Date() : null,
+            }
+          });
         }
       }
 
