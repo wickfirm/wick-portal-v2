@@ -6,6 +6,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
+import { LeadQualifierNav } from '@/components/LeadQualifierNav';
 
 interface DashboardStats {
   totalConversations: number;
@@ -69,54 +70,41 @@ export default function LeadQualifierPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '2rem' 
-      }}>
-        <div>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '600',
-            color: theme.colors.textPrimary,
-            marginBottom: '0.5rem'
-          }}>
-            AI Lead Qualifier
-          </h1>
-          <p style={{ color: theme.colors.textSecondary }}>
-            Qualify leads automatically with AI-powered conversations
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <Link
-            href="/lead-qualifier/settings"
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: theme.colors.bgTertiary,
+    <>
+      <LeadQualifierNav />
+      <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Header */}
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          marginBottom: '2rem' 
+        }}>
+          <div>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '600',
               color: theme.colors.textPrimary,
-              border: 'none',
-              borderRadius: theme.borderRadius.md,
-              cursor: 'pointer',
-              fontWeight: '500',
-              textDecoration: 'none',
-            }}
-          >
-            ⚙️ Settings
-          </Link>
-          <button
-            onClick={() => setTestMode(true)}
-            style={{
-              padding: '0.75rem 1.5rem',
-              background: theme.colors.primary,
-              color: 'white',
-              border: 'none',
-              borderRadius: theme.borderRadius.md,
-              cursor: 'pointer',
-              fontWeight: '500',
-            }}
+              marginBottom: '0.5rem'
+            }}>
+              AI Lead Qualifier
+            </h1>
+            <p style={{ color: theme.colors.textSecondary }}>
+              Qualify leads automatically with AI-powered conversations
+            </p>
+          </div>
+          <div style={{ display: 'flex', gap: '1rem' }}>
+            <button
+              onClick={() => setTestMode(true)}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: theme.colors.primary,
+                color: 'white',
+                border: 'none',
+                borderRadius: theme.borderRadius.md,
+                cursor: 'pointer',
+                fontWeight: '500',
+              }}
           >
             🧪 Test Chat
           </button>
@@ -624,5 +612,6 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
+    </>
   );
 }
