@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, Fragment } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
 import { LeadQualifierNav } from '@/components/LeadQualifierNav';
@@ -70,7 +70,7 @@ export default function LeadQualifierPage() {
   }
 
   return (
-    <>
+    <div>
       <LeadQualifierNav />
       <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
         {/* Header */}
@@ -245,6 +245,7 @@ export default function LeadQualifierPage() {
       {testMode && (
         <TestChatModal onClose={() => { setTestMode(false); fetchStats(); }} />
       )}
+    </div>
     </div>
   );
 }
@@ -612,6 +613,5 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
         </div>
       </div>
     </div>
-    </>
   );
 }
