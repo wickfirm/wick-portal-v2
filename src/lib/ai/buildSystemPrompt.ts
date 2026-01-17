@@ -197,7 +197,7 @@ export function extractLeadData(messages: { role: string; content: string }[]): 
   };
 
   // Look for JSON qualification blocks in assistant messages
-  const assistantMessages = messages.filter(m => m.role === 'assistant');
+  const assistantMessages = messages.filter(m => m.role.toUpperCase() === 'ASSISTANT');
   
   for (const msg of assistantMessages) {
     // Extract JSON blocks
@@ -222,7 +222,7 @@ export function extractLeadData(messages: { role: string; content: string }[]): 
   }
 
   // Extract contact info from user messages (simple patterns)
-  const userMessages = messages.filter(m => m.role === 'user');
+  const userMessages = messages.filter(m => m.role.toUpperCase() === 'USER');
   const fullText = userMessages.map(m => m.content).join(' ');
 
   // Email pattern
