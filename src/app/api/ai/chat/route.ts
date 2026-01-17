@@ -2,12 +2,10 @@
 // Main API endpoint for AI lead qualification conversations
 
 import { NextRequest, NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import prisma from '@/lib/prisma';
 import { sendMessage } from '@/lib/ai/claude';
 import { buildSystemPrompt, extractLeadData } from '@/lib/ai/buildSystemPrompt';
-import { calculateLeadScore, getRecommendation } from '@/lib/ai/calculateLeadScore';
-
-const prisma = new PrismaClient();
+import { getRecommendation } from '@/lib/ai/calculateLeadScore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,18 +22,18 @@ export async function POST(request: NextRequest) {
 
     // Get or create conversation
     let conversation;
+    let aiConfig;
+    let agencyName = 'The Agency';
+
     if (conversationId) {
+      // Existing conversation
       conversation = await prisma.conversation.findUnique({
         where: { id: conversationId },
         include: {
           messages: {
             orderBy: { timestamp: 'asc' }
           },
-          agency: {
-            include: {
-              aiConfigurations: true
-            }
-          }
+          agency: true
         }
       });
 
@@ -45,60 +43,85 @@ export async function POST(request: NextRequest) {
           { status: 404 }
         );
       }
+
+      // Get AI config for this conversation's agency
+      if (conversation.agencyId) {
+        aiConfig = await prisma.aIConfiguration.findFirst({
+          where: { agencyId: conversation.agencyId }
+        });
+        agencyName = conversation.agency?.name || 'The Agency';
+      } else {
+        // Find config without agency
+        aiConfig = await prisma.aIConfiguration.findFirst({
+          where: { agencyId: null }
+        });
+      }
     } else {
-      // Create new conversation
-      if (!agencyId) {
-        return NextResponse.json(
-          { error: 'agencyId required for new conversation' },
-          { status: 400 }
-        );
+      // New conversation - find AI config
+      if (agencyId) {
+        const agency = await prisma.agency.findUnique({
+          where: { id: agencyId }
+        });
+        
+        if (!agency) {
+          return NextResponse.json(
+            { error: 'Agency not found' },
+            { status: 404 }
+          );
+        }
+
+        aiConfig = await prisma.aIConfiguration.findFirst({
+          where: { agencyId }
+        });
+        agencyName = agency.name;
+      } else {
+        // No agencyId provided - find any available config
+        aiConfig = await prisma.aIConfiguration.findFirst({
+          orderBy: { createdAt: 'desc' }
+        });
+
+        // If config has an agency, get the name
+        if (aiConfig?.agencyId) {
+          const agency = await prisma.agency.findUnique({
+            where: { id: aiConfig.agencyId }
+          });
+          agencyName = agency?.name || 'The Agency';
+        }
       }
 
-      const agency = await prisma.agency.findUnique({
-        where: { id: agencyId },
-        include: { aiConfigurations: true }
-      });
-
-      if (!agency) {
+      if (!aiConfig) {
         return NextResponse.json(
-          { error: 'Agency not found' },
+          { error: 'No AI configuration found. Please configure the AI settings first.' },
           { status: 404 }
         );
       }
 
+      // Create new conversation
       conversation = await prisma.conversation.create({
         data: {
-          agencyId,
-          visitorId: crypto.randomUUID(), // Generate visitor ID
+          agencyId: aiConfig.agencyId || null,
+          visitorId: crypto.randomUUID(),
           channel: 'website',
           status: 'ACTIVE',
         },
         include: {
           messages: true,
-          agency: {
-            include: {
-              aiConfigurations: true
-            }
-          }
+          agency: true
         }
       });
     }
 
-// Get AI configuration
-if (!conversation.agency) {
-  return NextResponse.json(
-    { error: 'Agency not found for conversation' },
-    { status: 404 }
-  );
-}
-
-const aiConfig = conversation.agency.aiConfigurations?.[0];
-if (!aiConfig) {
-  return NextResponse.json(
-    { error: 'AI configuration not found for agency' },
-    { status: 404 }
-  );
-}
+    if (!aiConfig) {
+      // Try to find any config as fallback
+      aiConfig = await prisma.aIConfiguration.findFirst();
+      
+      if (!aiConfig) {
+        return NextResponse.json(
+          { error: 'AI configuration not found' },
+          { status: 404 }
+        );
+      }
+    }
 
     // Save user message
     await prisma.message.create({
@@ -122,7 +145,7 @@ if (!aiConfig) {
     ];
 
     // Build system prompt
-    const systemPrompt = buildSystemPrompt(aiConfig, conversation.agency.name);
+    const systemPrompt = buildSystemPrompt(aiConfig, agencyName);
 
     // Get response from Claude
     const response = await sendMessage({
@@ -176,7 +199,7 @@ if (!aiConfig) {
       } else {
         // Create new lead if qualified or warm
         if (recommendation === 'qualified' || recommendation === 'warm') {
-          // Need at least name and email to create lead
+          // Need at least email to create lead
           if (leadData.email) {
             await prisma.lead.create({
               data: {
@@ -258,7 +281,5 @@ if (!aiConfig) {
       },
       { status: 500 }
     );
-  } finally {
-    await prisma.$disconnect();
   }
 }
