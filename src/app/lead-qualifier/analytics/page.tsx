@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
+import { LeadQualifierNav, Breadcrumbs } from '@/components/LeadQualifierNav';
 
 interface AnalyticsData {
   totalConversations: number;
@@ -87,22 +88,18 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <Link 
-          href="/lead-qualifier"
-          style={{ 
-            color: theme.colors.textSecondary, 
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            display: 'block',
-            marginBottom: '0.5rem'
-          }}
-        >
-          ← Back to Lead Qualifier
-        </Link>
-        <h1 style={{
+    <>
+      <LeadQualifierNav />
+      <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: 'Lead Qualifier', href: '/lead-qualifier' },
+          { label: 'Analytics' },
+        ]} />
+
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{
           fontSize: '2rem',
           fontWeight: '600',
           color: theme.colors.textPrimary,
@@ -265,6 +262,7 @@ export default function AnalyticsPage() {
         </ul>
       </div>
     </div>
+    </>
   );
 }
 
