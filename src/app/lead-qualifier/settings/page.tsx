@@ -53,6 +53,7 @@ export default function AISettingsPage() {
   });
 
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [newIndustry, setNewIndustry] = useState('');
   const [newCaseStudy, setNewCaseStudy] = useState({ client: '', result: '' });
 
@@ -72,7 +73,9 @@ export default function AISettingsPage() {
       }
     } catch (error) {
       console.error('Failed to load config:', error);
-    }
+  } finally {
+    setLoading(false); 
+  }
   }
 
   async function saveConfig() {
@@ -140,6 +143,13 @@ export default function AISettingsPage() {
     }));
   }
 
+  if (loading) {
+  return (
+    <div style={{ padding: '2rem', textAlign: 'center' }}>
+      <p>Loading configuration...</p>
+    </div>
+  );
+}
   return (
     <div style={{ padding: '2rem', maxWidth: '900px', margin: '0 auto' }}>
       <div style={{ marginBottom: '2rem' }}>
