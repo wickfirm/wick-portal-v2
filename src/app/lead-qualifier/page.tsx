@@ -105,11 +105,11 @@ export default function LeadQualifierPage() {
                 cursor: 'pointer',
                 fontWeight: '500',
               }}
-          >
-            🧪 Test Chat
-          </button>
+            >
+              🧪 Test Chat
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Stats Grid */}
       <div style={{
