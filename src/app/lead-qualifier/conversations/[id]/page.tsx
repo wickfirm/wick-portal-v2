@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
 import { useParams } from 'next/navigation';
+import { LeadQualifierNav, Breadcrumbs } from '@/components/LeadQualifierNav';
 
 interface Message {
   id: string;
@@ -45,6 +46,7 @@ export default function ConversationDetailPage() {
   const [conversation, setConversation] = useState<Conversation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [changingStatus, setChangingStatus] = useState(false);
 
   useEffect(() => {
     fetchConversation();
@@ -62,6 +64,28 @@ export default function ConversationDetailPage() {
       setError(err instanceof Error ? err.message : 'Failed to load conversation');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleStatusChange(newStatus: string) {
+    setChangingStatus(true);
+    try {
+      const res = await fetch(`/api/lead-qualifier/conversations/${conversationId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (res.ok) {
+        await fetchConversation(); // Reload conversation
+      } else {
+        alert('Failed to update status');
+      }
+    } catch (error) {
+      console.error('Failed to update status:', error);
+      alert('Failed to update status');
+    } finally {
+      setChangingStatus(false);
     }
   }
 
@@ -93,29 +117,26 @@ export default function ConversationDetailPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1400px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <Link 
-          href="/lead-qualifier/conversations"
-          style={{ 
-            color: theme.colors.textSecondary, 
-            textDecoration: 'none',
-            fontSize: '0.875rem',
-            display: 'block',
-            marginBottom: '0.5rem'
-          }}
-        >
-          ← Back to Conversations
-        </Link>
-        <h1 style={{
-          fontSize: '2rem',
-          fontWeight: '600',
-          color: theme.colors.textPrimary,
-        }}>
-          Conversation Details
-        </h1>
-      </div>
+    <>
+      <LeadQualifierNav />
+      <div style={{ padding: '0 2rem 2rem', maxWidth: '1400px', margin: '0 auto' }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: 'Lead Qualifier', href: '/lead-qualifier' },
+          { label: 'Conversations', href: '/lead-qualifier/conversations' },
+          { label: conversation.lead?.name || `Conversation ${conversation.visitorId.slice(0, 8)}...` },
+        ]} />
+
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{
+            fontSize: '2rem',
+            fontWeight: '600',
+            color: theme.colors.textPrimary,
+          }}>
+            Conversation Details
+          </h1>
+        </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: '1.5rem' }}>
         {/* Chat History */}
@@ -214,6 +235,36 @@ export default function ConversationDetailPage() {
                 </p>
               </div>
             )}
+            
+            {/* Status Change Actions */}
+            <div style={{ marginTop: '1.5rem' }}>
+              <p style={{ fontSize: '0.875rem', color: theme.colors.textSecondary, marginBottom: '0.75rem' }}>
+                Change Status:
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {['ACTIVE', 'QUALIFIED', 'DISQUALIFIED', 'BOOKED'].map(status => (
+                  <button
+                    key={status}
+                    onClick={() => handleStatusChange(status)}
+                    disabled={conversation.status === status || changingStatus}
+                    style={{
+                      padding: '0.5rem',
+                      background: conversation.status === status 
+                        ? theme.colors.bgTertiary 
+                        : theme.colors.bgPrimary,
+                      color: theme.colors.textPrimary,
+                      border: `1px solid ${theme.colors.borderLight}`,
+                      borderRadius: theme.borderRadius.sm,
+                      cursor: conversation.status === status || changingStatus ? 'not-allowed' : 'pointer',
+                      fontSize: '0.875rem',
+                      opacity: conversation.status === status ? 0.5 : 1,
+                    }}
+                  >
+                    {status}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Lead Info Card */}
@@ -308,6 +359,7 @@ export default function ConversationDetailPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
