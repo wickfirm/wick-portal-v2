@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { theme } from '@/lib/theme';
+import { LeadQualifierNav, Breadcrumbs } from '@/components/LeadQualifierNav';
 
 interface Lead {
   id: string;
@@ -148,30 +149,27 @@ export default function LeadDetailPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <Link 
-            href="/lead-qualifier/leads"
-            style={{ 
-              color: theme.colors.textSecondary, 
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              display: 'block',
-              marginBottom: '0.5rem'
-            }}
-          >
-            ← Back to Leads
-          </Link>
-          <h1 style={{
-            fontSize: '2rem',
-            fontWeight: '600',
-            color: theme.colors.textPrimary,
-          }}>
-            {lead.name}
-          </h1>
-        </div>
+    <>
+      <LeadQualifierNav />
+      <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: 'Lead Qualifier', href: '/lead-qualifier' },
+          { label: 'Qualified Leads', href: '/lead-qualifier/leads' },
+          { label: lead.name },
+        ]} />
+
+        {/* Header */}
+        <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 style={{
+              fontSize: '2rem',
+              fontWeight: '600',
+              color: theme.colors.textPrimary,
+            }}>
+              {lead.name}
+            </h1>
+          </div>
 
         <div style={{ display: 'flex', gap: '0.75rem' }}>
           {!editing ? (
@@ -459,6 +457,7 @@ export default function LeadDetailPage() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
