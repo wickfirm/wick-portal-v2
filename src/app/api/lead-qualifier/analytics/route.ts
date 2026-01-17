@@ -18,6 +18,7 @@ export async function GET() {
       select: { agencyId: true },
     });
 
+    // If user has agencyId, filter by it. Otherwise show all (for testing/super admin)
     const agencyFilter = user?.agencyId ? { agencyId: user.agencyId } : {};
 
     // Total conversations
