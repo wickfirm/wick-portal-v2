@@ -34,8 +34,40 @@ export async function PATCH(
       data: { status },
       include: {
         lead: true,
+        messages: {
+          orderBy: { timestamp: 'asc' }
+        }
       }
     });
+
+    // If qualifying but no lead exists, create one
+    if (status === 'QUALIFIED' && !conversation.lead) {
+      // Try to extract basic info from messages
+      const userMessages = conversation.messages
+        .filter(m => m.role === 'USER')
+        .map(m => m.content)
+        .join(' ');
+      
+      // Extract email
+      const emailMatch = userMessages.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/);
+      const email = emailMatch ? emailMatch[0] : 'unknown@pending.com';
+      
+      // Extract phone
+      const phoneMatch = userMessages.match(/\+?\d{10,}/);
+      const phone = phoneMatch ? phoneMatch[0] : null;
+
+      await prisma.lead.create({
+        data: {
+          conversationId: conversation.id,
+          agencyId: conversation.agencyId,
+          name: 'Manual Qualification',
+          email: email,
+          phone: phone,
+          qualificationScore: conversation.leadScore || 70,
+          qualifiedAt: new Date(),
+        }
+      });
+    }
 
     // If disqualifying, also update lead
     if (status === 'DISQUALIFIED' && conversation.lead) {
@@ -45,7 +77,7 @@ export async function PATCH(
       });
     }
 
-    // If qualifying, set qualifiedAt
+    // If qualifying and lead exists, set qualifiedAt
     if (status === 'QUALIFIED' && conversation.lead) {
       await prisma.lead.update({
         where: { id: conversation.lead.id },
