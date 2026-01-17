@@ -3,7 +3,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
 
@@ -38,7 +38,6 @@ export default function LeadQualifierPage() {
         const data = await res.json();
         setStats(data);
       } else {
-        // Use placeholder data if API not ready
         setStats({
           totalConversations: 0,
           qualifiedLeads: 0,
@@ -205,6 +204,7 @@ export default function LeadQualifierPage() {
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem' }}>Score</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem' }}>Messages</th>
                 <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem' }}>Date</th>
+                <th style={{ padding: '0.75rem', textAlign: 'left', fontSize: '0.875rem' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -225,6 +225,18 @@ export default function LeadQualifierPage() {
                   <td style={{ padding: '0.75rem', fontSize: '0.875rem', color: theme.colors.textSecondary }}>
                     {new Date(conv.createdAt).toLocaleDateString()}
                   </td>
+                  <td style={{ padding: '0.75rem' }}>
+                    <Link
+                      href={`/lead-qualifier/conversations/${conv.id}`}
+                      style={{
+                        fontSize: '0.875rem',
+                        color: theme.colors.primary,
+                        textDecoration: 'none',
+                      }}
+                    >
+                      View
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -243,7 +255,7 @@ export default function LeadQualifierPage() {
 
       {/* Test Chat Modal */}
       {testMode && (
-        <TestChatModal onClose={() => setTestMode(false)} />
+        <TestChatModal onClose={() => { setTestMode(false); fetchStats(); }} />
       )}
     </div>
   );
@@ -345,6 +357,19 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [leadScore, setLeadScore] = useState<number | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // Strip JSON blocks from visible message
+  function cleanMessage(content: string): string {
+    // Remove JSON code blocks that contain lead scoring data
+    return content.replace(/```json\s*\{[\s\S]*?"leadScore"[\s\S]*?\}\s*```/g, '').trim();
+  }
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
@@ -362,7 +387,7 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
         body: JSON.stringify({
           conversationId,
           message: userMessage,
-          agencyId: null, // Will use default/first agency config
+          agencyId: null,
         }),
       });
 
@@ -373,12 +398,28 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
       }
 
       setConversationId(data.conversationId);
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      
+      // Clean the message to hide JSON blocks
+      const cleanedMessage = cleanMessage(data.message);
+      setMessages(prev => [...prev, { role: 'assistant', content: cleanedMessage }]);
+      
+      // Track lead score if available
+      if (data.leadScore) {
+        setLeadScore(data.leadScore);
+      }
     } catch (err) {
       console.error('Chat error:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    // Shift+Enter for new line, Enter alone to send
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   }
 
@@ -397,7 +438,7 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
         borderRadius: theme.borderRadius.lg,
         width: '100%',
         maxWidth: '500px',
-        height: '600px',
+        height: '650px',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
@@ -414,6 +455,19 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
             <h3 style={{ fontWeight: '600', marginBottom: '0.25rem' }}>Test Chat</h3>
             <p style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
               Test the AI lead qualifier
+              {leadScore && (
+                <span style={{ 
+                  marginLeft: '0.5rem',
+                  padding: '0.125rem 0.5rem',
+                  background: leadScore >= 70 ? theme.colors.successBg : theme.colors.warningBg,
+                  color: leadScore >= 70 ? theme.colors.success : theme.colors.warning,
+                  borderRadius: theme.borderRadius.sm,
+                  fontSize: '0.7rem',
+                  fontWeight: '600',
+                }}>
+                  Score: {leadScore}
+                </span>
+              )}
             </p>
           </div>
           <button
@@ -445,8 +499,9 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
               color: theme.colors.textSecondary,
               marginTop: '2rem'
             }}>
-              <p>👋 Start a conversation!</p>
-              <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
+              <p style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>👋</p>
+              <p>Start a conversation!</p>
+              <p style={{ fontSize: '0.75rem', marginTop: '0.5rem', opacity: 0.7 }}>
                 Try: "I'm looking for help with SEO"
               </p>
             </div>
@@ -457,14 +512,19 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
               key={i}
               style={{
                 alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-                maxWidth: '80%',
+                maxWidth: '85%',
               }}
             >
               <div style={{
                 padding: '0.75rem 1rem',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: msg.role === 'user' 
+                  ? '1rem 1rem 0.25rem 1rem' 
+                  : '1rem 1rem 1rem 0.25rem',
                 background: msg.role === 'user' ? theme.colors.primary : theme.colors.bgSecondary,
                 color: msg.role === 'user' ? 'white' : theme.colors.textPrimary,
+                fontSize: '0.9rem',
+                lineHeight: '1.5',
+                whiteSpace: 'pre-wrap',
               }}>
                 {msg.content}
               </div>
@@ -472,14 +532,26 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
           ))}
 
           {loading && (
-            <div style={{ alignSelf: 'flex-start' }}>
+            <div style={{ alignSelf: 'flex-start', maxWidth: '85%' }}>
               <div style={{
                 padding: '0.75rem 1rem',
-                borderRadius: theme.borderRadius.md,
+                borderRadius: '1rem 1rem 1rem 0.25rem',
                 background: theme.colors.bgSecondary,
                 color: theme.colors.textSecondary,
               }}>
-                Typing...
+                <span className="typing-dots">Typing</span>
+                <style>{`
+                  .typing-dots::after {
+                    content: '';
+                    animation: dots 1.5s steps(4, end) infinite;
+                  }
+                  @keyframes dots {
+                    0%, 20% { content: ''; }
+                    40% { content: '.'; }
+                    60% { content: '..'; }
+                    80%, 100% { content: '...'; }
+                  }
+                `}</style>
               </div>
             </div>
           )}
@@ -495,45 +567,60 @@ function TestChatModal({ onClose }: { onClose: () => void }) {
               Error: {error}
             </div>
           )}
+          
+          <div ref={messagesEndRef} />
         </div>
 
         {/* Input */}
         <div style={{
           padding: '1rem',
           borderTop: `1px solid ${theme.colors.borderLight}`,
+          background: theme.colors.bgSecondary,
         }}>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="text"
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+            <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-              placeholder="Type a message..."
+              onKeyDown={handleKeyDown}
+              placeholder="Type a message... (Shift+Enter for new line)"
               disabled={loading}
+              rows={2}
               style={{
                 flex: 1,
                 padding: '0.75rem',
                 border: `1px solid ${theme.colors.borderLight}`,
                 borderRadius: theme.borderRadius.md,
                 fontSize: '0.875rem',
+                resize: 'none',
+                fontFamily: 'inherit',
+                lineHeight: '1.4',
               }}
             />
             <button
               onClick={sendMessage}
               disabled={loading || !input.trim()}
               style={{
-                padding: '0.75rem 1.5rem',
+                padding: '0.75rem 1.25rem',
                 background: loading || !input.trim() ? theme.colors.textMuted : theme.colors.primary,
                 color: 'white',
                 border: 'none',
                 borderRadius: theme.borderRadius.md,
                 cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
                 fontWeight: '500',
+                height: 'fit-content',
               }}
             >
               Send
             </button>
           </div>
+          <p style={{ 
+            fontSize: '0.7rem', 
+            color: theme.colors.textMuted, 
+            marginTop: '0.5rem',
+            textAlign: 'center' 
+          }}>
+            Press Enter to send, Shift+Enter for new line
+          </p>
         </div>
       </div>
     </div>
