@@ -184,6 +184,22 @@ export default function LeadsPage() {
                 gap: '0.75rem',
               }}>
                 <Link
+                  href={`/lead-qualifier/leads/${lead.id}`}
+                  style={{
+                    flex: 1,
+                    padding: '0.625rem',
+                    background: theme.colors.primary,
+                    color: 'white',
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: '0.875rem',
+                    textAlign: 'center',
+                    textDecoration: 'none',
+                    fontWeight: '500',
+                  }}
+                >
+                  Manage Lead
+                </Link>
+                <Link
                   href={`/lead-qualifier/conversations/${lead.conversation.id}`}
                   style={{
                     flex: 1,
@@ -199,22 +215,6 @@ export default function LeadsPage() {
                 >
                   View Chat
                 </Link>
-                <button
-                  onClick={() => setSelectedLead(lead)}
-                  style={{
-                    flex: 1,
-                    padding: '0.625rem',
-                    background: theme.colors.primary,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: theme.borderRadius.md,
-                    fontSize: '0.875rem',
-                    cursor: 'pointer',
-                    fontWeight: '500',
-                  }}
-                >
-                  Convert to Client
-                </button>
               </div>
 
               {/* Date */}
