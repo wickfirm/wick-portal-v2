@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { theme } from '@/lib/theme';
+import { LeadQualifierNav, Breadcrumbs } from '@/components/LeadQualifierNav';
 
 interface Lead {
   id: string;
@@ -58,27 +59,19 @@ export default function LeadsPage() {
   }
 
   return (
-    <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
-        alignItems: 'center',
-        marginBottom: '2rem' 
-      }}>
-        <div>
-          <Link 
-            href="/lead-qualifier"
-            style={{ 
-              color: theme.colors.textSecondary, 
-              textDecoration: 'none',
-              fontSize: '0.875rem',
-              display: 'block',
-              marginBottom: '0.5rem'
-            }}
-          >
-            ← Back to Lead Qualifier
-          </Link>
+    <>
+      <LeadQualifierNav />
+      <div style={{ padding: '0 2rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        {/* Breadcrumbs */}
+        <Breadcrumbs items={[
+          { label: 'Lead Qualifier', href: '/lead-qualifier' },
+          { label: 'Qualified Leads' },
+        ]} />
+
+        {/* Header */}
+        <div style={{ 
+          marginBottom: '2rem' 
+        }}>
           <h1 style={{
             fontSize: '2rem',
             fontWeight: '600',
@@ -90,7 +83,6 @@ export default function LeadsPage() {
             {leads.length} lead{leads.length !== 1 ? 's' : ''} captured
           </p>
         </div>
-      </div>
 
       {/* Leads Grid */}
       {leads.length > 0 ? (
@@ -259,6 +251,7 @@ export default function LeadsPage() {
         />
       )}
     </div>
+    </>
   );
 }
 
