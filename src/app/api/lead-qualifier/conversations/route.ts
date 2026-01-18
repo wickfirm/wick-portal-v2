@@ -4,7 +4,8 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getScopedPrisma } from "@/lib/prisma-scoped";
+import { requireTenant } from "@/lib/tenant";
+import prisma from "@/lib/prisma";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,12 +14,18 @@ export async function GET() {
   }
 
   try {
-    // Get scoped Prisma client (automatically filters by agencyId)
-    const db = await getScopedPrisma();
+    // Get tenant context
+    const tenant = await requireTenant();
 
-    const conversations = await db.conversation.findMany({
+    const conversations = await prisma.conversation.findMany({
+      where: {
+        agencyId: tenant.agencyId,
+      },
       orderBy: { createdAt: 'desc' },
       include: {
+        _count: {
+          select: { messages: true },
+        },
         lead: {
           select: {
             name: true,
@@ -30,11 +37,6 @@ export async function GET() {
             id: true,
             name: true,
             email: true,
-          },
-        },
-        messages: {
-          select: {
-            id: true,
           },
         },
       },
@@ -49,7 +51,7 @@ export async function GET() {
         leadScore: conv.leadScore,
         createdAt: conv.createdAt.toISOString(),
         updatedAt: conv.updatedAt.toISOString(),
-        messagesCount: conv.messages.length,
+        messagesCount: conv._count.messages,
         lead: conv.lead,
         assignedTo: conv.assignedTo,
       })),
