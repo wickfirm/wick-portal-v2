@@ -1,97 +1,73 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getToken } from 'next-auth/jwt';
+import { getSubdomainFromHost, canAccessSubdomain, getExpectedSubdomain } from './lib/tenant';
 
-function getSubdomain(hostname: string): string | null {
-  const host = hostname.split(':')[0];
+export async function middleware(request: NextRequest) {
+  const { pathname, search } = request.nextUrl;
   
-  // Local development - use env variable
-  if (host === 'localhost' || host === '127.0.0.1') {
-    return process.env.DEV_TENANT_SLUG || null;
-  }
+  // Get subdomain from hostname
+  const hostname = request.headers.get('host') || '';
+  const subdomain = getSubdomainFromHost(hostname);
   
-  // Extract subdomain from hostname (e.g., "wick" from "wick.omnixia.com")
-  const parts = host.split('.');
-  if (parts.length >= 3) {
-    return parts[0];
-  }
-  
-  return null;
-}
-
-export default withAuth(
-  function middleware(req) {
-    const token = req.nextauth.token;
-    const path = req.nextUrl.pathname;
-    const hostname = req.headers.get('host') || '';
-    const subdomain = getSubdomain(hostname);
-
-    // Public routes - no processing needed
-    if (
-      path.startsWith('/api/auth') ||
-      path === '/api/reset-password' ||
-      path === '/login' ||
-      path === '/reset-password' ||
-      path === '/setup' ||
-      path === '/'
-    ) {
-      return NextResponse.next();
-    }
-
-    // Add tenant context to API routes
-    if (path.startsWith('/api') && subdomain) {
-      const requestHeaders = new Headers(req.headers);
-      requestHeaders.set('x-tenant-slug', subdomain);
-      
-      return NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
-      });
-    }
-
-    // Role-based routing: CLIENT users → /portal
-    if (token?.role === "CLIENT") {
-      if (path.startsWith("/portal")) {
-        return NextResponse.next();
-      }
-      return NextResponse.redirect(new URL("/portal", req.url));
-    }
-
-    // Non-CLIENT users trying to access /portal → /dashboard
-    if (path.startsWith("/portal") && token?.role !== "CLIENT") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-
-    // All other routes - allow if authenticated
+  // Skip middleware for certain paths
+  const publicPaths = ['/login', '/api/auth', '/_next', '/favicon.ico', '/static'];
+  if (publicPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        const path = req.nextUrl.pathname;
-        
-        // Public routes - no auth required
-        if (
-          path.startsWith('/api/auth') ||
-          path === '/api/reset-password' ||
-          path === '/' ||
-          path === '/login' ||
-          path === '/reset-password' ||
-          path === '/setup'
-        ) {
-          return true;
-        }
-        
-        // Everything else requires authentication
-        return !!token;
-      },
-    },
   }
-);
+  
+  // Get user session
+  const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+  
+  // If not authenticated, allow through (will be handled by page-level auth)
+  if (!token) {
+    return NextResponse.next();
+  }
+  
+  const userRole = token.role as string;
+  const userAgencyId = token.agencyId as string | null;
+  
+  // Check if user can access this subdomain
+  const canAccess = canAccessSubdomain(subdomain, userAgencyId, userRole);
+  
+  if (!canAccess) {
+    // Redirect to correct subdomain
+    const expectedSubdomain = getExpectedSubdomain(userAgencyId, userRole);
+    
+    // Determine base domain
+    const isProduction = hostname.includes('omnixia.ai');
+    const baseDomain = isProduction ? 'omnixia.ai' : 'omnixia.vercel.app';
+    
+    // Build redirect URL
+    const redirectHost = expectedSubdomain === 'dash' 
+      ? `dash.${baseDomain}`
+      : `${expectedSubdomain}.${baseDomain}`;
+    
+    const redirectUrl = new URL(pathname + search, `https://${redirectHost}`);
+    
+    return NextResponse.redirect(redirectUrl);
+  }
+  
+  // Add tenant info to request headers for downstream use
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set('x-tenant-subdomain', subdomain);
+  
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
 
 export const config = {
   matcher: [
-    // Run middleware on all routes except static files
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    /*
+     * Match all request paths except:
+     * - api/auth (NextAuth)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
   ],
 };
