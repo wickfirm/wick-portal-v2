@@ -456,6 +456,18 @@ export default function TeamPage() {
     >
       {user.agency.name}
     </Link>
+  ) : user.agencyId === null ? (
+    <span style={{
+      padding: "4px 10px",
+      borderRadius: 6,
+      fontSize: 12,
+      fontWeight: 500,
+      background: "#f0f9ff",
+      color: "#0284c7",
+      border: "1px solid #bae6fd"
+    }}>
+      🌐 External Partner
+    </span>
   ) : (
     <span style={{ color: theme.colors.textMuted, fontSize: 13 }}>—</span>
   )}
