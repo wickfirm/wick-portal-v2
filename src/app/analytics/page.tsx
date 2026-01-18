@@ -21,6 +21,11 @@ export default async function AnalyticsPage() {
 
   if (!currentUser) redirect("/login");
 
+  // Redirect MEMBERs - they shouldn't access analytics
+  if (currentUser.role === "MEMBER") {
+    redirect("/dashboard");
+  }
+
   // Build client filter based on agency
   let clientFilter: any = {};
   
