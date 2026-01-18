@@ -46,10 +46,32 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  // SUPER_ADMIN and ADMIN see only users from their agency
+  // SUPER_ADMIN and ADMIN see users from their agency + external partners assigned to their clients
   const users = await prisma.user.findMany({
     where: {
-      agencyId: currentUser.agencyId // Filter by current user's agency
+      OR: [
+        { agencyId: currentUser.agencyId }, // Users from same agency
+        {
+          AND: [
+            { agencyId: null }, // External partners
+            {
+              clientAssignments: {
+                some: {
+                  client: {
+                    teamMembers: {
+                      some: {
+                        user: {
+                          agencyId: currentUser.agencyId
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
     },
     orderBy: { createdAt: "desc" },
     include: {
@@ -102,14 +124,15 @@ export async function POST(req: NextRequest) {
       ? data.clientIds[0]
       : null;
 
-    // IMPORTANT: New users inherit the creator's agencyId (or use provided agencyId)
+    // IMPORTANT: New users inherit the creator's agencyId UNLESS they're external partners
+    // External partners have agencyId = NULL so they can access multiple tenants
     const newUser = await prisma.user.create({
       data: {
         email: data.email,
         name: data.name || null,
         password: hashedPassword,
         role: data.role || "MEMBER",
-        agencyId: data.agencyId || user.agencyId, // Use provided agencyId or inherit from creator
+        agencyId: data.isExternalPartner ? null : (data.agencyId || user.agencyId),
         clientId: clientId,
       },
     });
