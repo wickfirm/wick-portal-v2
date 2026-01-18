@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { theme } from "@/lib/theme";
 import TimerWidget from "./TimerWidget";
+import { getSubdomainFromHost, getTenantBySubdomain, PLATFORM_CONFIG } from "@/lib/tenant";
+import { useEffect, useState } from "react";
 
 export default function Header() {
   const pathname = usePathname();
@@ -15,10 +17,21 @@ export default function Header() {
   const userAgencyId = user?.agencyId;
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
   
-  // Determine branding based on user type
-  const isExternalPartner = userAgencyId === null && userRole !== "PLATFORM_ADMIN";
-  const brandName = isPlatformAdmin ? "Omnixia" : (isExternalPartner ? "Omnixia" : "Wick Portal");
-  const brandLogo = isPlatformAdmin ? "O" : (isExternalPartner ? "O" : "W");
+  // Get current subdomain and tenant config
+  const [tenantConfig, setTenantConfig] = useState(PLATFORM_CONFIG);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const subdomain = getSubdomainFromHost(window.location.hostname);
+      const config = getTenantBySubdomain(subdomain) || PLATFORM_CONFIG;
+      setTenantConfig(config);
+    }
+  }, []);
+  
+  // Determine branding based on subdomain tenant config
+  const brandName = tenantConfig.name;
+  const brandLogo = tenantConfig.logoLetter;
+  const brandColor = tenantConfig.colors.primary;
 
   // Show loading state to prevent navigation flash
   const isLoading = status === "loading";
@@ -29,14 +42,6 @@ export default function Header() {
     { href: "/platform-admin/agencies", label: "Tenants" },
     { href: "/platform-admin/users", label: "Users" },
     { href: "/platform-admin/analytics", label: "Analytics" },
-    { href: "/settings", label: "Settings" },
-  ] : isExternalPartner ? [
-    // External partners have limited navigation (no Team or Agencies)
-    { href: "/dashboard", label: "Dashboard" },
-    { href: "/clients", label: "Clients" },
-    { href: "/projects", label: "Projects" },
-    { href: "/timesheet", label: "Timesheet" },
-    { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ] : [
     // Regular tenant users (full navigation)
@@ -49,6 +54,11 @@ export default function Header() {
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ];
+
+  // Create gradient based on tenant colors
+  const brandGradient = tenantConfig.colors.secondary
+    ? `linear-gradient(135deg, ${brandColor}, ${tenantConfig.colors.secondary})`
+    : `linear-gradient(135deg, ${brandColor}, ${brandColor})`;
 
   const isActive = (href: string) => {
     if (href === "/dashboard" || href === "/platform-admin") {
@@ -76,7 +86,7 @@ export default function Header() {
           <div style={{
             width: 32,
             height: 32,
-            background: (isPlatformAdmin || isExternalPartner) ? theme.gradients.omnixia : theme.gradients.accent,
+            background: brandGradient,
             borderRadius: theme.borderRadius.md,
             display: "flex",
             alignItems: "center",
@@ -90,7 +100,7 @@ export default function Header() {
           <span style={{ 
             fontWeight: 600, 
             fontSize: 18, 
-            color: (isPlatformAdmin || isExternalPartner) ? theme.colors.omnixiaPurple : theme.colors.textPrimary 
+            color: brandColor
           }}>
             {brandName}
           </span>
