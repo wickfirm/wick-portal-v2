@@ -1,4 +1,4 @@
-// Force rebuild v4 - with multi-agency support
+// Force rebuild v5 - with proper multi-agency isolation
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
@@ -11,11 +11,30 @@ export async function GET() {
 
   const user = session.user as any;
 
+  // Get user's full data including agencyId
+  const currentUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { id: true, role: true, agencyId: true },
+  });
+
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   let clients: any[];
 
-  // SUPER_ADMIN sees all clients
-  if (user.role === "SUPER_ADMIN") {
+  // SUPER_ADMIN sees clients where ANY team member is from their agency
+  if (currentUser.role === "SUPER_ADMIN" && currentUser.agencyId) {
     clients = await prisma.client.findMany({
+      where: {
+        teamMembers: {
+          some: {
+            user: {
+              agencyId: currentUser.agencyId
+            }
+          }
+        }
+      },
       orderBy: { createdAt: "desc" },
       include: { 
         projects: true,
@@ -23,18 +42,31 @@ export async function GET() {
           include: { agency: true }
         },
         teamMembers: {
-          include: { user: { select: { id: true, name: true } } }
+          include: { user: { select: { id: true, name: true, agencyId: true } } }
         }
       },
     });
   } 
-  // ADMIN and MEMBER see only assigned clients
-  else if (["ADMIN", "MEMBER"].includes(user.role)) {
+  // ADMIN and MEMBER see only clients they're assigned to (within their agency)
+  else if (["ADMIN", "MEMBER"].includes(currentUser.role)) {
     clients = await prisma.client.findMany({
       where: {
-        teamMembers: {
-          some: { userId: user.id }
-        }
+        AND: [
+          {
+            teamMembers: {
+              some: { userId: currentUser.id }
+            }
+          },
+          {
+            teamMembers: {
+              some: {
+                user: {
+                  agencyId: currentUser.agencyId
+                }
+              }
+            }
+          }
+        ]
       },
       orderBy: { createdAt: "desc" },
       include: { 
@@ -43,7 +75,7 @@ export async function GET() {
           include: { agency: true }
         },
         teamMembers: {
-          include: { user: { select: { id: true, name: true } } }
+          include: { user: { select: { id: true, name: true, agencyId: true } } }
         }
       },
     });
@@ -62,8 +94,18 @@ export async function POST(req: NextRequest) {
 
   const user = session.user as any;
 
+  // Get user's agencyId
+  const currentUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { id: true, role: true, agencyId: true },
+  });
+
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   // Only SUPER_ADMIN and ADMIN can create clients
-  if (!["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
+  if (!["SUPER_ADMIN", "ADMIN"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Not authorized to create clients" }, { status: 403 });
   }
 
@@ -87,11 +129,11 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Auto-assign the creator to this client
+    // Auto-assign the creator to this client (links client to agency through user)
     await prisma.clientTeamMember.create({
       data: {
         clientId: client.id,
-        userId: user.id,
+        userId: currentUser.id,
       },
     });
 
