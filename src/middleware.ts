@@ -10,20 +10,27 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const subdomain = getSubdomainFromHost(hostname);
   
-  // Skip middleware for certain paths
-  const publicPaths = ['/login', '/api/auth', '/_next', '/favicon.ico', '/static'];
-  if (publicPaths.some(path => pathname.startsWith(path))) {
+  // Skip middleware ONLY for NextAuth API routes and static files
+  const skipPaths = ['/api/auth', '/_next', '/favicon.ico', '/static'];
+  if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
   
   // Get user session
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   
-  // If not authenticated, allow through (will be handled by page-level auth)
+  // If not authenticated, allow access to login page but nothing else
   if (!token) {
-    return NextResponse.next();
+    // Allow login page on any subdomain
+    if (pathname === '/login') {
+      return NextResponse.next();
+    }
+    // For other pages, redirect to login on current subdomain
+    const loginUrl = new URL('/login', request.url);
+    return NextResponse.redirect(loginUrl);
   }
   
+  // User IS authenticated - check if they're on the correct subdomain
   const userRole = token.role as string;
   const userAgencyId = token.agencyId as string | null;
   
@@ -38,12 +45,13 @@ export async function middleware(request: NextRequest) {
     const isProduction = hostname.includes('omnixia.ai');
     const baseDomain = isProduction ? 'omnixia.ai' : 'omnixia.vercel.app';
     
-    // Build redirect URL
+    // Build redirect URL to their correct subdomain
     const redirectHost = expectedSubdomain === 'dash' 
       ? `dash.${baseDomain}`
       : `${expectedSubdomain}.${baseDomain}`;
     
-    const redirectUrl = new URL(pathname + search, `https://${redirectHost}`);
+    // Redirect to dashboard on correct subdomain (not login)
+    const redirectUrl = new URL('/dashboard', `https://${redirectHost}`);
     
     return NextResponse.redirect(redirectUrl);
   }
