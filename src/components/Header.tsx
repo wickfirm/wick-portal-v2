@@ -76,7 +76,7 @@ export default function Header() {
           <div style={{
             width: 32,
             height: 32,
-            background: theme.gradients.accent,
+            background: (isPlatformAdmin || isExternalPartner) ? theme.gradients.omnixia : theme.gradients.accent,
             borderRadius: theme.borderRadius.md,
             display: "flex",
             alignItems: "center",
@@ -87,7 +87,13 @@ export default function Header() {
           }}>
             {brandLogo}
           </div>
-          <span style={{ fontWeight: 600, fontSize: 18, color: theme.colors.textPrimary }}>{brandName}</span>
+          <span style={{ 
+            fontWeight: 600, 
+            fontSize: 18, 
+            color: (isPlatformAdmin || isExternalPartner) ? theme.colors.omnixiaPurple : theme.colors.textPrimary 
+          }}>
+            {brandName}
+          </span>
         </Link>
         
         <nav style={{ display: "flex", gap: 4 }}>
