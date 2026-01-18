@@ -67,10 +67,19 @@ export default function TeamPage() {
   const [saving, setSaving] = useState(false);
 
   const isClientRole = currentUser?.role === "CLIENT";
+  const isExternalPartner = currentUser?.agencyId === null && currentUser?.role !== "PLATFORM_ADMIN";
+
+  // Redirect external partners - they shouldn't access team management
+  useEffect(() => {
+    if (isExternalPartner) {
+      window.location.href = "/dashboard";
+    }
+  }, [isExternalPartner]);
 
   useEffect(() => {
+    if (isExternalPartner) return; // Don't fetch if redirecting
     fetchData();
-  }, []);
+  }, [isExternalPartner]);
 
   async function fetchData() {
     try {
