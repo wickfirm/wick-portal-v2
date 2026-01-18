@@ -3,142 +3,58 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
-type TenantAgency = {
-  id: string;
-  name: string;
-  slug: string;
-  primaryColor: string;
-  isActive: boolean;
-  createdAt: string;
-  _count: {
-    users: number;
-  };
+type DashboardStats = {
+  totalAgencies: number;
+  activeAgencies: number;
+  totalUsers: number;
+  activeUsers: number;
+  recentSignups: Array<{
+    email: string;
+    name: string;
+    agency: string;
+    createdAt: string;
+  }>;
+  agencyBreakdown: Array<{
+    agencyName: string;
+    userCount: number;
+    activeCount: number;
+  }>;
 };
 
-export default function PlatformAdminAgenciesPage() {
+export default function PlatformAdminDashboard() {
   const { data: session } = useSession();
   const router = useRouter();
   const currentUser = session?.user as any;
 
-  const [agencies, setAgencies] = useState<TenantAgency[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-
-  // Form state
-  const [formData, setFormData] = useState({
-    name: "",
-    slug: "",
-    primaryColor: "#000000",
-  });
-
-  // Edit state
-  const [editingAgency, setEditingAgency] = useState<TenantAgency | null>(null);
-  const [editForm, setEditForm] = useState({
-    name: "",
-    primaryColor: "",
-    isActive: true,
-  });
+  const [stats, setStats] = useState<DashboardStats | null>(null);
 
   useEffect(() => {
-    // Check if user is PLATFORM_ADMIN
     if (currentUser && currentUser.role !== "PLATFORM_ADMIN") {
       router.push("/dashboard");
       return;
     }
-    fetchAgencies();
+    fetchStats();
   }, [currentUser, router]);
 
-  async function fetchAgencies() {
+  async function fetchStats() {
     try {
-      const res = await fetch("/api/platform-admin/agencies");
+      const res = await fetch("/api/platform-admin/dashboard");
       if (res.status === 403) {
         router.push("/dashboard");
         return;
       }
       const data = await res.json();
-      setAgencies(Array.isArray(data) ? data : []);
+      setStats(data);
     } catch (error) {
-      console.error("Failed to fetch agencies:", error);
+      console.error("Failed to fetch dashboard stats:", error);
     }
     setLoading(false);
   }
-
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError("");
-
-    const res = await fetch("/api/platform-admin/agencies", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData),
-    });
-
-    if (res.ok) {
-      setFormData({ name: "", slug: "", primaryColor: "#000000" });
-      setShowForm(false);
-      fetchAgencies();
-    } else {
-      const err = await res.json();
-      setError(err.error || "Failed to create agency");
-    }
-    setSaving(false);
-  }
-
-  function openEditModal(agency: TenantAgency) {
-    setEditingAgency(agency);
-    setEditForm({
-      name: agency.name,
-      primaryColor: agency.primaryColor,
-      isActive: agency.isActive,
-    });
-  }
-
-  async function handleUpdate() {
-    if (!editingAgency) return;
-    setSaving(true);
-
-    const res = await fetch(`/api/platform-admin/agencies/${editingAgency.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(editForm),
-    });
-
-    if (res.ok) {
-      setEditingAgency(null);
-      fetchAgencies();
-    }
-    setSaving(false);
-  }
-
-  async function handleDelete(agency: TenantAgency) {
-    if (!confirm(`Delete ${agency.name}? This will remove ${agency._count.users} users!`)) return;
-
-    const res = await fetch(`/api/platform-admin/agencies/${agency.id}`, {
-      method: "DELETE",
-    });
-
-    if (res.ok) {
-      fetchAgencies();
-    } else {
-      const err = await res.json();
-      alert(err.error || "Failed to delete agency");
-    }
-  }
-
-  const inputStyle = {
-    width: "100%",
-    padding: "12px 16px",
-    border: "1px solid " + theme.colors.borderMedium,
-    borderRadius: theme.borderRadius.md,
-    fontSize: 14,
-    outline: "none",
-  };
 
   if (loading) {
     return (
@@ -151,8 +67,7 @@ export default function PlatformAdminAgenciesPage() {
     );
   }
 
-  // Access denied if not PLATFORM_ADMIN
-  if (currentUser?.role !== "PLATFORM_ADMIN") {
+  if (currentUser?.role !== "PLATFORM_ADMIN" || !stats) {
     return null;
   }
 
@@ -174,384 +89,312 @@ export default function PlatformAdminAgenciesPage() {
               justifyContent: "center",
               fontSize: 24,
             }}>
-              🏢
+              📊
             </div>
             <div>
               <h1 style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, margin: 0 }}>
-                Platform Admin
+                Platform Overview
               </h1>
               <p style={{ color: theme.colors.textSecondary, fontSize: 15, margin: 0 }}>
-                Manage tenant agencies across Omnixia platform
+                Omnixia platform metrics and insights
               </p>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 32 }}>
+        {/* Key Stats */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
           <div style={{
             background: theme.colors.bgSecondary,
             padding: 24,
             borderRadius: 12,
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.primary }}>
-              {agencies.length}
+            <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
+              Total Agencies
             </div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Total Tenant Agencies</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.primary }}>
+              {stats.totalAgencies}
+            </div>
+            <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>
+              {stats.activeAgencies} active
+            </div>
           </div>
+
           <div style={{
             background: theme.colors.bgSecondary,
             padding: 24,
             borderRadius: 12,
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.success }}>
-              {agencies.filter(a => a.isActive).length}
+            <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
+              Total Users
             </div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Active Agencies</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.info }}>
+              {stats.totalUsers}
+            </div>
+            <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 4 }}>
+              {stats.activeUsers} active
+            </div>
           </div>
+
           <div style={{
             background: theme.colors.bgSecondary,
             padding: 24,
             borderRadius: 12,
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.info }}>
-              {agencies.reduce((sum, a) => sum + a._count.users, 0)}
+            <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
+              Avg Users/Agency
             </div>
-            <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>Total Users</div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.warning }}>
+              {Math.round(stats.totalUsers / stats.totalAgencies)}
+            </div>
+            <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>
+              per tenant
+            </div>
+          </div>
+
+          <div style={{
+            background: theme.colors.bgSecondary,
+            padding: 24,
+            borderRadius: 12,
+            border: `1px solid ${theme.colors.borderLight}`,
+          }}>
+            <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
+              Recent Signups
+            </div>
+            <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.success }}>
+              {stats.recentSignups.length}
+            </div>
+            <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>
+              last 7 days
+            </div>
           </div>
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Tenant Agencies</h2>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            style={{
-              background: theme.gradients.primary,
-              color: "white",
-              padding: "12px 24px",
-              borderRadius: 8,
-              border: "none",
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>+</span> Create Tenant Agency
-          </button>
-        </div>
-
-        {/* Create Form */}
-        {showForm && (
+        {/* Two Column Layout */}
+        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
+          {/* Recent Signups */}
           <div style={{
             background: theme.colors.bgSecondary,
             borderRadius: 12,
             padding: 24,
-            marginBottom: 24,
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Create New Tenant Agency</h3>
-            {error && (
-              <div style={{
-                background: theme.colors.errorBg,
-                color: theme.colors.error,
-                padding: 12,
-                borderRadius: 8,
-                marginBottom: 16,
-                fontSize: 14,
-              }}>
-                {error}
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Recent Signups</h2>
+            {stats.recentSignups.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: theme.colors.textMuted }}>
+                No recent signups
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: 12 }}>
+                {stats.recentSignups.map((signup, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      padding: 16,
+                      background: theme.colors.bgPrimary,
+                      borderRadius: 8,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        background: theme.gradients.primary,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "white",
+                        fontWeight: 600,
+                      }}>
+                        {signup.name?.charAt(0).toUpperCase() || "?"}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500 }}>{signup.name}</div>
+                        <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
+                          {signup.email}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                        {signup.agency}
+                      </div>
+                      <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
+                        {new Date(signup.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            <form onSubmit={handleCreate}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
-                    Agency Name *
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="e.g., Acme Corp"
-                    style={inputStyle}
-                    required
-                  />
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
-                    Slug * (subdomain)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase() })}
-                    placeholder="e.g., acme"
-                    style={inputStyle}
-                    required
-                  />
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>
-                    Will be: {formData.slug || 'slug'}.omnixia.com
-                  </div>
-                </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
-                    Brand Color
-                  </label>
-                  <input
-                    type="color"
-                    value={formData.primaryColor}
-                    onChange={(e) => setFormData({ ...formData, primaryColor: e.target.value })}
-                    style={{ ...inputStyle, height: 48 }}
-                  />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  type="button"
-                  onClick={() => setShowForm(false)}
-                  style={{
-                    padding: "10px 20px",
-                    background: theme.colors.bgTertiary,
-                    color: theme.colors.textSecondary,
-                    border: "none",
-                    borderRadius: 8,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{
-                    padding: "10px 20px",
-                    background: saving ? theme.colors.bgTertiary : theme.colors.primary,
-                    color: saving ? theme.colors.textMuted : "white",
-                    border: "none",
-                    borderRadius: 8,
-                    fontWeight: 500,
-                    cursor: saving ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {saving ? "Creating..." : "Create Agency"}
-                </button>
-              </div>
-            </form>
           </div>
-        )}
 
-        {/* Agencies List */}
-        <div style={{ display: "grid", gap: 16 }}>
-          {agencies.map((agency) => (
-            <div
-              key={agency.id}
-              style={{
-                background: theme.colors.bgSecondary,
-                borderRadius: 12,
-                padding: 24,
-                border: `1px solid ${theme.colors.borderLight}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-                <div style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: "50%",
-                  background: agency.primaryColor,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "white",
-                  fontSize: 24,
-                  fontWeight: 700,
-                }}>
-                  {agency.name.charAt(0).toUpperCase()}
-                </div>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 4 }}>
-                    <h3 style={{ fontSize: 18, fontWeight: 600, margin: 0 }}>
-                      {agency.name}
-                    </h3>
-                    {agency.isActive ? (
-                      <span style={{
-                        padding: "4px 12px",
-                        background: theme.colors.successBg,
-                        color: theme.colors.success,
-                        borderRadius: 16,
-                        fontSize: 12,
-                        fontWeight: 500,
-                      }}>
-                        Active
-                      </span>
-                    ) : (
-                      <span style={{
-                        padding: "4px 12px",
-                        background: theme.colors.errorBg,
-                        color: theme.colors.error,
-                        borderRadius: 16,
-                        fontSize: 12,
-                        fontWeight: 500,
-                      }}>
-                        Inactive
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>
-                    {agency.slug}.omnixia.com • {agency._count.users} users • 
-                    Created {new Date(agency.createdAt).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button
-                  onClick={() => openEditModal(agency)}
-                  style={{
-                    padding: "8px 16px",
-                    background: theme.colors.infoBg,
-                    color: theme.colors.info,
-                    border: "none",
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(agency)}
-                  disabled={agency._count.users > 0}
-                  style={{
-                    padding: "8px 16px",
-                    background: agency._count.users > 0 ? theme.colors.bgTertiary : theme.colors.errorBg,
-                    color: agency._count.users > 0 ? theme.colors.textMuted : theme.colors.error,
-                    border: "none",
-                    borderRadius: 6,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: agency._count.users > 0 ? "not-allowed" : "pointer",
-                  }}
-                  title={agency._count.users > 0 ? "Cannot delete agency with users" : "Delete agency"}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </main>
-
-      {/* Edit Modal */}
-      {editingAgency && (
-        <>
-          <div
-            onClick={() => setEditingAgency(null)}
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: "rgba(0,0,0,0.4)",
-              zIndex: 1000,
-            }}
-          />
+          {/* Agency Breakdown */}
           <div style={{
-            position: "fixed",
-            top: "50%",
-            left: "50%",
-            transform: "translate(-50%, -50%)",
             background: theme.colors.bgSecondary,
             borderRadius: 12,
-            padding: 32,
-            width: 500,
-            zIndex: 1001,
-            boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+            padding: 24,
+            border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <h3 style={{ margin: "0 0 24px 0", fontSize: 20, fontWeight: 600 }}>
-              Edit {editingAgency.name}
-            </h3>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
-                Agency Name
-              </label>
-              <input
-                value={editForm.name}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                style={inputStyle}
-              />
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
-                Brand Color
-              </label>
-              <input
-                type="color"
-                value={editForm.primaryColor}
-                onChange={(e) => setEditForm({ ...editForm, primaryColor: e.target.value })}
-                style={{ ...inputStyle, height: 48 }}
-              />
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={editForm.isActive}
-                  onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
-                />
-                <span style={{ fontSize: 14, fontWeight: 500 }}>Agency is Active</span>
-              </label>
-            </div>
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <button
-                onClick={() => setEditingAgency(null)}
-                style={{
-                  flex: 1,
-                  padding: "12px 20px",
-                  background: theme.colors.bgTertiary,
-                  color: theme.colors.textSecondary,
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleUpdate}
-                disabled={saving}
-                style={{
-                  flex: 1,
-                  padding: "12px 20px",
-                  background: saving ? theme.colors.bgTertiary : theme.colors.primary,
-                  color: saving ? theme.colors.textMuted : "white",
-                  border: "none",
-                  borderRadius: 8,
-                  fontWeight: 500,
-                  cursor: saving ? "not-allowed" : "pointer",
-                }}
-              >
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Users by Agency</h2>
+            <div style={{ display: "grid", gap: 16 }}>
+              {stats.agencyBreakdown.map((agency, idx) => (
+                <div key={idx}>
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    marginBottom: 8,
+                  }}>
+                    <div style={{ fontSize: 14, fontWeight: 500 }}>
+                      {agency.agencyName}
+                    </div>
+                    <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.primary }}>
+                      {agency.userCount}
+                    </div>
+                  </div>
+                  <div style={{
+                    height: 8,
+                    background: theme.colors.bgTertiary,
+                    borderRadius: 4,
+                    overflow: "hidden",
+                  }}>
+                    <div style={{
+                      height: "100%",
+                      width: `${(agency.userCount / stats.totalUsers) * 100}%`,
+                      background: theme.gradients.primary,
+                      borderRadius: 4,
+                    }} />
+                  </div>
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 4 }}>
+                    {agency.activeCount} active • {Math.round((agency.userCount / stats.totalUsers) * 100)}% of total
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* Quick Actions */}
+        <div style={{
+          marginTop: 32,
+          display: "grid",
+          gridTemplateColumns: "repeat(3, 1fr)",
+          gap: 16,
+        }}>
+          <Link
+            href="/platform-admin/agencies"
+            style={{
+              background: theme.colors.bgSecondary,
+              padding: 24,
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.borderLight}`,
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+              transition: "all 0.2s",
+            }}
+          >
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: theme.colors.infoBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 24,
+            }}>
+              🏢
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>
+                Manage Agencies
+              </div>
+              <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                View and edit tenant agencies
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/platform-admin/users"
+            style={{
+              background: theme.colors.bgSecondary,
+              padding: 24,
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.borderLight}`,
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: theme.colors.successBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 24,
+            }}>
+              👥
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>
+                View All Users
+              </div>
+              <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                Browse all platform users
+              </div>
+            </div>
+          </Link>
+
+          <Link
+            href="/platform-admin/analytics"
+            style={{
+              background: theme.colors.bgSecondary,
+              padding: 24,
+              borderRadius: 12,
+              border: `1px solid ${theme.colors.borderLight}`,
+              textDecoration: "none",
+              display: "flex",
+              alignItems: "center",
+              gap: 16,
+            }}
+          >
+            <div style={{
+              width: 48,
+              height: 48,
+              borderRadius: 12,
+              background: theme.colors.warningBg,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: 24,
+            }}>
+              📈
+            </div>
+            <div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>
+                Analytics
+              </div>
+              <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                Platform-wide metrics
+              </div>
+            </div>
+          </Link>
+        </div>
+      </main>
     </div>
   );
 }
