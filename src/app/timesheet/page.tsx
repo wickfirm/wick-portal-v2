@@ -115,8 +115,36 @@ export default async function TimesheetPage({
     entriesByRow[rowKey].total += entry.duration;
   });
 
+  // Fetch clients based on role
+  let clientFilter: any = { status: { in: ["ACTIVE", "ONBOARDING"] } };
+  
+  if (dbUser.role === "ADMIN" || dbUser.role === "SUPER_ADMIN") {
+    // ADMINs see all clients in their agency
+    if (dbUser.agencyId) {
+      const agencyTeamMembers = await prisma.user.findMany({
+        where: { agencyId: dbUser.agencyId },
+        select: { id: true },
+      });
+      const teamMemberIds = agencyTeamMembers.map(u => u.id);
+      
+      clientFilter.teamMembers = {
+        some: {
+          userId: { in: teamMemberIds }
+        }
+      };
+    }
+  } else if (dbUser.role === "MEMBER") {
+    // MEMBERs see only their assigned clients
+    const assignments = await prisma.clientTeamMember.findMany({
+      where: { userId: dbUser.id },
+      select: { clientId: true },
+    });
+    const clientIds = assignments.map(a => a.clientId);
+    clientFilter.id = { in: clientIds };
+  }
+
   const clients = await prisma.client.findMany({
-    where: { status: { in: ["ACTIVE", "ONBOARDING"] } },
+    where: clientFilter,
     select: { id: true, name: true, nickname: true },
     orderBy: { name: "asc" },
   });
