@@ -386,23 +386,6 @@ model TaskPriorityOption {
   @@map("task_priority_options")
 }
 
-model Agency {
-  id        String         @id @default(cuid())
-  name      String
-  isDefault Boolean        @default(false)
-  users     User[]
-  clients   ClientAgency[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  aiConfigurations        AIConfiguration[]
-  conversations           Conversation[]
-  leads                   Lead[]
-  bookings                Booking[]
-  conversationAnalytics   ConversationAnalytics[]  
-
-  @@map("agencies")
-}
-
 model ClientAgency {
   id        String   @id @default(cuid())
   clientId  String   @map("client_id")
