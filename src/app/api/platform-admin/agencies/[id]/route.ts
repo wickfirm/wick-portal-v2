@@ -27,8 +27,8 @@ isActive: data.isActive,
 });
 return NextResponse.json(updated);
 } catch (error) {
-console.error("Failed to update agency:", error);
-return NextResponse.json({ error: "Failed to update agency" }, { status: 500 });
+console.error("Failed to update tenant:", error);
+return NextResponse.json({ error: "Failed to update tenant" }, { status: 500 });
 }
 }
 export async function DELETE(
@@ -49,7 +49,7 @@ where: { agencyId: params.id },
 });
 if (userCount > 0) {
 return NextResponse.json(
-{ error: `Cannot delete agency with ${userCount} users. Remove users first.` },
+{ error: `Cannot delete tenant with ${userCount} users. Remove users first.` },
 { status: 400 }
 );
 }
@@ -58,7 +58,7 @@ where: { id: params.id },
 });
 return NextResponse.json({ success: true });
 } catch (error) {
-console.error("Failed to delete agency:", error);
-return NextResponse.json({ error: "Failed to delete agency" }, { status: 500 });
+console.error("Failed to delete tenant:", error);
+return NextResponse.json({ error: "Failed to delete tenant" }, { status: 500 });
 }
 }
