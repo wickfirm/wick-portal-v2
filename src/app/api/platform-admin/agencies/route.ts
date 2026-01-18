@@ -1,5 +1,5 @@
 // /src/app/api/platform-admin/agencies/route.ts
-// PLATFORM ADMIN ONLY - Manage tenant agencies (Wick, UDMS, future clients)
+// PLATFORM ADMIN ONLY - Manage tenants (Wick, UDMS, future tenant agencies)
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -25,7 +25,7 @@ select: { users: true },
 return NextResponse.json(agencies);
 } catch (error) {
 console.error("Failed to fetch tenant agencies:", error);
-return NextResponse.json({ error: "Failed to fetch agencies" }, { status: 500 });
+return NextResponse.json({ error: "Failed to fetch tenants" }, { status: 500 });
 }
 }
 export async function POST(req: NextRequest) {
@@ -43,7 +43,7 @@ const existing = await prisma.agency.findUnique({
 where: { slug: data.slug },
 });
 if (existing) {
-return NextResponse.json({ error: "Agency slug already exists" }, { status: 400 });
+return NextResponse.json({ error: "Tenant slug already exists" }, { status: 400 });
 }
 const agency = await prisma.agency.create({
 data: {
@@ -55,7 +55,7 @@ isActive: true,
 });
 return NextResponse.json(agency);
 } catch (error) {
-console.error("Failed to create agency:", error);
-return NextResponse.json({ error: "Failed to create agency" }, { status: 500 });
+console.error("Failed to create tenant:", error);
+return NextResponse.json({ error: "Failed to create tenant" }, { status: 500 });
 }
 }
