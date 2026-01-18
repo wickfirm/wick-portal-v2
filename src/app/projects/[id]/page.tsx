@@ -17,6 +17,14 @@ export default async function ProjectViewPage({ params }: { params: { id: string
   if (!session) redirect("/login");
   const user = session.user as any;
 
+  // Get current user role
+  const currentUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { role: true },
+  });
+
+  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
+
   const project = await prisma.project.findUnique({
     where: { id: params.id },
     include: {
@@ -125,17 +133,19 @@ export default async function ProjectViewPage({ params }: { params: { id: string
                 <span>{project.serviceType.replace("_", " ")}</span>
               </div>
             </div>
-            <Link href={"/projects/" + project.id + "/edit"} style={{
-              padding: "10px 20px",
-              borderRadius: theme.borderRadius.md,
-              background: theme.colors.bgTertiary,
-              color: theme.colors.textSecondary,
-              textDecoration: "none",
-              fontWeight: 500,
-              fontSize: 13
-            }}>
-              Edit Project
-            </Link>
+            {isAdmin && (
+              <Link href={"/projects/" + project.id + "/edit"} style={{
+                padding: "10px 20px",
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.bgTertiary,
+                color: theme.colors.textSecondary,
+                textDecoration: "none",
+                fontWeight: 500,
+                fontSize: 13
+              }}>
+                Edit Project
+              </Link>
+            )}
           </div>
 
           {/* Progress Bar */}
@@ -160,11 +170,13 @@ export default async function ProjectViewPage({ params }: { params: { id: string
         <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
           {/* Main Content */}
           <div>
-            {/* Stages */}
-            <StageManager
-              projectId={project.id}
-              initialStages={stagesForClient}
-            />
+            {/* Stages - Only show for ADMINs */}
+            {isAdmin && (
+              <StageManager
+                projectId={project.id}
+                initialStages={stagesForClient}
+              />
+            )}
 
             {/* Tasks */}
             <ProjectTasks
