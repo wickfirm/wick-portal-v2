@@ -83,7 +83,7 @@ export default function PlatformAdminDashboard() {
               width: 48,
               height: 48,
               borderRadius: "50%",
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              background: theme.gradients.omnixia,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
