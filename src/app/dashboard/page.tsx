@@ -68,28 +68,28 @@ export default async function DashboardPage() {
         ...clientFilter,
       } 
     }),
-    // Count only accessible projects
+    // Count only accessible projects (filter through client)
     prisma.project.count({
-      where: currentUser?.role === "SUPER_ADMIN" ? clientFilter : { client: clientFilter },
+      where: { client: clientFilter },
     }),
     prisma.project.count({ 
       where: { 
         status: "IN_PROGRESS",
-        ...(currentUser?.role === "SUPER_ADMIN" ? clientFilter : { client: clientFilter }),
+        client: clientFilter,
       } 
     }),
-    // FIX: Count only users in current user's agency
+    // Count only users in current user's agency
     prisma.user.count({ 
       where: { 
         isActive: true,
         agencyId: currentUser?.agencyId 
       } 
     }),
-    // Tasks for accessible clients only
+    // Tasks for accessible clients only (filter through client)
     prisma.clientTask.findMany({
       where: { 
         status: { not: "COMPLETED" },
-        ...(currentUser?.role === "SUPER_ADMIN" ? clientFilter : { client: clientFilter }),
+        client: clientFilter,
       },
       include: {
         client: { select: { id: true, name: true } },
@@ -98,7 +98,7 @@ export default async function DashboardPage() {
     }),
     // Recent projects for accessible clients
     prisma.project.findMany({
-      where: currentUser?.role === "SUPER_ADMIN" ? clientFilter : { client: clientFilter },
+      where: { client: clientFilter },
       take: 5,
       orderBy: { updatedAt: "desc" },
       include: { client: true, stages: true },
