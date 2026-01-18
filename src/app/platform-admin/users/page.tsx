@@ -145,7 +145,7 @@ export default function PlatformAdminUsersPage() {
                 All Users
               </h1>
               <p style={{ color: theme.colors.textSecondary, fontSize: 15, margin: 0 }}>
-                {filteredUsers.length} users across all tenant agencies
+                {filteredUsers.length} users across all tenants
               </p>
             </div>
           </div>
@@ -174,15 +174,15 @@ export default function PlatformAdminUsersPage() {
             </div>
             <div>
               <label style={{ display: "block", marginBottom: 8, fontSize: 13, fontWeight: 500 }}>
-                Agency
+                Tenant
               </label>
               <select
                 value={agencyFilter}
                 onChange={(e) => setAgencyFilter(e.target.value)}
                 style={{ ...inputStyle, width: "100%" }}
               >
-                <option value="all">All Agencies</option>
-                <option value="none">No Agency</option>
+                <option value="all">All Tenants</option>
+                <option value="none">No Tenant</option>
                 {agencies.map((agency) => (
                   <option key={agency.id} value={agency.id}>
                     {agency.name}
@@ -225,7 +225,7 @@ export default function PlatformAdminUsersPage() {
                   User
                 </th>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
-                  Agency
+                  Tenant
                 </th>
                 <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
                   Role
