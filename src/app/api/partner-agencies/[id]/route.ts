@@ -12,13 +12,35 @@ export async function PUT(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = session.user as any;
+  const currentUser = session.user as any;
 
-  if (!["SUPER_ADMIN", "ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
+  if (!["SUPER_ADMIN", "ADMIN"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   try {
+    // Get current user's agency
+    const user = await prisma.user.findUnique({
+      where: { email: currentUser.email },
+      select: { agencyId: true },
+    });
+
+    if (!user?.agencyId) {
+      return NextResponse.json({ error: "No agency assigned" }, { status: 400 });
+    }
+
+    // Verify the partner agency belongs to this tenant
+    const existing = await prisma.partnerAgency.findFirst({
+      where: {
+        id: params.id,
+        agencyId: user.agencyId,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Partner agency not found" }, { status: 404 });
+    }
+
     const data = await req.json();
 
     const updated = await prisma.partnerAgency.update({
@@ -45,13 +67,35 @@ export async function DELETE(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const user = session.user as any;
+  const currentUser = session.user as any;
 
-  if (!["SUPER_ADMIN", "ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
+  if (!["SUPER_ADMIN", "ADMIN"].includes(currentUser.role)) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
   try {
+    // Get current user's agency
+    const user = await prisma.user.findUnique({
+      where: { email: currentUser.email },
+      select: { agencyId: true },
+    });
+
+    if (!user?.agencyId) {
+      return NextResponse.json({ error: "No agency assigned" }, { status: 400 });
+    }
+
+    // Verify the partner agency belongs to this tenant
+    const existing = await prisma.partnerAgency.findFirst({
+      where: {
+        id: params.id,
+        agencyId: user.agencyId,
+      },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: "Partner agency not found" }, { status: 404 });
+    }
+
     await prisma.partnerAgency.delete({
       where: { id: params.id },
     });
