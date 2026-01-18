@@ -27,6 +27,7 @@ export default function NewTeamMemberPage() {
       role: formData.get("role"),
       clientId: formData.get("clientId") || null,
       isActive: formData.get("isActive") === "true",
+      isExternalPartner: formData.get("isExternalPartner") === "true",
     };
 
     const res = await fetch("/api/team", {
@@ -108,6 +109,18 @@ export default function NewTeamMemberPage() {
                 <option value="true">Active</option>
                 <option value="false">Inactive</option>
               </select>
+            </div>
+
+            <div style={{ marginBottom: 24, padding: 16, background: "#f0f9ff", border: "1px solid #bae6fd", borderRadius: 4 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+                <input type="checkbox" name="isExternalPartner" value="true" />
+                <div>
+                  <div style={{ fontWeight: 500 }}>External Partner (Multi-Tenant Access)</div>
+                  <div style={{ fontSize: 13, color: "#666", marginTop: 4 }}>
+                    Allow this user to access clients across multiple tenants. Useful for partner agency employees (e.g., ATC staff working with multiple agencies).
+                  </div>
+                </div>
+              </label>
             </div>
 
             <div style={{ display: "flex", gap: 12 }}>
