@@ -4,7 +4,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { requireTenant } from "@/lib/tenant";
 import prisma from "@/lib/prisma";
 
 export async function GET() {
@@ -14,13 +13,16 @@ export async function GET() {
   }
 
   try {
-    // Get tenant context
-    const tenant = await requireTenant();
+    // Get user's agency from session (instead of tenant context)
+    const user = await prisma.user.findUnique({
+      where: { email: session.user?.email || "" },
+      select: { agencyId: true },
+    });
+
+    const agencyFilter = user?.agencyId ? { agencyId: user.agencyId } : {};
 
     const conversations = await prisma.conversation.findMany({
-      where: {
-        agencyId: tenant.agencyId,
-      },
+      where: agencyFilter,
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
