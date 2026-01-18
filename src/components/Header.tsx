@@ -43,8 +43,15 @@ export default function Header() {
     { href: "/platform-admin/users", label: "Users" },
     { href: "/platform-admin/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
+  ] : userRole === "MEMBER" ? [
+    // MEMBERs see limited navigation
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/clients", label: "Clients" },
+    { href: "/projects", label: "Projects" },
+    { href: "/timesheet", label: "Timesheet" },
+    { href: "/settings", label: "Settings" },
   ] : [
-    // Regular tenant users (full navigation)
+    // ADMINs and SUPER_ADMINs see full navigation
     { href: "/dashboard", label: "Dashboard" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
