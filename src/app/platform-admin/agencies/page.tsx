@@ -111,7 +111,7 @@ export default function PlatformAdminDashboard() {
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
             <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
-              Total Agencies
+              Total Tenants
             </div>
             <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.primary }}>
               {stats.totalAgencies}
@@ -145,7 +145,7 @@ export default function PlatformAdminDashboard() {
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
             <div style={{ fontSize: 14, color: theme.colors.textSecondary, marginBottom: 8 }}>
-              Avg Users/Agency
+              Avg Users/Tenant
             </div>
             <div style={{ fontSize: 36, fontWeight: 700, color: theme.colors.warning }}>
               {Math.round(stats.totalUsers / stats.totalAgencies)}
@@ -243,7 +243,7 @@ export default function PlatformAdminDashboard() {
             padding: 24,
             border: `1px solid ${theme.colors.borderLight}`,
           }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Users by Agency</h2>
+            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16 }}>Users by Tenant</h2>
             <div style={{ display: "grid", gap: 16 }}>
               {stats.agencyBreakdown.map((agency, idx) => (
                 <div key={idx}>
@@ -316,10 +316,10 @@ export default function PlatformAdminDashboard() {
             </div>
             <div>
               <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>
-                Manage Agencies
+                Manage Tenants
               </div>
               <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-                View and edit tenant agencies
+                View and edit tenants
               </div>
             </div>
           </Link>
