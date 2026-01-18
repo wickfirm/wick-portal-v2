@@ -19,6 +19,8 @@ export default async function ProjectsPage() {
     select: { id: true, agencyId: true, role: true },
   });
 
+  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
+
   // Build client filter based on role
   let clientFilter: any = {};
   
@@ -73,21 +75,23 @@ export default async function ProjectsPage() {
             <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Projects</h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Track and manage all your projects</p>
           </div>
-          <Link href="/projects/new" style={{
-            background: theme.gradients.primary,
-            color: "white",
-            padding: "12px 24px",
-            borderRadius: theme.borderRadius.md,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: theme.shadows.button
-          }}>
-            <span style={{ fontSize: 18 }}>+</span> New Project
-          </Link>
+          {isAdmin && (
+            <Link href="/projects/new" style={{
+              background: theme.gradients.primary,
+              color: "white",
+              padding: "12px 24px",
+              borderRadius: theme.borderRadius.md,
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: theme.shadows.button
+            }}>
+              <span style={{ fontSize: 18 }}>+</span> New Project
+            </Link>
+          )}
         </div>
 
         {/* Stats */}
@@ -193,18 +197,20 @@ export default async function ProjectsPage() {
                           textDecoration: "none",
                           fontWeight: 500,
                           fontSize: 13,
-                          marginRight: 16
+                          marginRight: isAdmin ? 16 : 0
                         }}>
                           View
                         </Link>
-                        <Link href={"/projects/" + project.id + "/edit"} style={{
-                          color: theme.colors.textSecondary,
-                          textDecoration: "none",
-                          fontWeight: 500,
-                          fontSize: 13
-                        }}>
-                          Edit
-                        </Link>
+                        {isAdmin && (
+                          <Link href={"/projects/" + project.id + "/edit"} style={{
+                            color: theme.colors.textSecondary,
+                            textDecoration: "none",
+                            fontWeight: 500,
+                            fontSize: 13
+                          }}>
+                            Edit
+                          </Link>
+                        )}
                       </td>
                     </tr>
                   );
