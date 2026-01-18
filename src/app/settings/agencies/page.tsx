@@ -14,6 +14,42 @@ type Agency = {
 };
 
 export default function AgenciesSettingsPage() {
+  // TEMPORARILY DISABLED - This page was accidentally deleting multi-tenant agencies!
+  // This should manage ClientAgency (partner agencies), not the main agencies table
+  
+  return (
+    <div style={{ minHeight: "100vh", background: "#f5f5f5" }}>
+      <Header />
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{
+          background: "#fee",
+          border: "2px solid #f00",
+          borderRadius: 8,
+          padding: 32,
+          textAlign: "center"
+        }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, marginBottom: 16, color: "#c00" }}>
+            ⚠️ Page Temporarily Disabled
+          </h1>
+          <p style={{ fontSize: 16, marginBottom: 16 }}>
+            This page has been disabled to prevent accidental deletion of multi-tenant agencies.
+          </p>
+          <p style={{ fontSize: 14, color: "#666" }}>
+            This page should manage <strong>partner agencies</strong> (ClientAgency), 
+            not the main tenant agencies table.
+          </p>
+          <p style={{ fontSize: 14, color: "#666", marginTop: 16 }}>
+            Contact development team to re-enable after fixing the API routing.
+          </p>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ORIGINAL CODE BELOW - DO NOT USE UNTIL FIXED
+/*
+export default function AgenciesSettingsPage_ORIGINAL() {
   const router = useRouter();
   const { data: session } = useSession();
   const user = session?.user as any;
