@@ -204,3 +204,8 @@ export async function requireTenant(): Promise<{ agencyId: string; subdomain: st
     subdomain: tenant.subdomain,
   };
 }
+
+/**
+ * Alias for requireTenant() - used by some older code
+ */
+export const getCurrentTenant = requireTenant;
