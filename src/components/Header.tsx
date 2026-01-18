@@ -8,11 +8,14 @@ import TimerWidget from "./TimerWidget";
 
 export default function Header() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const user = session?.user as any;
   const userName = user?.name || "";
   const userRole = user?.role || "";
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
+
+  // Show loading state to prevent navigation flash
+  const isLoading = status === "loading";
 
   // Different navigation based on role
   const navItems = isPlatformAdmin ? [
@@ -73,7 +76,7 @@ export default function Header() {
         </Link>
         
         <nav style={{ display: "flex", gap: 4 }}>
-          {navItems.map((item) => (
+          {!isLoading && navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
