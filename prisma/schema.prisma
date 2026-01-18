@@ -468,6 +468,34 @@ model ActiveTimer {
 }
 
 
+model Agency {
+  id        String   @id @default(cuid())
+  name      String   // "The Wick Firm"
+  slug      String   @unique // "wick" -> subdomain
+  domain    String?  // Custom domain if needed
+  
+  // Branding
+  logo      String?
+  primaryColor String? @default("#000000")
+  
+  // Settings
+  isActive  Boolean  @default(true)
+  
+  // Relations
+  users                    User[]
+  aiConfigurations         AIConfiguration[]
+  conversations            Conversation[]
+  leads                    Lead[]
+  bookings                 Booking[]
+  conversationAnalytics    ConversationAnalytics[]
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([slug])
+  @@map("agencies")
+}
+
 model AIConfiguration {
   id        String   @id @default(cuid())
   agencyId  String?  @map("agency_id")
@@ -529,6 +557,7 @@ model Conversation {
   updatedAt DateTime @updatedAt @map("updated_at")
   
   @@index([agencyId, createdAt])
+  @@index([agencyId, status])
   @@map("conversations")
 }
 
@@ -590,6 +619,8 @@ model Lead {
   qualifiedAt    DateTime? @map("qualified_at")
   
   @@index([agencyId, createdAt])
+  @@index([agencyId, qualifiedAt])
+  @@index([agencyId, assignedToId])
   @@map("leads")
 }
 
