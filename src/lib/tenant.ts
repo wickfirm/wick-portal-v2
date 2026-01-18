@@ -165,3 +165,42 @@ export function getRedirectUrlForUser(
   
   return `https://${subdomain}.${baseDomain}`;
 }
+
+/**
+ * Legacy function for backward compatibility with existing API routes
+ * Returns tenant info based on current subdomain (from headers)
+ * Used in API routes that need to know which tenant they're serving
+ */
+export async function requireTenant(): Promise<{ agencyId: string; subdomain: string }> {
+  // In API routes, we need to get subdomain from request headers
+  // This will be set by middleware
+  if (typeof window === 'undefined') {
+    // Server-side: Get from headers (set by middleware)
+    const { headers } = await import('next/headers');
+    const headersList = headers();
+    const subdomain = headersList.get('x-tenant-subdomain') || 'dash';
+    
+    const tenant = getTenantBySubdomain(subdomain);
+    if (!tenant || tenant.subdomain === 'dash') {
+      throw new Error('Tenant context required for this operation');
+    }
+    
+    return {
+      agencyId: tenant.id,
+      subdomain: tenant.subdomain,
+    };
+  }
+  
+  // Client-side: Get from window.location
+  const subdomain = getSubdomainFromHost(window.location.hostname);
+  const tenant = getTenantBySubdomain(subdomain);
+  
+  if (!tenant || tenant.subdomain === 'dash') {
+    throw new Error('Tenant context required for this operation');
+  }
+  
+  return {
+    agencyId: tenant.id,
+    subdomain: tenant.subdomain,
+  };
+}
