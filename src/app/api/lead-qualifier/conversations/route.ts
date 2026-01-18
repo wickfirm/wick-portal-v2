@@ -1,10 +1,10 @@
 // /src/app/api/lead-qualifier/conversations/route.ts
-// Get all conversations
+// Get all conversations (with multi-tenant isolation)
 
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getScopedPrisma } from "@/lib/prisma-scoped";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,15 +13,10 @@ export async function GET() {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email: session.user?.email || "" },
-      select: { agencyId: true },
-    });
+    // Get scoped Prisma client (automatically filters by agencyId)
+    const db = await getScopedPrisma();
 
-    const agencyFilter = user?.agencyId ? { agencyId: user.agencyId } : {};
-
-    const conversations = await prisma.conversation.findMany({
-      where: agencyFilter,
+    const conversations = await db.conversation.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         _count: {
@@ -29,6 +24,13 @@ export async function GET() {
         },
         lead: {
           select: {
+            name: true,
+            email: true,
+          },
+        },
+        assignedTo: {
+          select: {
+            id: true,
             name: true,
             email: true,
           },
@@ -47,6 +49,7 @@ export async function GET() {
         updatedAt: conv.updatedAt.toISOString(),
         messagesCount: conv._count.messages,
         lead: conv.lead,
+        assignedTo: conv.assignedTo,
       })),
     });
   } catch (error) {
