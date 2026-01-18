@@ -28,7 +28,7 @@ export default function EditClientPage() {
   useEffect(() => {
     Promise.all([
       fetch(`/api/clients/${clientId}`).then(res => res.json()),
-      fetch("/api/agencies").then(res => res.json()),
+      fetch("/api/partner-agencies").then(res => res.json()),
       fetch("/api/auth/session").then(res => res.json()),
     ]).then(([clientData, agenciesData, sessionData]) => {
       setClient(clientData);
