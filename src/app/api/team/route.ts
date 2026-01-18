@@ -10,18 +10,22 @@ export async function GET() {
 
   const user = session.user as any;
 
-  // CLIENT role sees only team members assigned to their clients
-  if (user.role === "CLIENT") {
-    // Get clients this user has access to
-    const userWithClient = await prisma.user.findUnique({
-      where: { id: user.id },
-      include: { client: true },
-    });
+  // Get current user's full data including agencyId
+  const currentUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { id: true, role: true, agencyId: true, clientId: true },
+  });
 
-    if (userWithClient?.clientId) {
+  if (!currentUser) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  // CLIENT role sees only team members assigned to their clients
+  if (currentUser.role === "CLIENT") {
+    if (currentUser.clientId) {
       // Get team members for this client
       const teamMembers = await prisma.clientTeamMember.findMany({
-        where: { clientId: userWithClient.clientId },
+        where: { clientId: currentUser.clientId },
         include: {
           user: {
             include: {
@@ -42,8 +46,11 @@ export async function GET() {
     return NextResponse.json([]);
   }
 
-  // SUPER_ADMIN and ADMIN see all users
+  // SUPER_ADMIN and ADMIN see only users from their agency
   const users = await prisma.user.findMany({
+    where: {
+      agencyId: currentUser.agencyId // Filter by current user's agency
+    },
     orderBy: { createdAt: "desc" },
     include: {
       agency: true,
@@ -64,8 +71,18 @@ export async function POST(req: NextRequest) {
 
   const currentUser = session.user as any;
   
+  // Get user's agencyId
+  const user = await prisma.user.findUnique({
+    where: { email: currentUser.email },
+    select: { id: true, role: true, agencyId: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
   // Only SUPER_ADMIN and ADMIN can create users
-  if (!["SUPER_ADMIN", "ADMIN"].includes(currentUser.role)) {
+  if (!["SUPER_ADMIN", "ADMIN"].includes(user.role)) {
     return NextResponse.json({ error: "Not authorized" }, { status: 403 });
   }
 
@@ -85,13 +102,14 @@ export async function POST(req: NextRequest) {
       ? data.clientIds[0]
       : null;
 
-    const user = await prisma.user.create({
+    // IMPORTANT: New users inherit the creator's agencyId (or use provided agencyId)
+    const newUser = await prisma.user.create({
       data: {
         email: data.email,
         name: data.name || null,
         password: hashedPassword,
         role: data.role || "MEMBER",
-        agencyId: data.agencyId || null,
+        agencyId: data.agencyId || user.agencyId, // Use provided agencyId or inherit from creator
         clientId: clientId,
       },
     });
@@ -100,14 +118,14 @@ export async function POST(req: NextRequest) {
     if (data.clientIds && data.clientIds.length > 0) {
       await prisma.clientTeamMember.createMany({
         data: data.clientIds.map((clientId: string) => ({
-          userId: user.id,
+          userId: newUser.id,
           clientId,
         })),
         skipDuplicates: true,
       });
     }
 
-    return NextResponse.json(user);
+    return NextResponse.json(newUser);
   } catch (error) {
     console.error("Failed to create user:", error);
     return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
