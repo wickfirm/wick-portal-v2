@@ -30,7 +30,16 @@ export default function Header() {
     { href: "/platform-admin/users", label: "Users" },
     { href: "/platform-admin/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
+  ] : isExternalPartner ? [
+    // External partners have limited navigation (no Team or Agencies)
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/clients", label: "Clients" },
+    { href: "/projects", label: "Projects" },
+    { href: "/timesheet", label: "Timesheet" },
+    { href: "/analytics", label: "Analytics" },
+    { href: "/settings", label: "Settings" },
   ] : [
+    // Regular tenant users (full navigation)
     { href: "/dashboard", label: "Dashboard" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
