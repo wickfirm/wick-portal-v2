@@ -53,8 +53,18 @@ export default async function TimesheetPage({
 
   let teamMembers: any[] = [];
   if (canViewOthers) {
+    // Get current user's agency to filter team members
+    const currentUserFull = await prisma.user.findUnique({
+      where: { email: currentUser.email },
+      select: { agencyId: true },
+    });
+
     teamMembers = await prisma.user.findMany({
-      where: { isActive: true, role: { not: "CLIENT" } },
+      where: { 
+        isActive: true, 
+        role: { not: "CLIENT" },
+        agencyId: currentUserFull?.agencyId, // Only show users from same agency
+      },
       select: { id: true, name: true, email: true },
       orderBy: { name: "asc" },
     });
