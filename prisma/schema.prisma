@@ -2,7 +2,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Force rebuild v2
+// Force rebuild v4
 
 datasource db {
   provider = "postgresql"
