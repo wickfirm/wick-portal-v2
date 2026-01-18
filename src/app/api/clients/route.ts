@@ -23,8 +23,28 @@ export async function GET() {
 
   let clients: any[];
 
+  // External partners (agencyId = NULL) see ALL clients where they're personally assigned
+  if (currentUser.agencyId === null) {
+    clients = await prisma.client.findMany({
+      where: {
+        teamMembers: {
+          some: { userId: currentUser.id }
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      include: { 
+        projects: true,
+        agencies: {
+          include: { agency: true }
+        },
+        teamMembers: {
+          include: { user: { select: { id: true, name: true, agencyId: true } } }
+        }
+      },
+    });
+  }
   // SUPER_ADMIN sees clients where ANY team member is from their agency
-  if (currentUser.role === "SUPER_ADMIN" && currentUser.agencyId) {
+  else if (currentUser.role === "SUPER_ADMIN" && currentUser.agencyId) {
     clients = await prisma.client.findMany({
       where: {
         teamMembers: {
