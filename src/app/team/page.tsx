@@ -41,6 +41,13 @@ export default function TeamPage() {
   const { data: session } = useSession();
   const currentUser = session?.user as any;
 
+  // Redirect MEMBERs - they shouldn't access this page
+  useEffect(() => {
+    if (currentUser?.role === "MEMBER") {
+      window.location.href = "/dashboard";
+    }
+  }, [currentUser]);
+
   const [users, setUsers] = useState<User[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
