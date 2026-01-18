@@ -27,23 +27,26 @@ export default async function DashboardPage() {
 
   // Build client filter based on role and agency
   let clientFilter: any = {};
-  if (currentUser?.role === "SUPER_ADMIN" && currentUser.agencyId) {
-    // SUPER_ADMIN sees clients where their agency's team members are assigned
-    const agencyTeamMembers = await prisma.user.findMany({
-      where: { agencyId: currentUser.agencyId },
-      select: { id: true },
-    });
-    const teamMemberIds = agencyTeamMembers.map(u => u.id);
-    
-    clientFilter = {
-      teamMembers: {
-        some: {
-          userId: { in: teamMemberIds }
+  
+  if (currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN") {
+    // ADMINs and SUPER_ADMINs see ALL clients in their agency
+    if (currentUser.agencyId) {
+      const agencyTeamMembers = await prisma.user.findMany({
+        where: { agencyId: currentUser.agencyId },
+        select: { id: true },
+      });
+      const teamMemberIds = agencyTeamMembers.map(u => u.id);
+      
+      clientFilter = {
+        teamMembers: {
+          some: {
+            userId: { in: teamMemberIds }
+          }
         }
-      }
-    };
-  } else if (currentUser?.role !== "SUPER_ADMIN") {
-    // Get client IDs user is assigned to
+      };
+    }
+  } else {
+    // MEMBERs see only clients they're assigned to
     const assignments = await prisma.clientTeamMember.findMany({
       where: { userId: currentUser?.id },
       select: { clientId: true },
