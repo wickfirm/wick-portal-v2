@@ -67,26 +67,37 @@ export async function GET() {
       },
     });
   } 
-  // ADMIN and MEMBER see only clients they're assigned to (within their agency)
-  else if (["ADMIN", "MEMBER"].includes(currentUser.role)) {
+  // ADMIN sees all clients where any team member from their agency is assigned
+  else if (currentUser.role === "ADMIN" && currentUser.agencyId) {
     clients = await prisma.client.findMany({
       where: {
-        AND: [
-          {
-            teamMembers: {
-              some: { userId: currentUser.id }
-            }
-          },
-          {
-            teamMembers: {
-              some: {
-                user: {
-                  agencyId: currentUser.agencyId
-                }
-              }
+        teamMembers: {
+          some: {
+            user: {
+              agencyId: currentUser.agencyId
             }
           }
-        ]
+        }
+      },
+      orderBy: { createdAt: "desc" },
+      include: { 
+        projects: true,
+        agencies: {
+          include: { agency: true }
+        },
+        teamMembers: {
+          include: { user: { select: { id: true, name: true, agencyId: true } } }
+        }
+      },
+    });
+  }
+  // MEMBER sees ONLY clients they're personally assigned to
+  else if (currentUser.role === "MEMBER") {
+    clients = await prisma.client.findMany({
+      where: {
+        teamMembers: {
+          some: { userId: currentUser.id }
+        }
       },
       orderBy: { createdAt: "desc" },
       include: { 
