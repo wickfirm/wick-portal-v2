@@ -19,9 +19,6 @@ export async function GET() {
     const conversations = await db.conversation.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: {
-          select: { messages: true },
-        },
         lead: {
           select: {
             name: true,
@@ -33,6 +30,11 @@ export async function GET() {
             id: true,
             name: true,
             email: true,
+          },
+        },
+        messages: {
+          select: {
+            id: true,
           },
         },
       },
@@ -47,7 +49,7 @@ export async function GET() {
         leadScore: conv.leadScore,
         createdAt: conv.createdAt.toISOString(),
         updatedAt: conv.updatedAt.toISOString(),
-        messagesCount: conv._count.messages,
+        messagesCount: conv.messages.length,
         lead: conv.lead,
         assignedTo: conv.assignedTo,
       })),
