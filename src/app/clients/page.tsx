@@ -13,7 +13,34 @@ export default async function ClientsPage() {
   if (!session) redirect("/login");
   const user = session.user as any;
 
+  // Get current user's agencyId
+  const currentUser = await prisma.user.findUnique({
+    where: { email: user.email },
+    select: { agencyId: true, role: true, id: true },
+  });
+
+  // Build client filter based on agency
+  let clientFilter: any = {};
+  if (currentUser?.agencyId) {
+    // Get all users from this agency
+    const agencyTeamMembers = await prisma.user.findMany({
+      where: { agencyId: currentUser.agencyId },
+      select: { id: true },
+    });
+    const teamMemberIds = agencyTeamMembers.map(u => u.id);
+    
+    // Filter clients where ANY team member from this agency is assigned
+    clientFilter = {
+      teamMembers: {
+        some: {
+          userId: { in: teamMemberIds }
+        }
+      }
+    };
+  }
+
   const clients = await prisma.client.findMany({
+    where: clientFilter,
     orderBy: { createdAt: "desc" },
     include: { projects: true },
   });
