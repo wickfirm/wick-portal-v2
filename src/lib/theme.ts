@@ -3,10 +3,16 @@
 
 export const theme = {
   colors: {
-    // Brand Colors
+    // Brand Colors (Wick/Tenant default)
     primary: "#e85a4f",
     primaryDark: "#d44a3f",
     accent: "#f8b739",
+    
+    // Omnixia Brand Colors (Platform Admin & External Partners)
+    omnixiaPurple: "#8B5CF6",
+    omnixiaPurpleDark: "#7C3AED",
+    omnixiaNavy: "#1e1b4b",
+    omnixiaAccent: "#a78bfa",
     
     // Backgrounds
     bgPrimary: "#f8f9fa",
@@ -41,6 +47,10 @@ export const theme = {
     accent: "linear-gradient(135deg, #e85a4f, #f8b739)",
     progress: "linear-gradient(90deg, #e85a4f, #f8b739)",
     progressComplete: "linear-gradient(90deg, #34a853, #4caf50)",
+    
+    // Omnixia Gradients
+    omnixia: "linear-gradient(135deg, #8B5CF6, #7C3AED)",
+    omnixiaAccent: "linear-gradient(135deg, #a78bfa, #8B5CF6)",
   },
   
   shadows: {
@@ -91,6 +101,7 @@ export const PRIORITY_STYLES: Record<string, { bg: string; color: string }> = {
 
 // Role styles
 export const ROLE_STYLES: Record<string, { bg: string; color: string }> = {
+  PLATFORM_ADMIN: { bg: "#f3e8ff", color: theme.colors.omnixiaPurple },
   SUPER_ADMIN: { bg: "#FEE2E2", color: "#DC2626" },
   ADMIN: { bg: theme.colors.errorBg, color: theme.colors.error },
   MANAGER: { bg: theme.colors.warningBg, color: theme.colors.warning },
