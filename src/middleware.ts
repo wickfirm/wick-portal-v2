@@ -4,12 +4,13 @@ import { NextResponse } from "next/server";
 function getSubdomain(hostname: string): string | null {
   const host = hostname.split(':')[0];
   
+  // Local development - use env variable
   if (host === 'localhost' || host === '127.0.0.1') {
     return process.env.DEV_TENANT_SLUG || null;
   }
   
+  // Extract subdomain from hostname (e.g., "wick" from "wick.omnixia.com")
   const parts = host.split('.');
-  
   if (parts.length >= 3) {
     return parts[0];
   }
@@ -24,9 +25,10 @@ export default withAuth(
     const hostname = req.headers.get('host') || '';
     const subdomain = getSubdomain(hostname);
 
-    // Skip auth for NextAuth routes, static files, and public pages
+    // Public routes - no processing needed
     if (
       path.startsWith('/api/auth') ||
+      path === '/api/reset-password' ||
       path === '/login' ||
       path === '/reset-password' ||
       path === '/setup' ||
@@ -35,7 +37,7 @@ export default withAuth(
       return NextResponse.next();
     }
 
-    // API routes need tenant context
+    // Add tenant context to API routes
     if (path.startsWith('/api') && subdomain) {
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set('x-tenant-slug', subdomain);
@@ -47,7 +49,7 @@ export default withAuth(
       });
     }
 
-    // Check if user is a CLIENT trying to access admin routes
+    // Role-based routing: CLIENT users → /portal
     if (token?.role === "CLIENT") {
       if (path.startsWith("/portal")) {
         return NextResponse.next();
@@ -55,12 +57,12 @@ export default withAuth(
       return NextResponse.redirect(new URL("/portal", req.url));
     }
 
-    // Non-CLIENT users trying to access portal should be redirected to dashboard
+    // Non-CLIENT users trying to access /portal → /dashboard
     if (path.startsWith("/portal") && token?.role !== "CLIENT") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    // All other authenticated routes
+    // All other routes - allow if authenticated
     return NextResponse.next();
   },
   {
@@ -68,17 +70,19 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
         
-        // Allow ALL /api/auth paths without checking token
-        if (path.startsWith('/api/auth')) {
+        // Public routes - no auth required
+        if (
+          path.startsWith('/api/auth') ||
+          path === '/api/reset-password' ||
+          path === '/' ||
+          path === '/login' ||
+          path === '/reset-password' ||
+          path === '/setup'
+        ) {
           return true;
         }
         
-        // Allow public pages without token
-        if (path === '/' || path === '/login' || path === '/reset-password' || path === '/setup') {
-          return true;
-        }
-        
-        // Everything else requires auth
+        // Everything else requires authentication
         return !!token;
       },
     },
@@ -87,7 +91,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    // Don't run middleware on static files
+    // Run middleware on all routes except static files
     '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
