@@ -7,23 +7,41 @@ import Link from "next/link";
 
 export default function NewTeamMemberPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const currentUser = session?.user as any;
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [clients, setClients] = useState<any[]>([]);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     // Only Platform Admins can access this page
     // Regular tenant admins should use the inline form on /team page
+    if (status === "loading") return;
+    
     if (currentUser && currentUser.role !== "PLATFORM_ADMIN") {
       router.push("/team");
       return;
     }
     
+    setChecking(false);
     fetch("/api/clients").then(res => res.json()).then(setClients);
-  }, [currentUser, router]);
+  }, [currentUser, router, status]);
+
+  // Show loading while checking permissions
+  if (checking || status === "loading") {
+    return (
+      <div style={{ minHeight: "100vh", background: "#f5f5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: "#666" }}>Loading...</div>
+      </div>
+    );
+  }
+
+  // If not platform admin, show nothing (will redirect)
+  if (currentUser?.role !== "PLATFORM_ADMIN") {
+    return null;
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
