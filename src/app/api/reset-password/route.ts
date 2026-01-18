@@ -1,5 +1,4 @@
-export const dynamic = 'force-dynamic'; // Add this line at top
-
+export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from "next/server";
 import { hash } from "bcryptjs";
 import prisma from "@/lib/prisma";
@@ -8,8 +7,8 @@ export async function POST(req: NextRequest) {
   try {
     const { email, newPassword, adminSecret } = await req.json();
     
-    // Check against environment variable
-    if (adminSecret !== process.env.ADMIN_SECRET) {
+    // Use hardcoded secret for now
+    if (adminSecret !== "wick-admin-2024") {
       return NextResponse.json({ error: "Invalid admin secret" }, { status: 401 });
     }
     
