@@ -12,7 +12,13 @@ export default function Header() {
   const user = session?.user as any;
   const userName = user?.name || "";
   const userRole = user?.role || "";
+  const userAgencyId = user?.agencyId;
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
+  
+  // Determine branding based on user type
+  const isExternalPartner = userAgencyId === null && userRole !== "PLATFORM_ADMIN";
+  const brandName = isPlatformAdmin ? "Omnixia" : (isExternalPartner ? "Omnixia" : "Wick Portal");
+  const brandLogo = isPlatformAdmin ? "O" : (isExternalPartner ? "O" : "W");
 
   // Show loading state to prevent navigation flash
   const isLoading = status === "loading";
@@ -70,9 +76,9 @@ export default function Header() {
             fontWeight: "bold",
             fontSize: 14
           }}>
-            W
+            {brandLogo}
           </div>
-          <span style={{ fontWeight: 600, fontSize: 18, color: theme.colors.textPrimary }}>Wick Portal</span>
+          <span style={{ fontWeight: 600, fontSize: 18, color: theme.colors.textPrimary }}>{brandName}</span>
         </Link>
         
         <nav style={{ display: "flex", gap: 4 }}>
