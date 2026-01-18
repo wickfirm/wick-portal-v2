@@ -148,22 +148,24 @@ export default async function ProjectViewPage({ params }: { params: { id: string
             )}
           </div>
 
-          {/* Progress Bar */}
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>Progress</span>
-              <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{completed}/{total} stages ({pct}%)</span>
+          {/* Progress Bar - Only show for ADMINs */}
+          {isAdmin && (
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>Progress</span>
+                <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{completed}/{total} stages ({pct}%)</span>
+              </div>
+              <div style={{ height: 10, background: theme.colors.bgTertiary, borderRadius: 5 }}>
+                <div style={{
+                  height: "100%",
+                  width: pct + "%",
+                  background: pct === 100 ? theme.colors.success : theme.gradients.progress,
+                  borderRadius: 5,
+                  transition: "width 300ms ease"
+                }} />
+              </div>
             </div>
-            <div style={{ height: 10, background: theme.colors.bgTertiary, borderRadius: 5 }}>
-              <div style={{
-                height: "100%",
-                width: pct + "%",
-                background: pct === 100 ? theme.colors.success : theme.gradients.progress,
-                borderRadius: 5,
-                transition: "width 300ms ease"
-              }} />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Content Grid */}
