@@ -106,13 +106,13 @@ export default function PlatformAdminAnalyticsPage() {
           marginBottom: 24,
           border: `1px solid ${theme.colors.borderLight}`,
         }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Agency Performance</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Tenant Performance</h2>
           <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ borderBottom: `2px solid ${theme.colors.borderLight}` }}>
                   <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
-                    Agency
+                    Tenant
                   </th>
                   <th style={{ padding: "12px 16px", textAlign: "center", fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary }}>
                     Total Users
