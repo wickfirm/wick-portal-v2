@@ -20,6 +20,11 @@ export async function GET() {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  // External partners (MEMBER with agencyId = null) cannot access team management
+  if (currentUser.agencyId === null && currentUser.role !== "PLATFORM_ADMIN") {
+    return NextResponse.json({ error: "External partners cannot access team management" }, { status: 403 });
+  }
+
   // CLIENT role sees only team members assigned to their clients
   if (currentUser.role === "CLIENT") {
     if (currentUser.clientId) {
