@@ -2,17 +2,28 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Link from "next/link";
 
 export default function NewTeamMemberPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const currentUser = session?.user as any;
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [clients, setClients] = useState<any[]>([]);
 
   useEffect(() => {
+    // Only Platform Admins can access this page
+    // Regular tenant admins should use the inline form on /team page
+    if (currentUser && currentUser.role !== "PLATFORM_ADMIN") {
+      router.push("/team");
+      return;
+    }
+    
     fetch("/api/clients").then(res => res.json()).then(setClients);
-  }, []);
+  }, [currentUser, router]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
