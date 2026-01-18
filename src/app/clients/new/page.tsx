@@ -20,7 +20,7 @@ export default function NewClientPage() {
   const [defaultAgencyId, setDefaultAgencyId] = useState<string>("");
 
   useEffect(() => {
-    fetch("/api/agencies")
+    fetch("/api/partner-agencies")
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
