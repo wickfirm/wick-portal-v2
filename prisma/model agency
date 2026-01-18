@@ -402,6 +402,8 @@ model PartnerAgency {
   id        String   @id @default(cuid())
   name      String
   isDefault Boolean  @default(false)
+  agencyId  String   @map("agency_id")  // NEW
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)  // NEW
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -483,7 +485,7 @@ model Agency {
   bookings                 Booking[]
   conversationAnalytics    ConversationAnalytics[]
   clientAgencies           ClientAgency[]
-  
+  partnerAgencies PartnerAgency[]
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
   
