@@ -1,4 +1,5 @@
-// Add this import at the top
+"use client";
+
 import { usePathname } from "next/navigation";
 
 // Inside the component, add:
