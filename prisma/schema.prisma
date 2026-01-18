@@ -712,6 +712,7 @@ enum TaskStatus {
 }
 
 enum UserRole {
+  PLATFORM_ADMIN
   SUPER_ADMIN
   ADMIN
   MANAGER
