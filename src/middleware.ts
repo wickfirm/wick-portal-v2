@@ -27,7 +27,7 @@ export default withAuth(
     // No subdomain = main site (marketing, super admin, etc.)
     if (!subdomain) {
       // Allow access to marketing pages, login, etc.
-      if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup')) {
+      if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup') || path === '/reset-password') {
         return NextResponse.next();
       }
       
@@ -38,7 +38,7 @@ export default withAuth(
     // ON A SUBDOMAIN - this is a tenant portal
     
     // Public routes on tenant subdomain
-    if (path === '/' || path === '/login') {
+    if (path === '/' || path === '/login' || path === '/reset-password') {
       return NextResponse.next();
     }
 
@@ -76,7 +76,7 @@ export default withAuth(
         const path = req.nextUrl.pathname;
         
         // Allow public paths
-        if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup')) {
+        if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup') || path === '/reset-password') {
           return true;
         }
         
@@ -89,13 +89,6 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - api/auth/* (NextAuth routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization)
-     * - favicon.ico (favicon file)
-     */
     '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
   ],
 };
