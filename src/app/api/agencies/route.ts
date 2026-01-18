@@ -1,6 +1,3 @@
-// /src/app/api/lead-qualifier/conversations/route.ts
-// Get all conversations (with multi-tenant isolation)
-
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -13,56 +10,21 @@ export async function GET() {
   }
 
   try {
-    // Get user's agency from session (instead of tenant context)
-    const user = await prisma.user.findUnique({
-      where: { email: session.user?.email || "" },
-      select: { agencyId: true },
-    });
-
-    const agencyFilter = user?.agencyId ? { agencyId: user.agencyId } : {};
-
-    const conversations = await prisma.conversation.findMany({
-      where: agencyFilter,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: {
-          select: { messages: true },
-        },
-        lead: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        assignedTo: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
+    // This returns the multi-tenant agencies (for the agency dropdown in team form)
+    // NOTE: This is different from ClientAgency (partner agencies)
+    const agencies = await prisma.agency.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
       },
     });
 
-    return NextResponse.json({
-      conversations: conversations.map(conv => ({
-        id: conv.id,
-        visitorId: conv.visitorId,
-        channel: conv.channel,
-        status: conv.status,
-        leadScore: conv.leadScore,
-        createdAt: conv.createdAt.toISOString(),
-        updatedAt: conv.updatedAt.toISOString(),
-        messagesCount: conv._count.messages,
-        lead: conv.lead,
-        assignedTo: conv.assignedTo,
-      })),
-    });
+    return NextResponse.json(agencies);
   } catch (error) {
-    console.error("Failed to fetch conversations:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch conversations" },
-      { status: 500 }
-    );
+    console.error("Failed to fetch agencies:", error);
+    return NextResponse.json({ error: "Failed to fetch agencies" }, { status: 500 });
   }
 }
