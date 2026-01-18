@@ -398,6 +398,16 @@ model ClientAgency {
   @@map("client_agencies")
 }
 
+model PartnerAgency {
+  id        String   @id @default(cuid())
+  name      String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("partner_agencies")
+}
+
 model ClientTeamMember {
   id         String   @id @default(cuid())
   clientId   String
