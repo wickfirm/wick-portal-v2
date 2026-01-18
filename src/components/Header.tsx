@@ -17,7 +17,7 @@ export default function Header() {
   // Different navigation based on role
   const navItems = isPlatformAdmin ? [
     { href: "/platform-admin", label: "Dashboard" },
-    { href: "/platform-admin/agencies", label: "Agencies" },
+    { href: "/platform-admin/agencies", label: "Tenants" },
     { href: "/platform-admin/users", label: "Users" },
     { href: "/platform-admin/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
