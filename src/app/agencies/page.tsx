@@ -15,6 +15,13 @@ export default function PartnerAgenciesPage() {
   const { data: session } = useSession();
   const currentUser = session?.user as any;
 
+  // Redirect MEMBERs - they shouldn't access this page
+  useEffect(() => {
+    if (currentUser?.role === "MEMBER") {
+      window.location.href = "/dashboard";
+    }
+  }, [currentUser]);
+
   const [agencies, setAgencies] = useState<PartnerAgency[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
