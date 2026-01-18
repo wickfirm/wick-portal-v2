@@ -24,26 +24,19 @@ export default withAuth(
     const hostname = req.headers.get('host') || '';
     const subdomain = getSubdomain(hostname);
 
-    // No subdomain = main site (marketing, super admin, etc.)
-    if (!subdomain) {
-      // Allow access to marketing pages, login, etc.
-      if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup') || path === '/reset-password') {
-        return NextResponse.next();
-      }
-      
-      // Redirect to main site if no subdomain
-      return NextResponse.redirect(new URL('/', req.url));
-    }
-
-    // ON A SUBDOMAIN - this is a tenant portal
-    
-    // Public routes on tenant subdomain
-    if (path === '/' || path === '/login' || path === '/reset-password') {
+    // Skip auth for NextAuth routes, static files, and public pages
+    if (
+      path.startsWith('/api/auth') ||
+      path === '/login' ||
+      path === '/reset-password' ||
+      path === '/setup' ||
+      path === '/'
+    ) {
       return NextResponse.next();
     }
 
     // API routes need tenant context
-    if (path.startsWith('/api')) {
+    if (path.startsWith('/api') && subdomain) {
       const requestHeaders = new Headers(req.headers);
       requestHeaders.set('x-tenant-slug', subdomain);
       
@@ -75,12 +68,17 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const path = req.nextUrl.pathname;
         
-        // Allow public paths
-        if (path === '/' || path === '/login' || path.startsWith('/api/auth') || path.startsWith('/setup') || path === '/reset-password') {
+        // Allow ALL /api/auth paths without checking token
+        if (path.startsWith('/api/auth')) {
           return true;
         }
         
-        // Require authentication for all other routes
+        // Allow public pages without token
+        if (path === '/' || path === '/login' || path === '/reset-password' || path === '/setup') {
+          return true;
+        }
+        
+        // Everything else requires auth
         return !!token;
       },
     },
@@ -89,6 +87,7 @@ export default withAuth(
 
 export const config = {
   matcher: [
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    // Don't run middleware on static files
+    '/((?!_next/static|_next/image|favicon.ico).*)',
   ],
 };
