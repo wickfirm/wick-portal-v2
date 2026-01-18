@@ -39,7 +39,7 @@ export async function GET() {
     const recentSignups = users.slice(0, 10).map(u => ({
       email: u.email,
       name: u.name || "Unknown",
-      agency: u.agency?.name || "No agency",
+      agency: u.agency?.name || "No tenant",
       createdAt: u.createdAt,
     }));
 
