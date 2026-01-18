@@ -410,7 +410,7 @@ model ClientTeamMember {
   @@map("client_team_members")
 }
 
-// ============ TIME TRACKING (NEW) ============
+// ============ TIME TRACKING ============
 
 model TimeEntry {
   id          String     @id @default(cuid())
@@ -450,6 +450,7 @@ model ActiveTimer {
   @@map("active_timers")
 }
 
+// ============ MULTI-TENANT (OMNIXIA) ============
 
 model Agency {
   id        String   @id @default(cuid())
@@ -471,6 +472,7 @@ model Agency {
   leads                    Lead[]
   bookings                 Booking[]
   conversationAnalytics    ConversationAnalytics[]
+  clientAgencies           ClientAgency[]
   
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
