@@ -1,6 +1,5 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 
 function getSubdomain(hostname: string): string | null {
   const host = hostname.split(':')[0];
@@ -19,7 +18,7 @@ function getSubdomain(hostname: string): string | null {
 }
 
 export default withAuth(
-  function middleware(req: NextRequest) {
+  function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
     const hostname = req.headers.get('host') || '';
