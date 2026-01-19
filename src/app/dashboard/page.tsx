@@ -10,15 +10,22 @@ import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
+  const startTime = Date.now();
+  console.log('[DASHBOARD] Start');
+  
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
   const user = session.user as any;
+
+  console.log('[DASHBOARD] Got session:', Date.now() - startTime, 'ms');
 
   // Get current user's agencyId
   const currentUser = await prisma.user.findUnique({
     where: { email: user.email },
     select: { agencyId: true, role: true, id: true },
   });
+
+  console.log('[DASHBOARD] Got current user:', Date.now() - startTime, 'ms');
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -53,6 +60,8 @@ export default async function DashboardPage() {
     clientFilter = { id: { in: clientIds } };
   }
 
+  console.log('[DASHBOARD] Built filters:', Date.now() - startTime, 'ms');
+
   // Get PROJECT filter using new helper function
   const projectFilter = await getProjectFilterForUser(
     currentUser!.id,
@@ -60,6 +69,9 @@ export default async function DashboardPage() {
     currentUser!.agencyId
   );
 
+  console.log('[DASHBOARD] Got project filter:', Date.now() - startTime, 'ms');
+
+  const queryStart = Date.now();
   const [
     clientCount, 
     projectCount, 
@@ -93,7 +105,7 @@ export default async function DashboardPage() {
         agencyId: currentUser?.agencyId 
       } 
     }),
-    // Tasks for accessible projects only (severely limited to prevent slow loads)
+    // Tasks for accessible projects only
     prisma.clientTask.findMany({
       where: { 
         status: { not: "COMPLETED" },
@@ -109,9 +121,9 @@ export default async function DashboardPage() {
         },
       },
       orderBy: { dueDate: "asc" },
-      take: 20, // Minimal for performance
+      take: 20,
     }),
-    // Recent projects (optimized - only select what's displayed)
+    // Recent projects
     prisma.project.findMany({
       where: projectFilter,
       take: 5,
@@ -135,7 +147,7 @@ export default async function DashboardPage() {
         }
       },
     }),
-    // Recent accessible clients (optimized - only select what's displayed)
+    // Recent accessible clients
     prisma.client.findMany({
       where: clientFilter,
       take: 5,
@@ -149,6 +161,9 @@ export default async function DashboardPage() {
       },
     }),
   ]);
+
+  console.log('[DASHBOARD] Queries completed:', Date.now() - queryStart, 'ms');
+  console.log('[DASHBOARD] Total time:', Date.now() - startTime, 'ms');
 
   // Task categorization
   const overdueTasks = allTasks.filter(task => 
