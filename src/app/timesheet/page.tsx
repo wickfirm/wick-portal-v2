@@ -11,11 +11,10 @@ import { theme } from "@/lib/theme";
 
 type TimesheetData = {
   timeEntries: any[];
-  projects: any[];
+  clients: any[];
   weekDates: string[];
   weekStart: string;
   weekEnd: string;
-  weeklyTotal: number;
   viewUser: any;
   teamMembers: any[];
   canViewOthers: boolean;
@@ -28,14 +27,10 @@ function TimesheetPageSkeleton() {
       <Header />
       
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>
             <div style={{ width: 200, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
             <div style={{ width: 300, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
-          </div>
-          <div style={{ display: "flex", gap: 12 }}>
-            <div style={{ width: 120, height: 44, background: theme.colors.bgSecondary, borderRadius: 8 }} />
-            <div style={{ width: 120, height: 44, background: theme.colors.bgSecondary, borderRadius: 8 }} />
           </div>
         </div>
 
@@ -146,29 +141,75 @@ export default function TimesheetPage() {
     return <TimesheetError error={new Error("No data received")} retry={() => refetch()} />;
   }
 
-  const { weekDates, weekStart, weekEnd, weeklyTotal, viewUser, teamMembers, canViewOthers, timeEntries, projects } = data;
+  const { weekDates, weekStart, weekEnd, viewUser, teamMembers, canViewOthers, timeEntries, clients } = data;
 
   // Format week range for display
   const startDate = new Date(weekStart);
   const endDate = new Date(weekEnd);
-  const weekRange = `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
+  const formatWeekRange = (start: Date, end: Date) => {
+    const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+    return `${start.toLocaleDateString("en-US", options)} - ${end.toLocaleDateString("en-US", { ...options, year: "numeric" })}`;
+  };
+
+  // Group entries by client/project/task
+  const entriesByRow: Record<string, any> = {};
+  timeEntries.forEach((entry: any) => {
+    const rowKey = `${entry.project.client.id}-${entry.project.id}-${entry.task?.id || 'notask'}`;
+    
+    if (!entriesByRow[rowKey]) {
+      entriesByRow[rowKey] = {
+        client: entry.project.client,
+        project: entry.project,
+        task: entry.task || { id: 'notask', name: 'No Task' },
+        entries: {},
+        total: 0,
+      };
+    }
+    
+    const dateKey = new Date(entry.date).toISOString().split("T")[0];
+    if (!entriesByRow[rowKey].entries[dateKey]) {
+      entriesByRow[rowKey].entries[dateKey] = [];
+    }
+    entriesByRow[rowKey].entries[dateKey].push({
+      id: entry.id,
+      duration: entry.duration,
+      description: entry.description,
+      billable: entry.billable || true,
+      source: entry.source || 'MANUAL',
+    });
+    entriesByRow[rowKey].total += entry.duration;
+  });
+
+  const serializedEntries = Object.entries(entriesByRow).map(([key, data]) => ({
+    key,
+    client: data.client,
+    project: data.project,
+    task: data.task,
+    entries: data.entries,
+    total: data.total,
+  }));
 
   // Navigation functions
   const goToPreviousWeek = () => {
     const prevWeek = new Date(startDate);
     prevWeek.setDate(prevWeek.getDate() - 7);
-    setWeek(prevWeek.toISOString().split("T")[0]);
+    const newUrl = `/timesheet?week=${prevWeek.toISOString().split("T")[0]}${userId ? "&userId=" + userId : ""}`;
+    router.push(newUrl);
   };
 
   const goToNextWeek = () => {
     const nextWeek = new Date(startDate);
     nextWeek.setDate(nextWeek.getDate() + 7);
-    setWeek(nextWeek.toISOString().split("T")[0]);
+    const newUrl = `/timesheet?week=${nextWeek.toISOString().split("T")[0]}${userId ? "&userId=" + userId : ""}`;
+    router.push(newUrl);
   };
 
   const goToCurrentWeek = () => {
-    setWeek("");
+    const newUrl = `/timesheet${userId ? "?userId=" + userId : ""}`;
+    router.push(newUrl);
   };
+
+  const currentUser = session.user as any;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
@@ -176,118 +217,117 @@ export default function TimesheetPage() {
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
         {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
-              Timesheet
+            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 4 }}>
+              Weekly Timesheet
             </h1>
-            <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
-              {viewUser?.name || "Your"} timesheet for {weekRange}
-            </p>
-          </div>
-
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            {canViewOthers && teamMembers.length > 0 && (
-              <select
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                style={{
-                  padding: "12px 16px",
-                  borderRadius: theme.borderRadius.md,
-                  border: "1px solid " + theme.colors.borderLight,
-                  background: theme.colors.bgSecondary,
-                  color: theme.colors.textPrimary,
-                  fontSize: 14,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                }}
-              >
-                <option value="">My Timesheet</option>
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name}
-                  </option>
-                ))}
-              </select>
+            {viewUser && userId && userId !== currentUser.id && (
+              <p style={{ fontSize: 14, color: theme.colors.textSecondary, margin: 0 }}>
+                Viewing: {viewUser.name || viewUser.email}
+              </p>
             )}
-
-            <button
-              onClick={goToPreviousWeek}
-              style={{
-                padding: "12px 20px",
-                borderRadius: theme.borderRadius.md,
-                border: "1px solid " + theme.colors.borderLight,
-                background: theme.colors.bgSecondary,
-                color: theme.colors.textPrimary,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              ← Previous
-            </button>
-
-            <button
-              onClick={goToCurrentWeek}
-              style={{
-                padding: "12px 20px",
-                borderRadius: theme.borderRadius.md,
-                border: "1px solid " + theme.colors.borderLight,
-                background: theme.colors.bgSecondary,
-                color: theme.colors.textPrimary,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              Today
-            </button>
-
-            <button
-              onClick={goToNextWeek}
-              style={{
-                padding: "12px 20px",
-                borderRadius: theme.borderRadius.md,
-                border: "1px solid " + theme.colors.borderLight,
-                background: theme.colors.bgSecondary,
-                color: theme.colors.textPrimary,
-                fontSize: 14,
-                fontWeight: 500,
-                cursor: "pointer",
-              }}
-            >
-              Next →
-            </button>
           </div>
+
+          {canViewOthers && teamMembers.length > 0 && (
+            <select
+              value={userId}
+              onChange={(e) => {
+                const newUserId = e.target.value;
+                const newUrl = `/timesheet${week ? `?week=${week}` : ""}${newUserId ? `${week ? "&" : "?"}userId=${newUserId}` : ""}`;
+                router.push(newUrl);
+              }}
+              style={{
+                padding: "10px 16px",
+                borderRadius: theme.borderRadius.sm,
+                border: "1px solid " + theme.colors.borderLight,
+                background: theme.colors.bgSecondary,
+                color: theme.colors.textPrimary,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: "pointer",
+              }}
+            >
+              <option value="">My Timesheet</option>
+              {teamMembers.map((member: any) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
-        {/* Weekly Total */}
-        <div style={{ 
-          background: theme.colors.bgSecondary, 
-          borderRadius: theme.borderRadius.lg, 
-          border: "1px solid " + theme.colors.borderLight, 
-          padding: 20, 
-          marginBottom: 24,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
-          <div>
-            <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginBottom: 4 }}>Weekly Total</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{weeklyTotal.toFixed(2)} hrs</div>
+        {/* Week Navigation */}
+        <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 24 }}>
+          <button
+            onClick={goToPreviousWeek}
+            style={{
+              padding: "8px 12px",
+              borderRadius: theme.borderRadius.sm,
+              border: "1px solid " + theme.colors.borderLight,
+              background: theme.colors.bgPrimary,
+              color: theme.colors.textSecondary,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            ← Previous
+          </button>
+          
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 8, 
+            padding: "8px 16px", 
+            background: theme.colors.bgTertiary, 
+            borderRadius: theme.borderRadius.md 
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 500 }}>📅</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>
+              {formatWeekRange(startDate, endDate)}
+            </span>
           </div>
-          <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
-            {weekDates.map(d => new Date(d).toLocaleDateString("en-US", { weekday: "short" })).join(" • ")}
-          </div>
+          
+          <button
+            onClick={goToNextWeek}
+            style={{
+              padding: "8px 12px",
+              borderRadius: theme.borderRadius.sm,
+              border: "1px solid " + theme.colors.borderLight,
+              background: theme.colors.bgPrimary,
+              color: theme.colors.textSecondary,
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Next →
+          </button>
+
+          <button
+            onClick={goToCurrentWeek}
+            style={{
+              padding: "8px 16px",
+              borderRadius: theme.borderRadius.sm,
+              background: theme.colors.infoBg,
+              color: theme.colors.info,
+              border: "none",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+            }}
+          >
+            Today
+          </button>
         </div>
 
         {/* Timesheet Grid */}
         <TimesheetGrid
-          timeEntries={timeEntries}
-          projects={projects}
-          weekDates={weekDates.map(d => new Date(d))}
-          weekStart={startDate}
-          weekEnd={endDate}
+          weekDates={weekDates}
+          entries={serializedEntries}
+          clients={clients}
+          userId={userId || currentUser.id}
+          canEdit={!userId || userId === currentUser.id || canViewOthers}
         />
       </main>
     </div>
