@@ -153,6 +153,20 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Create project assignments if provided
+    if (data.projectIds && data.projectIds.length > 0) {
+      await prisma.projectAssignment.createMany({
+        data: data.projectIds.map((projectId: string) => ({
+          id: `pa-${newUser.id}-${projectId}-${Date.now()}`,
+          userId: newUser.id,
+          projectId,
+          role: 'MEMBER',
+          createdAt: new Date(),
+        })),
+        skipDuplicates: true,
+      });
+    }
+
     return NextResponse.json(newUser);
   } catch (error) {
     console.error("Failed to create user:", error);
