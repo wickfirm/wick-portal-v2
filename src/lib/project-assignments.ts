@@ -153,8 +153,10 @@ export async function assignUserToProjects(
   if (projectIds.length > 0) {
     await prisma.projectAssignment.createMany({
       data: projectIds.map(projectId => ({
+        id: `pa-${userId}-${projectId}`,
         userId,
         projectId,
+        createdAt: new Date(),
       }))
     });
   }
