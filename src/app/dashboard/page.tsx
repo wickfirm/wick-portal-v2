@@ -93,7 +93,7 @@ export default async function DashboardPage() {
         agencyId: currentUser?.agencyId 
       } 
     }),
-    // Tasks for accessible projects only
+    // Tasks for accessible projects only (limit to prevent large payload)
     prisma.clientTask.findMany({
       where: { 
         status: { not: "COMPLETED" },
@@ -103,6 +103,7 @@ export default async function DashboardPage() {
         client: { select: { id: true, name: true } },
       },
       orderBy: { dueDate: "asc" },
+      take: 100, // Limit to prevent slow page loads
     }),
     // Recent projects
     prisma.project.findMany({
