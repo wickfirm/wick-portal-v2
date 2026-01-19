@@ -17,7 +17,7 @@ type Task = {
   };
   assignee: {
     id: string;
-    name: string;
+    name: string | null;
   } | null;
 };
 
