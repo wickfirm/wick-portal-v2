@@ -93,7 +93,7 @@ export async function GET(request: Request) {
       select: {
         id: true,
         date: true,
-        hours: true,
+        duration: true, // Duration in seconds
         description: true,
         project: {
           select: {
@@ -132,8 +132,8 @@ export async function GET(request: Request) {
       orderBy: { name: "asc" },
     });
 
-    // Calculate weekly total
-    const weeklyTotal = timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
+    // Calculate weekly total (convert seconds to hours)
+    const weeklyTotal = timeEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
 
     return NextResponse.json({
       timeEntries,
