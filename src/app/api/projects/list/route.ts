@@ -42,6 +42,7 @@ export async function GET() {
         name: true,
         description: true,
         status: true,
+        serviceType: true,
         startDate: true,
         endDate: true,
         createdAt: true,
