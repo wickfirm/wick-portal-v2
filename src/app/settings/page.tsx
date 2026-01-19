@@ -36,7 +36,7 @@ export default async function SettingsPage() {
       href: "/settings/rates",
       icon: "💰",
       color: theme.colors.success,
-      roles: ["SUPER_ADMIN", "ADMIN"],
+      roles: ["SUPER_ADMIN"],
     },
     {
       title: "Stage Templates",
