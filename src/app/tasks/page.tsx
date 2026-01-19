@@ -46,7 +46,7 @@ export default async function TasksPage() {
   }
 
   // Fetch all tasks with minimal fields for list view
-  const tasks = await prisma.task.findMany({
+  const tasks = await prisma.tasks.findMany({
     where: taskFilter,
     select: {
       id: true,
