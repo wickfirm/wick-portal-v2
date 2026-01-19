@@ -93,17 +93,22 @@ export default async function DashboardPage() {
         agencyId: currentUser?.agencyId 
       } 
     }),
-    // Tasks for accessible projects only (limit to prevent large payload)
+    // Tasks for accessible projects only (severely limited to prevent slow loads)
     prisma.clientTask.findMany({
       where: { 
         status: { not: "COMPLETED" },
         project: projectFilter,
       },
-      include: {
-        client: { select: { id: true, name: true } },
+      select: {
+        id: true,
+        dueDate: true,
+        priority: true,
+        client: { 
+          select: { id: true, name: true }
+        },
       },
       orderBy: { dueDate: "asc" },
-      take: 100, // Limit to prevent slow page loads
+      take: 20, // Minimal for performance
     }),
     // Recent projects (optimized - only select what's displayed)
     prisma.project.findMany({
