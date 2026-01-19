@@ -156,6 +156,7 @@ export async function assignUserToProjects(
         id: `pa-${userId}-${projectId}`,
         userId,
         projectId,
+        role: 'MEMBER', // Default role for project assignments
         createdAt: new Date(),
       }))
     });
