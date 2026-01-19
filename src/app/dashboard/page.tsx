@@ -352,7 +352,7 @@ export default async function DashboardPage() {
             ) : (
               <div>
                 {overdueTasks.slice(0, 5).map((task, idx) => (
-                  <Link key={task.id} href={"/clients/" + task.clientId + "/tasks"} style={{ textDecoration: "none", color: "inherit" }}>
+                  <Link key={task.id} href={"/clients/" + task.client.id + "/tasks"} style={{ textDecoration: "none", color: "inherit" }}>
                     <div style={{ 
                       padding: "12px 20px", 
                       borderBottom: idx < Math.min(overdueTasks.length, 5) - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
@@ -400,7 +400,7 @@ export default async function DashboardPage() {
             ) : (
               <div>
                 {dueTodayTasks.slice(0, 5).map((task, idx) => (
-                  <Link key={task.id} href={"/clients/" + task.clientId + "/tasks"} style={{ textDecoration: "none", color: "inherit" }}>
+                  <Link key={task.id} href={"/clients/" + task.client.id + "/tasks"} style={{ textDecoration: "none", color: "inherit" }}>
                     <div style={{ 
                       padding: "12px 20px", 
                       borderBottom: idx < Math.min(dueTodayTasks.length, 5) - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
