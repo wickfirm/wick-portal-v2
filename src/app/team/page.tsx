@@ -60,6 +60,7 @@ export default function TeamPage() {
     role: "MEMBER",
     agencyId: "",
     clientIds: [] as string[],
+    projectIds: [] as string[],
   });
   const [adding, setAdding] = useState(false);
 
@@ -70,8 +71,13 @@ export default function TeamPage() {
     role: "",
     agencyId: "",
     clientIds: [] as string[],
+    projectIds: [] as string[],
   });
   const [saving, setSaving] = useState(false);
+
+  // Projects state
+  const [availableProjects, setAvailableProjects] = useState<any[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   const isClientRole = currentUser?.role === "CLIENT";
   const isExternalPartner = currentUser?.agencyId === null && currentUser?.role !== "PLATFORM_ADMIN";
@@ -87,6 +93,46 @@ export default function TeamPage() {
     if (isExternalPartner) return; // Don't fetch if redirecting
     fetchData();
   }, [isExternalPartner]);
+
+  // Fetch projects when clients are selected (for new user form)
+  useEffect(() => {
+    if (newUser.clientIds.length > 0) {
+      setLoadingProjects(true);
+      const clientIdsParam = newUser.clientIds.map(id => `clientId=${id}`).join('&');
+      fetch(`/api/projects?${clientIdsParam}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableProjects(Array.isArray(data) ? data : []);
+          setLoadingProjects(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch projects:', err);
+          setLoadingProjects(false);
+        });
+    } else {
+      setAvailableProjects([]);
+    }
+  }, [newUser.clientIds]);
+
+  // Fetch projects when clients are selected (for edit form)
+  useEffect(() => {
+    if (editingUser && editForm.clientIds.length > 0) {
+      setLoadingProjects(true);
+      const clientIdsParam = editForm.clientIds.map(id => `clientId=${id}`).join('&');
+      fetch(`/api/projects?${clientIdsParam}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableProjects(Array.isArray(data) ? data : []);
+          setLoadingProjects(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch projects:', err);
+          setLoadingProjects(false);
+        });
+    } else if (editingUser) {
+      setAvailableProjects([]);
+    }
+  }, [editForm.clientIds, editingUser]);
 
   async function fetchData() {
     try {
@@ -122,7 +168,7 @@ export default function TeamPage() {
     });
 
     if (res.ok) {
-      setNewUser({ email: "", name: "", password: "", role: "MEMBER", agencyId: "", clientIds: [] });
+      setNewUser({ email: "", name: "", password: "", role: "MEMBER", agencyId: "", clientIds: [], projectIds: [] });
       setShowForm(false);
       fetchData();
     } else {
@@ -132,14 +178,46 @@ export default function TeamPage() {
     setAdding(false);
   }
 
-  function openEditModal(user: User) {
+  async function openEditModal(user: User) {
     setEditingUser(user);
     setEditForm({
       name: user.name || "",
       role: user.role,
       agencyId: user.agencyId || "",
       clientIds: user.clientAssignments?.map(ca => ca.client.id) || [],
+      projectIds: [],
     });
+    
+    // Fetch user's project assignments
+    try {
+      const res = await fetch(`/api/users/${user.id}/project-assignments`);
+      if (res.ok) {
+        const projectAssignments = await res.json();
+        setEditForm(prev => ({
+          ...prev,
+          projectIds: projectAssignments.map((pa: any) => pa.projectId)
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to fetch project assignments:', error);
+    }
+    
+    // Fetch projects for assigned clients
+    const clientIds = user.clientAssignments?.map(ca => ca.client.id) || [];
+    if (clientIds.length > 0) {
+      setLoadingProjects(true);
+      const clientIdsParam = clientIds.map(id => `clientId=${id}`).join('&');
+      fetch(`/api/projects?${clientIdsParam}`)
+        .then(res => res.json())
+        .then(data => {
+          setAvailableProjects(Array.isArray(data) ? data : []);
+          setLoadingProjects(false);
+        })
+        .catch(err => {
+          console.error('Failed to fetch projects:', err);
+          setLoadingProjects(false);
+        });
+    }
   }
 
   async function saveEdit() {
@@ -189,6 +267,22 @@ export default function TeamPage() {
         setNewUser({ ...newUser, clientIds: newUser.clientIds.filter(id => id !== clientId) });
       } else {
         setNewUser({ ...newUser, clientIds: [...newUser.clientIds, clientId] });
+      }
+    }
+  }
+
+  function toggleProjectSelection(projectId: string, isEdit = false) {
+    if (isEdit) {
+      if (editForm.projectIds.includes(projectId)) {
+        setEditForm({ ...editForm, projectIds: editForm.projectIds.filter(id => id !== projectId) });
+      } else {
+        setEditForm({ ...editForm, projectIds: [...editForm.projectIds, projectId] });
+      }
+    } else {
+      if (newUser.projectIds.includes(projectId)) {
+        setNewUser({ ...newUser, projectIds: newUser.projectIds.filter(id => id !== projectId) });
+      } else {
+        setNewUser({ ...newUser, projectIds: [...newUser.projectIds, projectId] });
       }
     }
   }
@@ -364,6 +458,81 @@ export default function TeamPage() {
                   </div>
                 )}
               </div>
+
+              {/* Project Assignments */}
+              {newUser.clientIds.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
+                    Assign to Projects
+                  </label>
+                  {loadingProjects ? (
+                    <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>Loading projects...</div>
+                  ) : (
+                    <div style={{ 
+                      border: "1px solid " + theme.colors.borderMedium, 
+                      borderRadius: 8, 
+                      maxHeight: 200, 
+                      overflow: "auto",
+                      background: theme.colors.bgPrimary,
+                    }}>
+                      {availableProjects.length === 0 ? (
+                        <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No projects available for selected clients</div>
+                      ) : (
+                        (() => {
+                          // Group projects by client
+                          const projectsByClient: Record<string, any[]> = {};
+                          availableProjects.forEach(project => {
+                            if (!projectsByClient[project.clientId]) {
+                              projectsByClient[project.clientId] = [];
+                            }
+                            projectsByClient[project.clientId].push(project);
+                          });
+
+                          return Object.entries(projectsByClient).map(([clientId, projects]) => {
+                            const client = clients.find(c => c.id === clientId);
+                            return (
+                              <div key={clientId} style={{ borderBottom: "1px solid " + theme.colors.borderLight }}>
+                                <div style={{ padding: "8px 12px", background: theme.colors.bgTertiary, fontWeight: 600, fontSize: 13 }}>
+                                  {client?.nickname || client?.name}
+                                </div>
+                                {projects.map(project => (
+                                  <label 
+                                    key={project.id} 
+                                    style={{ 
+                                      display: "flex", 
+                                      alignItems: "center", 
+                                      gap: 10, 
+                                      padding: "8px 12px 8px 24px",
+                                      cursor: "pointer",
+                                      borderBottom: "1px solid " + theme.colors.borderLight,
+                                      background: newUser.projectIds.includes(project.id) ? theme.colors.successBg : "transparent",
+                                    }}
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={newUser.projectIds.includes(project.id)}
+                                      onChange={() => toggleProjectSelection(project.id)}
+                                      style={{ cursor: "pointer" }}
+                                    />
+                                    <span style={{ fontSize: 13 }}>
+                                      {project.name}
+                                    </span>
+                                  </label>
+                                ))}
+                              </div>
+                            );
+                          });
+                        })()
+                      )}
+                    </div>
+                  )}
+                  {newUser.projectIds.length > 0 && (
+                    <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>
+                      {newUser.projectIds.length} project(s) selected
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div style={{ display: "flex", gap: 12 }}>
                 <button type="submit" disabled={adding} style={{
@@ -742,6 +911,81 @@ export default function TeamPage() {
                 </div>
               )}
             </div>
+
+            {/* Project Assignments */}
+            {editForm.clientIds.length > 0 && (
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
+                  Assign to Projects
+                </label>
+                {loadingProjects ? (
+                  <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>Loading projects...</div>
+                ) : (
+                  <div style={{ 
+                    border: "1px solid " + theme.colors.borderMedium, 
+                    borderRadius: 8, 
+                    maxHeight: 200, 
+                    overflow: "auto",
+                    background: theme.colors.bgPrimary,
+                  }}>
+                    {availableProjects.length === 0 ? (
+                      <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No projects available for selected clients</div>
+                    ) : (
+                      (() => {
+                        // Group projects by client
+                        const projectsByClient: Record<string, any[]> = {};
+                        availableProjects.forEach(project => {
+                          if (!projectsByClient[project.clientId]) {
+                            projectsByClient[project.clientId] = [];
+                          }
+                          projectsByClient[project.clientId].push(project);
+                        });
+
+                        return Object.entries(projectsByClient).map(([clientId, projects]) => {
+                          const client = clients.find(c => c.id === clientId);
+                          return (
+                            <div key={clientId} style={{ borderBottom: "1px solid " + theme.colors.borderLight }}>
+                              <div style={{ padding: "8px 12px", background: theme.colors.bgTertiary, fontWeight: 600, fontSize: 13 }}>
+                                {client?.nickname || client?.name}
+                              </div>
+                              {projects.map(project => (
+                                <label 
+                                  key={project.id} 
+                                  style={{ 
+                                    display: "flex", 
+                                    alignItems: "center", 
+                                    gap: 10, 
+                                    padding: "8px 12px 8px 24px",
+                                    cursor: "pointer",
+                                    borderBottom: "1px solid " + theme.colors.borderLight,
+                                    background: editForm.projectIds.includes(project.id) ? theme.colors.successBg : "transparent",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={editForm.projectIds.includes(project.id)}
+                                    onChange={() => toggleProjectSelection(project.id, true)}
+                                    style={{ cursor: "pointer" }}
+                                  />
+                                  <span style={{ fontSize: 13 }}>
+                                    {project.name}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
+                          );
+                        });
+                      })()
+                    )}
+                  </div>
+                )}
+                {editForm.projectIds.length > 0 && (
+                  <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>
+                    {editForm.projectIds.length} project(s) selected
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 12 }}>
               <button
