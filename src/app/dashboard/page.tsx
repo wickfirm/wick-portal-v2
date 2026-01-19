@@ -101,6 +101,7 @@ export default async function DashboardPage() {
       },
       select: {
         id: true,
+        name: true,
         dueDate: true,
         priority: true,
         client: { 
