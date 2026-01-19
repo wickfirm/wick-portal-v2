@@ -95,6 +95,18 @@ export async function GET(request: Request) {
         date: true,
         duration: true, // Duration in seconds
         description: true,
+        billable: true,
+        source: true,
+        createdAt: true,
+        projectId: true,
+        taskId: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+          },
+        },
         project: {
           select: {
             id: true,
@@ -103,45 +115,61 @@ export async function GET(request: Request) {
               select: {
                 id: true,
                 name: true,
+                nickname: true,
               },
             },
           },
         },
-      },
-      orderBy: { date: "asc" },
-    });
-
-    // Get user's projects for the timesheet grid
-    const projects = await prisma.project.findMany({
-      where: {
-        OR: [
-          { client: { teamMembers: { some: { userId: viewUserId } } } },
-          { assignments: { some: { userId: viewUserId } } },
-        ],
-      },
-      select: {
-        id: true,
-        name: true,
-        client: {
+        task: {
           select: {
             id: true,
             name: true,
           },
         },
       },
+      orderBy: [{ date: "asc" }, { createdAt: "asc" }],
+    });
+
+    // Fetch clients based on role
+    let clientFilter: any = { status: { in: ["ACTIVE", "ONBOARDING"] } };
+    
+    if (dbUser.role === "ADMIN" || dbUser.role === "SUPER_ADMIN") {
+      // ADMINs see all clients in their agency
+      if (dbUser.agencyId) {
+        const agencyTeamMembers = await prisma.user.findMany({
+          where: { agencyId: dbUser.agencyId },
+          select: { id: true },
+        });
+        const teamMemberIds = agencyTeamMembers.map(u => u.id);
+        
+        clientFilter.teamMembers = {
+          some: {
+            userId: { in: teamMemberIds }
+          }
+        };
+      }
+    } else if (dbUser.role === "MEMBER") {
+      // MEMBERs see only their assigned clients
+      const assignments = await prisma.clientTeamMember.findMany({
+        where: { userId: dbUser.id },
+        select: { clientId: true },
+      });
+      const clientIds = assignments.map(a => a.clientId);
+      clientFilter.id = { in: clientIds };
+    }
+
+    const clients = await prisma.client.findMany({
+      where: clientFilter,
+      select: { id: true, name: true, nickname: true },
       orderBy: { name: "asc" },
     });
 
-    // Calculate weekly total (convert seconds to hours)
-    const weeklyTotal = timeEntries.reduce((sum, entry) => sum + (entry.duration / 3600), 0);
-
     return NextResponse.json({
       timeEntries,
-      projects,
+      clients,
       weekDates: weekDates.map(d => d.toISOString()),
       weekStart: weekStart.toISOString(),
       weekEnd: weekEnd.toISOString(),
-      weeklyTotal,
       viewUser,
       teamMembers,
       canViewOthers,
