@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProjectFilterForUser } from "@/lib/project-assignments";
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -19,52 +20,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  // Get clientId from query params (used by TimerWidget)
+  // Get clientId from query params (used by TimerWidget/Timesheet)
   const { searchParams } = new URL(request.url);
   const clientId = searchParams.get('clientId');
 
-  // Build where clause based on role
-  let where: any = {};
+  // Get base project filter
+  let where = await getProjectFilterForUser(
+    currentUser.id,
+    currentUser.role,
+    currentUser.agencyId
+  );
 
-  // If clientId is specified, filter by that
+  // If clientId is specified, add it to the filter
   if (clientId) {
-    where.clientId = clientId;
-  }
-
-  // Apply role-based filtering
-  if (currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN") {
-    // ADMINs see all projects in their agency
-    if (currentUser.agencyId) {
-      const agencyTeamMembers = await prisma.user.findMany({
-        where: { agencyId: currentUser.agencyId },
-        select: { id: true },
-      });
-      const teamMemberIds = agencyTeamMembers.map(u => u.id);
-      
-      where.client = {
-        teamMembers: {
-          some: {
-            userId: { in: teamMemberIds }
-          }
-        }
-      };
-    }
-  } else if (currentUser.role === "MEMBER") {
-    // MEMBERs see only projects for their assigned clients
-    const assignments = await prisma.clientTeamMember.findMany({
-      where: { userId: currentUser.id },
-      select: { clientId: true },
-    });
-    const clientIds = assignments.map(a => a.clientId);
-    
-    // If clientId specified, make sure it's in their assigned clients
-    if (clientId) {
-      if (!clientIds.includes(clientId)) {
-        return NextResponse.json([]); // Not assigned to this client
-      }
-    } else {
-      where.clientId = { in: clientIds };
-    }
+    where = { ...where, clientId };
   }
 
   const projects = await prisma.project.findMany({
