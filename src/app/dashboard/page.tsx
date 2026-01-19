@@ -105,18 +105,42 @@ export default async function DashboardPage() {
       orderBy: { dueDate: "asc" },
       take: 100, // Limit to prevent slow page loads
     }),
-    // Recent projects
+    // Recent projects (optimized - only select what's displayed)
     prisma.project.findMany({
       where: projectFilter,
       take: 5,
       orderBy: { updatedAt: "desc" },
-      include: { client: true, stages: true },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+          }
+        },
+        stages: {
+          select: {
+            id: true,
+            isCompleted: true,
+          }
+        }
+      },
     }),
-    // Recent accessible clients
+    // Recent accessible clients (optimized - only select what's displayed)
     prisma.client.findMany({
       where: clientFilter,
       take: 5,
       orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        nickname: true,
+        status: true,
+        industry: true,
+      },
     }),
   ]);
 
