@@ -28,16 +28,36 @@ export default async function TasksPage() {
 
   if (!currentUser) redirect("/login");
 
-  // Get project filter for user
-  const projectFilter = await getProjectFilterForUser(
-    currentUser.id,
-    currentUser.role,
-    currentUser.agencyId
-  );
+  // Build task filter based on role  
+  // Get accessible client IDs
+  let clientIds: string[] = [];
+  
+  if (currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN") {
+    // Get all clients for agency
+    const agencyClients = await prisma.client.findMany({
+      where: {
+        teamMembers: {
+          some: {
+            user: {
+              agencyId: currentUser.agencyId
+            }
+          }
+        }
+      },
+      select: { id: true }
+    });
+    clientIds = agencyClients.map(c => c.id);
+  } else {
+    // Get assigned clients for member
+    const assignments = await prisma.clientTeamMember.findMany({
+      where: { userId: currentUser.id },
+      select: { clientId: true },
+    });
+    clientIds = assignments.map(a => a.clientId);
+  }
 
-  // Build task filter based on role
   let taskFilter: any = {
-    project: projectFilter,
+    clientId: { in: clientIds }
   };
 
   // For MEMBERS, only show tasks assigned to them
@@ -46,25 +66,19 @@ export default async function TasksPage() {
   }
 
   // Fetch all tasks with minimal fields for list view
-  const tasks = await prisma.tasks.findMany({
+  const tasks = await prisma.clientTask.findMany({
     where: taskFilter,
     select: {
       id: true,
-      title: true,
+      name: true,
       status: true,
       priority: true,
       dueDate: true,
-      completedAt: true,
-      project: {
+      projectId: true,
+      client: {
         select: {
           id: true,
           name: true,
-          client: {
-            select: {
-              id: true,
-              name: true,
-            }
-          }
         }
       },
       assignee: {
@@ -86,9 +100,7 @@ export default async function TasksPage() {
     // Get accessible clients
     prisma.client.findMany({
       where: {
-        projects: {
-          some: projectFilter
-        }
+        id: { in: clientIds }
       },
       select: {
         id: true,
@@ -96,9 +108,11 @@ export default async function TasksPage() {
       },
       orderBy: { name: "asc" },
     }),
-    // Get accessible projects
+    // Get all projects for accessible clients  
     prisma.project.findMany({
-      where: projectFilter,
+      where: {
+        clientId: { in: clientIds }
+      },
       select: {
         id: true,
         name: true,
