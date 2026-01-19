@@ -16,6 +16,15 @@ interface TeamMember {
     id: string;
     client: { id: string; name: string; nickname: string | null };
   }[];
+  projectAssignments: {
+    id: string;
+    project: {
+      id: string;
+      name: string;
+      serviceType: string;
+      client: { id: string; name: string; nickname: string | null };
+    };
+  }[];
   assignedTasks: {
     id: string;
     name: string;
@@ -36,9 +45,11 @@ interface TeamMember {
 
 interface Props {
   member: TeamMember;
+  currentUserRole: string;
+  canEdit: boolean;
 }
 
-export default function TeamMemberView({ member }: Props) {
+export default function TeamMemberView({ member, currentUserRole, canEdit }: Props) {
   // Calculate time stats
   const now = new Date();
   const startOfWeek = new Date(now);
@@ -78,22 +89,17 @@ export default function TeamMemberView({ member }: Props) {
     other: member.assignedTasks.filter(t => ["ON_HOLD", "BLOCKED", "IN_REVIEW", "FUTURE_PLAN"].includes(t.status)),
   };
 
-  // Get unique projects
-  const projectsMap = new Map();
-  member.assignedTasks.forEach(task => {
-    if (task.project && !projectsMap.has(task.project.id)) {
-      projectsMap.set(task.project.id, {
-        ...task.project,
-        client: task.client,
-        taskCount: 0,
-      });
-    }
-    if (task.project) {
-      const p = projectsMap.get(task.project.id);
-      p.taskCount++;
-    }
-  });
-  const projects = Array.from(projectsMap.values());
+  // Get unique projects from project assignments
+  const projects = member.projectAssignments.map(pa => ({
+    id: pa.project.id,
+    name: pa.project.name,
+    serviceType: pa.project.serviceType,
+    client: pa.project.client,
+    taskCount: member.assignedTasks.filter(t => t.project?.id === pa.project.id).length,
+  }));
+
+  // Only show rates to SUPER_ADMIN
+  const canViewRates = currentUserRole === "SUPER_ADMIN";
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-US", {
@@ -184,16 +190,45 @@ export default function TeamMemberView({ member }: Props) {
             </div>
           </div>
 
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Rates</div>
-            <div style={{ fontSize: 14 }}>
-              <span style={{ color: theme.colors.textSecondary }}>Cost:</span>{" "}
-              <strong>{hourlyRate ? formatCurrency(hourlyRate) + "/hr" : "—"}</strong>
-            </div>
-            <div style={{ fontSize: 14 }}>
-              <span style={{ color: theme.colors.textSecondary }}>Bill:</span>{" "}
-              <strong style={{ color: theme.colors.success }}>{billRate ? formatCurrency(billRate) + "/hr" : "—"}</strong>
-            </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, alignItems: "flex-end" }}>
+            {canEdit && (
+              <Link
+                href={`/team`}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: theme.borderRadius.md,
+                  background: theme.colors.bgTertiary,
+                  color: theme.colors.textSecondary,
+                  textDecoration: "none",
+                  fontWeight: 500,
+                  fontSize: 13,
+                  border: "1px solid " + theme.colors.borderMedium,
+                  cursor: "pointer",
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  window.history.back();
+                  // Trigger edit modal for this user (would need state management)
+                  alert("Edit functionality: Navigate to Team page and click Edit on this user");
+                }}
+              >
+                Edit Member
+              </Link>
+            )}
+            
+            {canViewRates && (
+              <div style={{ textAlign: "right" }}>
+                <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Rates</div>
+                <div style={{ fontSize: 14 }}>
+                  <span style={{ color: theme.colors.textSecondary }}>Cost:</span>{" "}
+                  <strong>{hourlyRate ? formatCurrency(hourlyRate) + "/hr" : "—"}</strong>
+                </div>
+                <div style={{ fontSize: 14 }}>
+                  <span style={{ color: theme.colors.textSecondary }}>Bill:</span>{" "}
+                  <strong style={{ color: theme.colors.success }}>{billRate ? formatCurrency(billRate) + "/hr" : "—"}</strong>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -213,9 +248,11 @@ export default function TeamMemberView({ member }: Props) {
           }}>
             <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>This Week</div>
             <div style={{ fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{formatHours(weekSeconds)}</div>
-            <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-              Cost: {formatCurrency(weekCost)} • Bill: {formatCurrency(weekBillable)}
-            </div>
+            {canViewRates && (
+              <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                Cost: {formatCurrency(weekCost)} • Bill: {formatCurrency(weekBillable)}
+              </div>
+            )}
           </div>
 
           {/* This Month */}
@@ -227,9 +264,11 @@ export default function TeamMemberView({ member }: Props) {
           }}>
             <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>This Month</div>
             <div style={{ fontSize: 24, fontWeight: 600, marginBottom: 4 }}>{formatHours(monthSeconds)}</div>
-            <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
-              Cost: {formatCurrency(monthCost)} • Bill: {formatCurrency(monthBillable)}
-            </div>
+            {canViewRates && (
+              <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                Cost: {formatCurrency(monthCost)} • Bill: {formatCurrency(monthBillable)}
+              </div>
+            )}
           </div>
 
           {/* Active Tasks */}
