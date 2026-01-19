@@ -3,17 +3,17 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// GET /api/users/[userId]/project-assignments
+// GET /api/users/[id]/project-assignments
 export async function GET(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const projectAssignments = await prisma.projectAssignment.findMany({
-      where: { userId: params.userId },
+      where: { userId: params.id },
       include: {
         project: {
           include: {
@@ -32,10 +32,10 @@ export async function GET(
   }
 }
 
-// PUT /api/users/[userId]/project-assignments
+// PUT /api/users/[id]/project-assignments
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: { id: string } }
 ) {
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -45,15 +45,15 @@ export async function PUT(
 
     // Delete existing assignments
     await prisma.projectAssignment.deleteMany({
-      where: { userId: params.userId }
+      where: { userId: params.id }
     });
 
     // Create new assignments
     if (projectIds && projectIds.length > 0) {
       await prisma.projectAssignment.createMany({
         data: projectIds.map((projectId: string) => ({
-          id: `pa-${params.userId}-${projectId}-${Date.now()}`,
-          userId: params.userId,
+          id: `pa-${params.id}-${projectId}-${Date.now()}`,
+          userId: params.id,
           projectId,
           role: 'MEMBER',
           createdAt: new Date(),
