@@ -665,6 +665,20 @@ model ConversationAnalytics {
   @@map("conversation_analytics")
 }
 
+model ProjectAssignment {
+  id              String   @id @default(cuid())
+  role            String
+  hoursAllocated  Int?
+  projectId       String
+  userId          String
+  createdAt       DateTime @default(now())
+  
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("project_assignments")
+}
+
 // ============ ENUMS ============
 
 enum ClientStatus {
