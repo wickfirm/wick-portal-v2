@@ -27,6 +27,17 @@ export default async function TeamMemberPage({ params }: { params: { id: string 
           client: true,
         },
       },
+      projectAssignments: {
+        include: {
+          project: {
+            include: {
+              client: {
+                select: { id: true, name: true, nickname: true }
+              }
+            }
+          }
+        }
+      },
       assignedTasks: {
         include: {
           client: true,
@@ -102,7 +113,16 @@ export default async function TeamMemberPage({ params }: { params: { id: string 
         name: entry.task.name,
       },
     })),
+    projectAssignments: member.projectAssignments.map(pa => ({
+      id: pa.id,
+      project: {
+        id: pa.project.id,
+        name: pa.project.name,
+        serviceType: pa.project.serviceType,
+        client: pa.project.client,
+      }
+    })),
   };
 
-  return <TeamMemberView member={serializedMember} />;
+  return <TeamMemberView member={serializedMember} currentUserRole={dbUser.role} canEdit={["ADMIN", "SUPER_ADMIN"].includes(dbUser.role)} />;
 }
