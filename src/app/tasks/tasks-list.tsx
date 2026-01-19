@@ -6,18 +6,14 @@ import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 
 type Task = {
   id: string;
-  title: string;
+  name: string;
   status: string;
   priority: string;
   dueDate: Date | null;
-  completedAt: Date | null;
-  project: {
+  projectId: string | null;
+  client: {
     id: string;
     name: string;
-    client: {
-      id: string;
-      name: string;
-    };
   };
   assignee: {
     id: string;
@@ -64,17 +60,17 @@ export default function TasksList({
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
       // Search filter
-      if (searchQuery && !task.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+      if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
       }
 
       // Client filter
-      if (selectedClient && task.project.client.id !== selectedClient) {
+      if (selectedClient && task.client.id !== selectedClient) {
         return false;
       }
 
       // Project filter
-      if (selectedProject && task.project.id !== selectedProject) {
+      if (selectedProject && task.projectId !== selectedProject) {
         return false;
       }
 
@@ -342,6 +338,7 @@ export default function TasksList({
             <tbody>
               {filteredTasks.map((task, idx) => {
                 const isOverdue = task.dueDate && new Date(task.dueDate) < today && task.status !== "COMPLETED";
+                const taskProject = projects.find(p => p.id === task.projectId);
                 
                 return (
                   <tr
@@ -353,7 +350,7 @@ export default function TasksList({
                   >
                     <td style={{ padding: "16px 24px" }}>
                       <Link
-                        href={`/projects/${task.project.id}?tab=tasks&taskId=${task.id}`}
+                        href={task.projectId ? `/projects/${task.projectId}?tab=tasks` : `/clients/${task.client.id}/tasks`}
                         style={{
                           color: theme.colors.textPrimary,
                           textDecoration: "none",
@@ -361,15 +358,15 @@ export default function TasksList({
                           fontSize: 14,
                         }}
                       >
-                        {task.title}
+                        {task.name}
                       </Link>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
                       <div style={{ fontSize: 13, color: theme.colors.textPrimary }}>
-                        {task.project.client.name}
+                        {task.client.name}
                       </div>
                       <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
-                        {task.project.name}
+                        {taskProject?.name || "No project"}
                       </div>
                     </td>
                     <td style={{ padding: "16px 24px" }}>
