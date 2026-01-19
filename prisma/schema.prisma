@@ -29,6 +29,7 @@ model User {
   hourlyRate  Decimal?  @db.Decimal(10, 2)
   billRate    Decimal?  @db.Decimal(10, 2)
   assignedConversations  Conversation[]
+  projectAssignments ProjectAssignment[]
   assignedLeads          Lead[]  @relation("AssignedLeads")
   bookings               Booking[]  @relation("UserBookings")
   calendarConnected      Boolean @default(false) @map("calendar_connected")
@@ -98,6 +99,7 @@ model Project {
   tasks       ClientTask[]
   resources   ProjectResource[]
   timeEntries TimeEntry[]
+  assignments     ProjectAssignment[]
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   billRate    Decimal?  @db.Decimal(10, 2)
