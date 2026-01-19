@@ -38,13 +38,8 @@ export default function ProjectsList({ projects, isAdmin }: Props) {
 
   const clientGroups = Object.values(projectsByClient);
 
-  // State for expanded clients (all expanded by default)
-  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>(
-    clientGroups.reduce((acc, group) => {
-      acc[group.client.id] = true;
-      return acc;
-    }, {} as Record<string, boolean>)
-  );
+  // State for expanded clients (all collapsed by default)
+  const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
 
   const toggleClient = (clientId: string) => {
     setExpandedClients(prev => ({ ...prev, [clientId]: !prev[clientId] }));
