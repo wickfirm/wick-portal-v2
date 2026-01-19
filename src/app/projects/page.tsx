@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProjectFilterForUser } from "@/lib/project-assignments";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme, STATUS_STYLES } from "@/lib/theme";
@@ -21,38 +22,15 @@ export default async function ProjectsPage() {
 
   const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
 
-  // Build client filter based on role
-  let clientFilter: any = {};
-  
-  if (currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN") {
-    // ADMINs see all projects in their agency
-    if (currentUser.agencyId) {
-      const agencyTeamMembers = await prisma.user.findMany({
-        where: { agencyId: currentUser.agencyId },
-        select: { id: true },
-      });
-      const teamMemberIds = agencyTeamMembers.map(u => u.id);
-      
-      clientFilter = {
-        teamMembers: {
-          some: {
-            userId: { in: teamMemberIds }
-          }
-        }
-      };
-    }
-  } else {
-    // MEMBERs see only projects for their assigned clients
-    const assignments = await prisma.clientTeamMember.findMany({
-      where: { userId: currentUser?.id },
-      select: { clientId: true },
-    });
-    const clientIds = assignments.map(a => a.clientId);
-    clientFilter = { id: { in: clientIds } };
-  }
+  // Get project filter using new helper function
+  const projectFilter = await getProjectFilterForUser(
+    currentUser!.id,
+    currentUser!.role,
+    currentUser!.agencyId
+  );
 
   const projects = await prisma.project.findMany({
-    where: { client: clientFilter },
+    where: projectFilter,
     orderBy: { createdAt: "desc" },
     include: { client: true, stages: true },
   });
