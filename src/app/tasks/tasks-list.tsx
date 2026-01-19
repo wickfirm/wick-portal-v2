@@ -23,7 +23,7 @@ type Task = {
 
 type Client = { id: string; name: string };
 type Project = { id: string; name: string; clientId: string };
-type TeamMember = { id: string; name: string };
+type TeamMember = { id: string; name: string | null };
 
 interface TasksListProps {
   initialTasks: Task[];
@@ -263,7 +263,7 @@ export default function TasksList({
               >
                 <option value="">All Assignees</option>
                 {teamMembers.map(member => (
-                  <option key={member.id} value={member.id}>{member.name}</option>
+                  <option key={member.id} value={member.id}>{member.name || "Unnamed"}</option>
                 ))}
               </select>
             </div>
