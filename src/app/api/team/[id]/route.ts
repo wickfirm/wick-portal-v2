@@ -54,6 +54,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       }
     }
 
+    // Update project assignments if provided
+    if (data.projectIds !== undefined) {
+      // Delete existing assignments
+      await prisma.projectAssignment.deleteMany({
+        where: { userId: params.id },
+      });
+
+      // Create new assignments
+      if (data.projectIds.length > 0) {
+        await prisma.projectAssignment.createMany({
+          data: data.projectIds.map((projectId: string) => ({
+            id: `pa-${params.id}-${projectId}-${Date.now()}`,
+            userId: params.id,
+            projectId,
+            role: 'MEMBER',
+            createdAt: new Date(),
+          })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
     return NextResponse.json(user);
   } catch (error) {
     console.error("Failed to update user:", error);
