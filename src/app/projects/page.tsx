@@ -14,6 +14,7 @@ type Project = {
   name: string;
   description: string | null;
   status: string;
+  serviceType: string;
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
