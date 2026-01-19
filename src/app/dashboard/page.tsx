@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { getProjectFilterForUser } from "@/lib/project-assignments";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
@@ -25,11 +26,9 @@ export default async function DashboardPage() {
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
 
-  // Build client filter based on role and agency
+  // Build CLIENT filter for client counts
   let clientFilter: any = {};
-  
   if (currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN") {
-    // ADMINs and SUPER_ADMINs see ALL clients in their agency
     if (currentUser.agencyId) {
       const agencyTeamMembers = await prisma.user.findMany({
         where: { agencyId: currentUser.agencyId },
@@ -46,7 +45,6 @@ export default async function DashboardPage() {
       };
     }
   } else {
-    // MEMBERs see only clients they're assigned to
     const assignments = await prisma.clientTeamMember.findMany({
       where: { userId: currentUser?.id },
       select: { clientId: true },
@@ -54,6 +52,13 @@ export default async function DashboardPage() {
     const clientIds = assignments.map(a => a.clientId);
     clientFilter = { id: { in: clientIds } };
   }
+
+  // Get PROJECT filter using new helper function
+  const projectFilter = await getProjectFilterForUser(
+    currentUser!.id,
+    currentUser!.role,
+    currentUser!.agencyId
+  );
 
   const [
     clientCount, 
@@ -71,14 +76,14 @@ export default async function DashboardPage() {
         ...clientFilter,
       } 
     }),
-    // Count only accessible projects (filter through client)
+    // Count only accessible projects
     prisma.project.count({
-      where: { client: clientFilter },
+      where: projectFilter,
     }),
     prisma.project.count({ 
       where: { 
+        ...projectFilter,
         status: "IN_PROGRESS",
-        client: clientFilter,
       } 
     }),
     // Count only users in current user's agency
@@ -88,20 +93,20 @@ export default async function DashboardPage() {
         agencyId: currentUser?.agencyId 
       } 
     }),
-    // Tasks for accessible clients only (filter through client)
+    // Tasks for accessible projects only
     prisma.clientTask.findMany({
       where: { 
         status: { not: "COMPLETED" },
-        client: clientFilter,
+        project: projectFilter,
       },
       include: {
         client: { select: { id: true, name: true } },
       },
       orderBy: { dueDate: "asc" },
     }),
-    // Recent projects for accessible clients
+    // Recent projects
     prisma.project.findMany({
-      where: { client: clientFilter },
+      where: projectFilter,
       take: 5,
       orderBy: { updatedAt: "desc" },
       include: { client: true, stages: true },
