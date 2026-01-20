@@ -203,7 +203,7 @@ export default function DashboardPage() {
                   </h2>
                 </div>
                 <div>
-                  {taskData.overdueTasks.map((task, idx) => (
+                  {taskData.overdueTasks.map((task: Task, idx: number) => (
                     <Link key={task.id} href={`/clients/${task.client.id}/tasks`} style={{ textDecoration: "none", color: "inherit" }}>
                       <div style={{ 
                         padding: "12px 20px", 
@@ -229,7 +229,7 @@ export default function DashboardPage() {
                   </h2>
                 </div>
                 <div>
-                  {taskData.dueTodayTasks.map((task, idx) => (
+                  {taskData.dueTodayTasks.map((task: Task, idx: number) => (
                     <Link key={task.id} href={`/clients/${task.client.id}/tasks`} style={{ textDecoration: "none", color: "inherit" }}>
                       <div style={{ 
                         padding: "12px 20px", 
@@ -263,7 +263,7 @@ export default function DashboardPage() {
               <div style={{ padding: 48, textAlign: "center", color: theme.colors.textMuted }}>No projects yet</div>
             ) : (
               <div>
-                {recentData.recentProjects.map((project, idx) => {
+                {recentData.recentProjects.map((project: Project, idx: number) => {
                   const completed = project.stages.filter((s) => s.isCompleted).length;
                   const total = project.stages.length;
                   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -306,7 +306,7 @@ export default function DashboardPage() {
               <div style={{ padding: 48, textAlign: "center", color: theme.colors.textMuted }}>No clients yet</div>
             ) : (
               <div>
-                {recentData.recentClients.map((client, idx) => (
+                {recentData.recentClients.map((client: Client, idx: number) => (
                   <Link key={client.id} href={"/clients/" + client.id} style={{ textDecoration: "none", color: "inherit" }}>
                     <div style={{ padding: "14px 24px", borderBottom: idx < recentData.recentClients.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none", display: "flex", alignItems: "center", gap: 12 }}>
                       <div style={{ width: 40, height: 40, borderRadius: 10, background: theme.gradients.accent, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 600, fontSize: 14 }}>
