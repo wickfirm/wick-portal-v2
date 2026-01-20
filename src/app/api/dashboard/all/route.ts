@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { getProjectFilterForUser } from "@/lib/project-assignments";
+import { Prisma } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -51,36 +52,49 @@ export async function GET() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // FETCH EVERYTHING IN PARALLEL (1 DATABASE ROUNDTRIP)
-    const [
-      clientCount,
-      projectCount,
-      activeProjects,
-      teamCount,
-      overdueTasks,
-      dueTodayTasks,
-      totalTasks,
-      recentProjects,
-      recentClients,
-    ] = await Promise.all([
-      // Stats
-      prisma.client.count({ where: clientFilter }),
-      prisma.project.count({ where: projectFilter }),
-      prisma.project.count({
-        where: {
-          ...projectFilter,
-          status: "IN_PROGRESS",
-        },
-      }),
-      isAdmin
-        ? prisma.user.count({
-            where: currentUser.agencyId
-              ? { agencyId: currentUser.agencyId }
-              : {},
-          })
-        : Promise.resolve(0),
+    // COMBINED STATS QUERY - All counts in ONE database round trip!
+    interface DashboardStats {
+      clientCount: bigint;
+      projectCount: bigint;
+      activeProjects: bigint;
+      teamCount: bigint;
+      overdueTasks: bigint;
+      dueTodayTasks: bigint;
+      totalTasks: bigint;
+    }
 
-      // Overdue tasks
+    const statsQueryAdmin = Prisma.sql`
+      SELECT 
+        (SELECT COUNT(*) FROM clients) as "clientCount",
+        (SELECT COUNT(*) FROM projects) as "projectCount",
+        (SELECT COUNT(*) FROM projects WHERE status = 'IN_PROGRESS') as "activeProjects",
+        (SELECT COUNT(*) FROM users WHERE "agencyId" = ${currentUser.agencyId}) as "teamCount",
+        (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED' AND "dueDate" < ${today}) as "overdueTasks",
+        (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED' AND "dueDate" >= ${today} AND "dueDate" < ${tomorrow}) as "dueTodayTasks",
+        (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED') as "totalTasks"
+    `;
+
+    const statsQueryNonAdmin = Prisma.sql`
+      SELECT 
+        (SELECT COUNT(DISTINCT c.id) FROM clients c 
+         INNER JOIN client_team_members ctm ON c.id = ctm."clientId" 
+         WHERE ctm."userId" = ${currentUser.id}) as "clientCount",
+        (SELECT COUNT(*) FROM projects WHERE "clientId" IN 
+         (SELECT "clientId" FROM client_team_members WHERE "userId" = ${currentUser.id})) as "projectCount",
+        (SELECT COUNT(*) FROM projects WHERE status = 'IN_PROGRESS' AND "clientId" IN 
+         (SELECT "clientId" FROM client_team_members WHERE "userId" = ${currentUser.id})) as "activeProjects",
+        0 as "teamCount",
+        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED' AND "dueDate" < ${today}) as "overdueTasks",
+        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED' AND "dueDate" >= ${today} AND "dueDate" < ${tomorrow}) as "dueTodayTasks",
+        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED') as "totalTasks"
+    `;
+
+    // Execute 3 queries in parallel (instead of 9!)
+    const [statsResult, overdueTasks, dueTodayTasks, recentProjects, recentClients] = await Promise.all([
+      // 1. Combined stats query (7 counts in 1 query!)
+      prisma.$queryRaw<DashboardStats[]>(isAdmin ? statsQueryAdmin : statsQueryNonAdmin),
+      
+      // 2. Overdue tasks details
       prisma.clientTask.findMany({
         where: {
           ...(!isAdmin && { assigneeId: currentUser.id }),
@@ -103,7 +117,7 @@ export async function GET() {
         },
       }),
 
-      // Due today tasks
+      // 3. Due today tasks details
       prisma.clientTask.findMany({
         where: {
           ...(!isAdmin && { assigneeId: currentUser.id }),
@@ -126,15 +140,7 @@ export async function GET() {
         },
       }),
 
-      // Total tasks count
-      prisma.clientTask.count({
-        where: {
-          ...(!isAdmin && { assigneeId: currentUser.id }),
-          status: { not: "COMPLETED" },
-        },
-      }),
-
-      // Recent projects
+      // 4. Recent projects
       prisma.project.findMany({
         where: projectFilter,
         take: 5,
@@ -159,7 +165,7 @@ export async function GET() {
         },
       }),
 
-      // Recent clients
+      // 5. Recent clients
       prisma.client.findMany({
         where: clientFilter,
         take: 5,
@@ -174,21 +180,24 @@ export async function GET() {
       }),
     ]);
 
-    // Return everything in one response
+    // Convert BigInt to Number for JSON serialization
+    const stats = statsResult[0];
+    const formattedStats = {
+      clientCount: Number(stats.clientCount),
+      projectCount: Number(stats.projectCount),
+      activeProjects: Number(stats.activeProjects),
+      teamCount: Number(stats.teamCount),
+    };
+
     return NextResponse.json({
-      stats: {
-        clientCount,
-        projectCount,
-        activeProjects,
-        teamCount,
-      },
+      stats: formattedStats,
       tasks: {
         overdueTasks,
         dueTodayTasks,
         taskSummary: {
-          total: totalTasks,
-          overdue: overdueTasks.length,
-          dueToday: dueTodayTasks.length,
+          total: Number(stats.totalTasks),
+          overdue: Number(stats.overdueTasks),
+          dueToday: Number(stats.dueTodayTasks),
         },
       },
       recent: {
