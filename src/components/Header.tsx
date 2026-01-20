@@ -3,10 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
+import dynamic from "next/dynamic";
 import { theme } from "@/lib/theme";
-import TimerWidget from "./TimerWidget";
 import { getSubdomainFromHost, getTenantBySubdomain, PLATFORM_CONFIG } from "@/lib/tenant";
 import { useEffect, useState } from "react";
+
+// Lazy load TimerWidget so it doesn't block page load
+const TimerWidget = dynamic(() => import("./TimerWidget"), {
+  ssr: false,
+  loading: () => (
+    <div style={{ 
+      width: 120, 
+      height: 36,
+      borderRadius: 8,
+      background: "transparent"
+    }} />
+  )
+});
 
 export default function Header() {
   const pathname = usePathname();
