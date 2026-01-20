@@ -1,15 +1,61 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+"use client";
+
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
-export const dynamic = "force-dynamic";
+// Loading skeleton
+function SettingsPageSkeleton() {
+  return (
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <Header />
 
-export default async function SettingsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+      <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Header Skeleton */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ width: 140, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+          <div style={{ width: 280, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
+        </div>
+
+        {/* Settings Cards Skeleton */}
+        <div style={{ display: "grid", gap: 16 }}>
+          {[1, 2, 3, 4, 5].map((i) => (
+            <div key={i} style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 12, background: theme.colors.bgTertiary }} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ width: "40%", height: 24, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
+                  <div style={{ width: "70%", height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+export default function SettingsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Show loading state while checking authentication
+  if (status === "loading") {
+    return <SettingsPageSkeleton />;
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!session) return null;
 
   const user = session.user as any;
 
@@ -79,36 +125,56 @@ export default async function SettingsPage() {
 
         <div style={{ display: "grid", gap: 16 }}>
           {visibleItems.map((item) => (
-            <Link key={item.href} href={item.href} style={{ textDecoration: "none" }}>
-              <div style={{
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
                 background: theme.colors.bgSecondary,
                 padding: 24,
                 borderRadius: theme.borderRadius.lg,
                 border: "1px solid " + theme.colors.borderLight,
+                textDecoration: "none",
                 display: "flex",
                 alignItems: "center",
-                gap: 20,
-                transition: "all 150ms ease",
+                gap: 16,
+                transition: "all 0.2s",
                 cursor: "pointer",
-              }}>
-                <div style={{
-                  width: 56,
-                  height: 56,
-                  borderRadius: theme.borderRadius.lg,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.borderMedium;
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = theme.shadows.card;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.borderColor = theme.colors.borderLight;
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
                   background: item.color + "15",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 24,
-                }}>
-                  {item.icon}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>{item.title}</div>
-                  <div style={{ fontSize: 14, color: theme.colors.textSecondary }}>{item.description}</div>
-                </div>
-                <div style={{ color: theme.colors.textMuted, fontSize: 20 }}>→</div>
+                  flexShrink: 0,
+                }}
+              >
+                {item.icon}
               </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 4 }}>
+                  {item.title}
+                </h3>
+                <p style={{ color: theme.colors.textSecondary, fontSize: 14, margin: 0 }}>
+                  {item.description}
+                </p>
+              </div>
+              <div style={{ color: theme.colors.textMuted, fontSize: 18 }}>→</div>
             </Link>
           ))}
         </div>
