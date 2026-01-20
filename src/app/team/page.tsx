@@ -300,7 +300,50 @@ export default function TeamPage() {
     outline: "none",
   };
 
-  if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
+  // Loading skeleton
+  if (loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+        <Header />
+        
+        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+          {/* Header Skeleton */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+            <div>
+              <div style={{ width: 120, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+              <div style={{ width: 300, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
+            </div>
+            <div style={{ width: 120, height: 44, background: theme.colors.bgSecondary, borderRadius: 8 }} />
+          </div>
+
+          {/* Stats Skeleton */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 32 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+                <div style={{ width: 80, height: 40, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
+                <div style={{ width: 120, height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Team List Skeleton */}
+          <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            {[1, 2, 3, 4, 5].map((i) => (
+              <div key={i} style={{ padding: 24, borderBottom: i < 5 ? "1px solid " + theme.colors.bgTertiary : "none" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: theme.colors.bgTertiary }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ width: "60%", height: 20, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
+                    <div style={{ width: "40%", height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const displayUsers = isClientRole 
     ? users.filter(u => u.role !== "CLIENT")
