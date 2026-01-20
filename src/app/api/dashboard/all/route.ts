@@ -68,7 +68,7 @@ export async function GET() {
         (SELECT COUNT(*) FROM clients) as "clientCount",
         (SELECT COUNT(*) FROM projects) as "projectCount",
         (SELECT COUNT(*) FROM projects WHERE status = 'IN_PROGRESS') as "activeProjects",
-        (SELECT COUNT(*) FROM users WHERE "agencyId" = ${currentUser.agencyId}) as "teamCount",
+        (SELECT COUNT(*) FROM users WHERE "agency_id" = ${currentUser.agencyId}) as "teamCount",
         (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED' AND "dueDate" < ${today}) as "overdueTasks",
         (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED' AND "dueDate" >= ${today} AND "dueDate" < ${tomorrow}) as "dueTodayTasks",
         (SELECT COUNT(*) FROM client_tasks WHERE status != 'COMPLETED') as "totalTasks"
