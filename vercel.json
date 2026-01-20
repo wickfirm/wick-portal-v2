@@ -1,4 +1,20 @@
 {
+  "functions": {
+    "app/api/dashboard/all/route.ts": {
+      "memory": 1024,
+      "maxDuration": 10
+    },
+    "app/api/cron/warm/route.ts": {
+      "memory": 512,
+      "maxDuration": 5
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/warm",
+      "schedule": "*/5 * * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
