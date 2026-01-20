@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import { theme, ROLE_STYLES } from "@/lib/theme";
 import Link from "next/link";
@@ -38,7 +39,7 @@ type Client = {
 };
 
 export default function TeamPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const currentUser = session?.user as any;
 
   // Redirect MEMBERs - they shouldn't access this page
@@ -48,10 +49,6 @@ export default function TeamPage() {
     }
   }, [currentUser]);
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [clients, setClients] = useState<Client[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newUser, setNewUser] = useState({ 
     email: "", 
@@ -89,10 +86,35 @@ export default function TeamPage() {
     }
   }, [isExternalPartner]);
 
-  useEffect(() => {
-    if (isExternalPartner) return; // Don't fetch if redirecting
-    fetchData();
-  }, [isExternalPartner]);
+  // Fetch team data with React Query
+  const { data, isLoading: loading, refetch } = useQuery({
+    queryKey: ["team-data"],
+    queryFn: async () => {
+      const [usersRes, agenciesRes, clientsRes] = await Promise.all([
+        fetch("/api/team"),
+        fetch("/api/agencies"),
+        fetch("/api/clients"),
+      ]);
+      
+      const [usersData, agenciesData, clientsData] = await Promise.all([
+        usersRes.json(),
+        agenciesRes.json(),
+        clientsRes.json(),
+      ]);
+
+      return {
+        users: Array.isArray(usersData) ? usersData : [],
+        agencies: Array.isArray(agenciesData) ? agenciesData : [],
+        clients: Array.isArray(clientsData) ? clientsData : [],
+      };
+    },
+    enabled: status === "authenticated" && !isExternalPartner,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const users = data?.users || [];
+  const agencies = data?.agencies || [];
+  const clients = data?.clients || [];
 
   // Fetch projects when clients are selected (for new user form)
   useEffect(() => {
@@ -134,29 +156,6 @@ export default function TeamPage() {
     }
   }, [editForm.clientIds, editingUser]);
 
-  async function fetchData() {
-    try {
-      const [usersRes, agenciesRes, clientsRes] = await Promise.all([
-        fetch("/api/team"),
-        fetch("/api/agencies"),
-        fetch("/api/clients"),
-      ]);
-      
-      const [usersData, agenciesData, clientsData] = await Promise.all([
-        usersRes.json(),
-        agenciesRes.json(),
-        clientsRes.json(),
-      ]);
-
-      setUsers(Array.isArray(usersData) ? usersData : []);
-      setAgencies(Array.isArray(agenciesData) ? agenciesData : []);
-      setClients(Array.isArray(clientsData) ? clientsData : []);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    }
-    setLoading(false);
-  }
-
   async function addUser(e: React.FormEvent) {
     e.preventDefault();
     setAdding(true);
@@ -170,7 +169,7 @@ export default function TeamPage() {
     if (res.ok) {
       setNewUser({ email: "", name: "", password: "", role: "MEMBER", agencyId: "", clientIds: [], projectIds: [] });
       setShowForm(false);
-      fetchData();
+      refetch(); // Refresh team data
     } else {
       const data = await res.json();
       alert(data.error || "Failed to add user");
@@ -232,7 +231,7 @@ export default function TeamPage() {
 
     if (res.ok) {
       setEditingUser(null);
-      fetchData();
+      refetch(); // Refresh team data
     } else {
       const data = await res.json();
       alert(data.error || "Failed to update user");
@@ -246,13 +245,13 @@ export default function TeamPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isActive: !user.isActive }),
     });
-    fetchData();
+    refetch(); // Refresh team data
   }
 
   async function deleteUser(user: User) {
     if (!confirm("Delete " + user.email + "?")) return;
     await fetch("/api/team/" + user.id, { method: "DELETE" });
-    fetchData();
+    refetch(); // Refresh team data
   }
 
   function toggleClientSelection(clientId: string, isEdit = false) {
