@@ -143,7 +143,7 @@ export default function SettingsPage() {
               onMouseEnter={(e) => {
                 e.currentTarget.style.borderColor = theme.colors.borderMedium;
                 e.currentTarget.style.transform = "translateY(-2px)";
-                e.currentTarget.style.boxShadow = theme.shadows.card;
+                e.currentTarget.style.boxShadow = theme.shadows.md;
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.borderColor = theme.colors.borderLight;
