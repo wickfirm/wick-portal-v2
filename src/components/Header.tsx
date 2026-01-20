@@ -151,7 +151,8 @@ export default function Header() {
       </div>
       
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <TimerWidget />
+        {/* TimerWidget temporarily disabled for performance testing */}
+        {/* <TimerWidget /> */}
         
         {userName && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
