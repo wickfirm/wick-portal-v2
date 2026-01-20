@@ -74,41 +74,25 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  // Fetch stats with React Query
-  const { data: stats, isLoading: loadingStats } = useQuery<Stats>({
-    queryKey: ["dashboard-stats"],
+  // Fetch ALL dashboard data in one call
+  const { data, isLoading } = useQuery({
+    queryKey: ["dashboard-all"],
     queryFn: async () => {
-      const res = await fetch("/api/dashboard/stats");
-      if (!res.ok) throw new Error("Failed to load stats");
-      return res.json();
-    },
-    enabled: status === "authenticated",
-    staleTime: 2 * 60 * 1000, // 2 minutes (dashboard data changes more frequently)
-  });
-
-  // Fetch tasks with React Query
-  const { data: taskData, isLoading: loadingTasks } = useQuery<TaskData>({
-    queryKey: ["dashboard-tasks"],
-    queryFn: async () => {
-      const res = await fetch("/api/dashboard/tasks");
-      if (!res.ok) throw new Error("Failed to load tasks");
+      const res = await fetch("/api/dashboard/all");
+      if (!res.ok) throw new Error("Failed to load dashboard");
       return res.json();
     },
     enabled: status === "authenticated",
     staleTime: 2 * 60 * 1000, // 2 minutes
   });
 
-  // Fetch recent data with React Query
-  const { data: recentData, isLoading: loadingRecent } = useQuery<RecentData>({
-    queryKey: ["dashboard-recent"],
-    queryFn: async () => {
-      const res = await fetch("/api/dashboard/recent");
-      if (!res.ok) throw new Error("Failed to load recent data");
-      return res.json();
-    },
-    enabled: status === "authenticated",
-    staleTime: 2 * 60 * 1000, // 2 minutes
-  });
+  // Destructure the unified response
+  const stats = data?.stats;
+  const taskData = data?.tasks;
+  const recentData = data?.recent;
+  const loadingStats = isLoading;
+  const loadingTasks = isLoading;
+  const loadingRecent = isLoading;
 
   if (status === "loading") {
     return (
