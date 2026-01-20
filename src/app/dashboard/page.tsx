@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
@@ -66,14 +67,6 @@ type RecentData = {
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  
-  const [stats, setStats] = useState<Stats | null>(null);
-  const [taskData, setTaskData] = useState<TaskData | null>(null);
-  const [recentData, setRecentData] = useState<RecentData | null>(null);
-  
-  const [loadingStats, setLoadingStats] = useState(true);
-  const [loadingTasks, setLoadingTasks] = useState(true);
-  const [loadingRecent, setLoadingRecent] = useState(true);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -81,43 +74,41 @@ export default function DashboardPage() {
     }
   }, [status, router]);
 
-  useEffect(() => {
-    if (status === "authenticated") {
-      // Fetch all data in parallel
-      fetch("/api/dashboard/stats")
-        .then(res => res.json())
-        .then(data => {
-          setStats(data);
-          setLoadingStats(false);
-        })
-        .catch(err => {
-          console.error("Failed to load stats:", err);
-          setLoadingStats(false);
-        });
+  // Fetch stats with React Query
+  const { data: stats, isLoading: loadingStats } = useQuery<Stats>({
+    queryKey: ["dashboard-stats"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/stats");
+      if (!res.ok) throw new Error("Failed to load stats");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 2 * 60 * 1000, // 2 minutes (dashboard data changes more frequently)
+  });
 
-      fetch("/api/dashboard/tasks")
-        .then(res => res.json())
-        .then(data => {
-          setTaskData(data);
-          setLoadingTasks(false);
-        })
-        .catch(err => {
-          console.error("Failed to load tasks:", err);
-          setLoadingTasks(false);
-        });
+  // Fetch tasks with React Query
+  const { data: taskData, isLoading: loadingTasks } = useQuery<TaskData>({
+    queryKey: ["dashboard-tasks"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/tasks");
+      if (!res.ok) throw new Error("Failed to load tasks");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 
-      fetch("/api/dashboard/recent")
-        .then(res => res.json())
-        .then(data => {
-          setRecentData(data);
-          setLoadingRecent(false);
-        })
-        .catch(err => {
-          console.error("Failed to load recent data:", err);
-          setLoadingRecent(false);
-        });
-    }
-  }, [status]);
+  // Fetch recent data with React Query
+  const { data: recentData, isLoading: loadingRecent } = useQuery<RecentData>({
+    queryKey: ["dashboard-recent"],
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/recent");
+      if (!res.ok) throw new Error("Failed to load recent data");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 2 * 60 * 1000, // 2 minutes
+  });
 
   if (status === "loading") {
     return (
