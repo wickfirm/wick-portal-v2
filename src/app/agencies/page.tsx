@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
@@ -12,7 +13,7 @@ type PartnerAgency = {
 };
 
 export default function PartnerAgenciesPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const currentUser = session?.user as any;
 
   // Redirect MEMBERs - they shouldn't access this page
@@ -22,8 +23,6 @@ export default function PartnerAgenciesPage() {
     }
   }, [currentUser]);
 
-  const [agencies, setAgencies] = useState<PartnerAgency[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [newAgency, setNewAgency] = useState({ name: "" });
   const [adding, setAdding] = useState(false);
@@ -35,20 +34,18 @@ export default function PartnerAgenciesPage() {
 
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(currentUser?.role);
 
-  useEffect(() => {
-    fetchAgencies();
-  }, []);
-
-  async function fetchAgencies() {
-    try {
+  // Fetch agencies with React Query
+  const { data: agencies = [], isLoading: loading, refetch } = useQuery<PartnerAgency[]>({
+    queryKey: ["partner-agencies"],
+    queryFn: async () => {
       const res = await fetch("/api/partner-agencies");
+      if (!res.ok) throw new Error("Failed to fetch agencies");
       const data = await res.json();
-      setAgencies(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error("Failed to fetch agencies:", error);
-    }
-    setLoading(false);
-  }
+      return Array.isArray(data) ? data : [];
+    },
+    enabled: status === "authenticated",
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   async function addAgency(e: React.FormEvent) {
     e.preventDefault();
@@ -64,7 +61,7 @@ export default function PartnerAgenciesPage() {
     if (res.ok) {
       setNewAgency({ name: "" });
       setShowForm(false);
-      fetchAgencies();
+      refetch(); // Refresh agencies
     }
     setAdding(false);
   }
@@ -86,7 +83,7 @@ export default function PartnerAgenciesPage() {
 
     if (res.ok) {
       setEditingAgency(null);
-      fetchAgencies();
+      refetch(); // Refresh agencies
     }
     setSaving(false);
   }
@@ -95,7 +92,7 @@ export default function PartnerAgenciesPage() {
     if (!confirm(`Delete ${agency.name}?`)) return;
 
     await fetch(`/api/partner-agencies/${agency.id}`, { method: "DELETE" });
-    fetchAgencies();
+    refetch(); // Refresh agencies
   }
 
   const inputStyle = {
@@ -108,13 +105,50 @@ export default function PartnerAgenciesPage() {
     outline: "none",
   };
 
+  // Loading skeleton
   if (loading) {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>
-          Loading...
-        </div>
+        
+        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+          {/* Header Skeleton */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+            <div>
+              <div style={{ width: 200, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+              <div style={{ width: 320, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
+            </div>
+            <div style={{ width: 140, height: 44, background: theme.colors.bgSecondary, borderRadius: 8 }} />
+          </div>
+
+          {/* Stats Skeleton */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 20, marginBottom: 32 }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+                <div style={{ width: 80, height: 40, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
+                <div style={{ width: 120, height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Agencies List Skeleton */}
+          <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ padding: 24, borderBottom: i < 4 ? "1px solid " + theme.colors.bgTertiary : "none" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ width: "50%", height: 24, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
+                    <div style={{ width: "30%", height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <div style={{ width: 70, height: 36, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+                    <div style={{ width: 70, height: 36, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
