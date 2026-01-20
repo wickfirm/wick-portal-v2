@@ -659,7 +659,7 @@ export default function TeamPage() {
                     <td style={{ padding: 16 }}>
                       {user.clientAssignments && user.clientAssignments.length > 0 ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {user.clientAssignments.slice(0, 3).map(ca => (
+                          {user.clientAssignments.slice(0, 3).map((ca: ClientAssignment) => (
                             <Link 
                               key={ca.id}
                               href={`/clients/${ca.client.id}`}
