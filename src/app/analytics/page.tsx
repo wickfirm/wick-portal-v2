@@ -1,167 +1,151 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+"use client";
+
+import { useEffect } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 import AdminAnalyticsDashboard from "@/components/AdminAnalyticsDashboard";
 
-export const dynamic = "force-dynamic";
+type AnalyticsData = {
+  clients: Array<{ id: string; name: string; status: string }>;
+  totalProjects: number;
+  completedProjects: number;
+  inProgressProjects: number;
+  totalTasks: number;
+  completedTasks: number;
+  clientsByStatus: Array<{ status: string; _count: { status: number } }>;
+  projectsByType: Array<{ serviceType: string; _count: { serviceType: number } }>;
+  projectsByStatus: Array<{ status: string; _count: { status: number } }>;
+  allMetrics: any[];
+};
 
-export default async function AnalyticsPage() {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
+// Loading skeleton
+function AnalyticsPageSkeleton() {
+  return (
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <Header />
+      
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Header Skeleton */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ width: 140, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+          <div style={{ width: 320, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
+        </div>
 
-  // Get current user's agency for filtering
-  const user = session.user as any;
-  const currentUser = await prisma.user.findUnique({
-    where: { email: user.email },
-    select: { id: true, agencyId: true, role: true },
-  });
+        {/* Stats Grid Skeleton */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 20, marginBottom: 32 }}>
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ width: 80, height: 40, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
+              <div style={{ width: 120, height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+            </div>
+          ))}
+        </div>
 
-  if (!currentUser) redirect("/login");
+        {/* Charts Skeleton */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 20, marginBottom: 32 }}>
+          {[1, 2].map((i) => (
+            <div key={i} style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+              <div style={{ width: "50%", height: 24, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 16 }} />
+              <div style={{ width: "100%", height: 200, background: theme.colors.bgTertiary, borderRadius: 8 }} />
+            </div>
+          ))}
+        </div>
 
-  // Redirect MEMBERs - they shouldn't access analytics
-  if (currentUser.role === "MEMBER") {
-    redirect("/dashboard");
-  }
+        {/* Large Chart Skeleton */}
+        <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <div style={{ width: "40%", height: 24, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 16 }} />
+          <div style={{ width: "100%", height: 300, background: theme.colors.bgTertiary, borderRadius: 8 }} />
+        </div>
+      </main>
+    </div>
+  );
+}
 
-  // Build client filter based on agency
-  let clientFilter: any = {};
-  
-  if (currentUser.agencyId === null) {
-    // External partners: only see clients they're assigned to
-    clientFilter = {
-      teamMembers: {
-        some: { userId: currentUser.id }
-      }
-    };
-  } else if (currentUser.role === "SUPER_ADMIN") {
-    // SUPER_ADMIN: see all clients where their agency's team members are assigned
-    const agencyUsers = await prisma.user.findMany({
-      where: { agencyId: currentUser.agencyId },
-      select: { id: true },
-    });
-    clientFilter = {
-      teamMembers: {
-        some: {
-          userId: { in: agencyUsers.map(u => u.id) }
+export default function AnalyticsPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  // Fetch analytics data with React Query
+  const { data, isLoading, error } = useQuery<AnalyticsData>({
+    queryKey: ["analytics-data"],
+    queryFn: async () => {
+      const res = await fetch("/api/analytics");
+      if (!res.ok) {
+        if (res.status === 403) {
+          router.push("/dashboard");
+          throw new Error("Access denied");
         }
+        throw new Error("Failed to fetch analytics");
       }
-    };
-  } else {
-    // Regular users: only see clients they're assigned to
-    clientFilter = {
-      teamMembers: {
-        some: { userId: currentUser.id }
-      }
-    };
+      return res.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 2 * 60 * 1000, // 2 minutes (analytics change frequently)
+  });
+
+  // Show loading state
+  if (status === "loading" || isLoading) {
+    return <AnalyticsPageSkeleton />;
   }
 
-  const [
-    clients,
-    totalProjects,
-    completedProjects,
-    inProgressProjects,
-    totalTasks,
-    completedTasks,
-    clientsByStatus,
-    projectsByType,
-    projectsByStatus,
-    allMetrics,
-  ] = await Promise.all([
-    prisma.client.findMany({ 
-      where: clientFilter, // Apply agency filter
-      select: { id: true, name: true, nickname: true, status: true },
-      orderBy: { name: "asc" }
-    }),
-    prisma.project.count({
-      where: {
-        client: clientFilter
-      }
-    }),
-    prisma.project.count({ 
-      where: { 
-        status: "COMPLETED",
-        client: clientFilter
-      } 
-    }),
-    prisma.project.count({ 
-      where: { 
-        status: "IN_PROGRESS",
-        client: clientFilter
-      } 
-    }),
-    prisma.clientTask.count({
-      where: {
-        client: clientFilter
-      }
-    }),
-    prisma.clientTask.count({ 
-      where: { 
-        status: "COMPLETED",
-        client: clientFilter
-      } 
-    }),
-    prisma.client.groupBy({ 
-      by: ["status"], 
-      _count: { status: true },
-      where: clientFilter
-    }),
-    prisma.project.groupBy({ 
-      by: ["serviceType"], 
-      _count: { serviceType: true },
-      where: {
-        client: clientFilter
-      }
-    }),
-    prisma.project.groupBy({ 
-      by: ["status"], 
-      _count: { status: true },
-      where: {
-        client: clientFilter
-      }
-    }),
-    prisma.clientMetrics.findMany({ 
-      where: {
-        client: clientFilter
-      },
-      orderBy: { month: "asc" },
-      include: { client: { select: { id: true, name: true, nickname: true } } }
-    }),
-  ]);
+  // Don't render if not authenticated
+  if (!session || !data) return null;
 
-  const serializedMetrics = allMetrics.map(function(m) {
-    return { 
-      ...m, 
-      month: m.month.toISOString(),
-      clientName: m.client.nickname || m.client.name,
-    };
-  });
-
-  const serializedClients = clients.map(function(c) {
-    return {
-      id: c.id,
-      name: c.nickname || c.name,
-      status: c.status,
-    };
-  });
+  // Error state
+  if (error) {
+    return (
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+        <Header />
+        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ textAlign: "center", padding: 48 }}>
+            <p style={{ color: theme.colors.error, fontSize: 16, marginBottom: 16 }}>
+              Failed to load analytics data
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: theme.gradients.primary,
+                color: "white",
+                padding: "12px 24px",
+                borderRadius: theme.borderRadius.md,
+                border: "none",
+                fontWeight: 500,
+                fontSize: 14,
+                cursor: "pointer",
+              }}
+            >
+              Retry
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <AdminAnalyticsDashboard
-          clients={serializedClients}
-          totalProjects={totalProjects}
-          completedProjects={completedProjects}
-          inProgressProjects={inProgressProjects}
-          totalTasks={totalTasks}
-          completedTasks={completedTasks}
-          clientsByStatus={clientsByStatus}
-          projectsByType={projectsByType}
-          projectsByStatus={projectsByStatus}
-          allMetrics={serializedMetrics}
+          clients={data.clients}
+          totalProjects={data.totalProjects}
+          completedProjects={data.completedProjects}
+          inProgressProjects={data.inProgressProjects}
+          totalTasks={data.totalTasks}
+          completedTasks={data.completedTasks}
+          clientsByStatus={data.clientsByStatus}
+          projectsByType={data.projectsByType}
+          projectsByStatus={data.projectsByStatus}
+          allMetrics={data.allMetrics}
         />
       </main>
     </div>
