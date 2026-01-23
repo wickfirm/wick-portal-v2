@@ -79,8 +79,15 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-  },
+},
   pages: {
     signIn: "/login",
+    signOut: "/login", // Redirect to login after sign out
   },
+  events: {
+    async signOut({ token }) {
+      // Clear session data on sign out
+      console.log("User signed out:", token?.email);
+    }
+  }
 };
