@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
-},
+  },
   pages: {
     signIn: "/login",
     signOut: "/login", // Redirect to login after sign out
