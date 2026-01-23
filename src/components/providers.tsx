@@ -2,11 +2,21 @@
 
 import { SessionProvider } from "next-auth/react";
 import { QueryProvider } from "@/providers/query-provider";
+import { TenantProvider } from "@/providers/tenant-provider";
+import type { TenantConfig } from "@/lib/tenant";
 
-export function Providers({ children }: { children: React.ReactNode }) {
+export function Providers({ 
+  tenantConfig, 
+  children 
+}: { 
+  tenantConfig: TenantConfig;
+  children: React.ReactNode;
+}) {
   return (
     <SessionProvider>
-      <QueryProvider>{children}</QueryProvider>
+      <TenantProvider tenantConfig={tenantConfig}>
+        <QueryProvider>{children}</QueryProvider>
+      </TenantProvider>
     </SessionProvider>
   );
 }
