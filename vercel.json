@@ -7,6 +7,10 @@
     "app/api/cron/warm/route.ts": {
       "memory": 512,
       "maxDuration": 5
+    },
+    "app/api/timer/route.ts": {
+      "memory": 512,
+      "maxDuration": 10
     }
   },
   "crons": [
