@@ -5,8 +5,7 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { theme } from "@/lib/theme";
-import { getSubdomainFromHost, getTenantBySubdomain, PLATFORM_CONFIG } from "@/lib/tenant";
-import { useEffect, useState } from "react";
+import { useTenant } from "@/providers/tenant-provider";
 
 // Lazy load TimerWidget so it doesn't block page load
 const TimerWidget = dynamic(() => import("./TimerWidget"), {
@@ -30,18 +29,10 @@ export default function Header() {
   const userAgencyId = user?.agencyId;
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
   
-  // Get current subdomain and tenant config
-  const [tenantConfig, setTenantConfig] = useState(PLATFORM_CONFIG);
+  // Get tenant config from context (passed from server, no flash!)
+  const tenantConfig = useTenant();
   
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const subdomain = getSubdomainFromHost(window.location.hostname);
-      const config = getTenantBySubdomain(subdomain) || PLATFORM_CONFIG;
-      setTenantConfig(config);
-    }
-  }, []);
-  
-  // Determine branding based on subdomain tenant config
+  // Determine branding based on tenant config
   const brandName = tenantConfig.name;
   const brandLogo = tenantConfig.logoLetter;
   const brandColor = tenantConfig.colors.primary;
@@ -150,7 +141,7 @@ export default function Header() {
         </nav>
       </div>
       
-<div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <TimerWidget />
         
         {userName && (
