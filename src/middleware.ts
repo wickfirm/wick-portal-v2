@@ -10,8 +10,8 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const subdomain = getSubdomainFromHost(hostname);
   
-  // Skip middleware ONLY for NextAuth API routes and static files
-  const skipPaths = ['/api/auth', '/_next', '/favicon.ico', '/static'];
+  // Skip middleware for NextAuth API routes, static files, and signout
+  const skipPaths = ['/api/auth', '/_next', '/favicon.ico', '/static', '/auth/signout'];
   if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
@@ -38,6 +38,19 @@ export async function middleware(request: NextRequest) {
   const canAccess = canAccessSubdomain(subdomain, userAgencyId, userRole);
   
   if (!canAccess) {
+    // Prevent redirect loop - if already trying to go to /dashboard, don't redirect again
+    if (pathname === '/dashboard') {
+      console.error('Redirect loop detected for user:', token.email, 'subdomain:', subdomain);
+      // Let them through but log the issue
+      const requestHeaders = new Headers(request.headers);
+      requestHeaders.set('x-tenant-subdomain', subdomain);
+      return NextResponse.next({
+        request: {
+          headers: requestHeaders,
+        },
+      });
+    }
+    
     // Redirect to correct subdomain
     const expectedSubdomain = getExpectedSubdomain(userAgencyId, userRole);
     
