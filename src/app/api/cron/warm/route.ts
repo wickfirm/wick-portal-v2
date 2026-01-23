@@ -12,12 +12,31 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Warm the Prisma client with a simple query
-    await prisma.$queryRaw`SELECT 1`
+    // Warm the Prisma client and keep serverless functions alive
+    // This prevents cold starts by running every 5 minutes
+    const warmingQueries = await Promise.all([
+      // Basic Prisma client warming
+      prisma.$queryRaw`SELECT 1`,
+      
+      // Warm ActiveTimer queries (most common for timer API)
+      prisma.activeTimer.findFirst({
+        where: { userId: 'warm-dummy-id' },
+        include: {
+          user: true,
+        }
+      }),
+      
+      // Warm Client/Project/Task lookups (used by timer API)
+      prisma.client.findFirst({ 
+        where: { id: 'warm-dummy-id' },
+        select: { id: true, name: true, nickname: true }
+      }),
+    ])
     
     return NextResponse.json({ 
       warmed: true, 
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString(),
+      queriesWarmed: warmingQueries.length
     })
   } catch (error) {
     console.error('Warm cron error:', error)
