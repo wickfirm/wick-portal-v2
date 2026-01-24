@@ -7,32 +7,44 @@ import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
-interface Employee {
+interface User {
   id: string;
-  employeeNumber?: string;
-  jobTitle?: string;
-  department?: string;
-  annualLeaveBalance: string;
-  sickLeaveBalance: string;
-  annualLeaveEntitlement: string;
-  sickLeaveEntitlement: string;
+  name: string;
+  email: string;
+  agencyId?: string;
+}
+
+interface Manager {
+  id: string;
   user: {
     id: string;
-    name: string;
-    email: string;
-    role: string;
-  };
-  manager?: {
     name: string;
   };
 }
 
-export default function EmployeesPage() {
+export default function AddEmployeePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterDept, setFilterDept] = useState<string>("ALL");
+  const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+  const [managers, setManagers] = useState<Manager[]>([]);
+  const [hrSettings, setHrSettings] = useState<any>(null);
+
+  const [formData, setFormData] = useState({
+    userId: "",
+    employeeNumber: "",
+    jobTitle: "",
+    department: "",
+    employmentType: "FULL_TIME",
+    startDate: "",
+    annualLeaveEntitlement: 21,
+    sickLeaveEntitlement: 10,
+    managerId: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    emergencyContactRelation: "",
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -42,226 +54,614 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      loadEmployees();
+      loadData();
     }
   }, [status]);
 
-  const loadEmployees = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/hr/employees");
-      const data = await res.json();
-      setEmployees(data);
+
+      // Get current user's agency from session hook
+      const currentUserAgencyId = (session?.user as any)?.agencyId;
+
+      if (!currentUserAgencyId) {
+        console.error("No agency ID found in session");
+        setLoading(false);
+        return;
+      }
+
+      // Load users without employee profiles
+      const usersRes = await fetch("/api/users");
+      const allUsers = await usersRes.json();
+
+      // Load existing employees to filter out and get managers
+      const employeesRes = await fetch("/api/hr/employees");
+      const employees = await employeesRes.json();
+
+      const employeeUserIds = employees.map((e: any) => e.userId);
+      
+      // Filter: Same agency + No employee profile
+      const availableUsers = allUsers.filter(
+        (u: User) => 
+          u.agencyId === currentUserAgencyId && 
+          !employeeUserIds.includes(u.id)
+      );
+
+      console.log("Current agency:", currentUserAgencyId);
+      console.log("All users:", allUsers.length);
+      console.log("Filtered users:", availableUsers.length);
+
+      setUsers(availableUsers);
+      setManagers(employees);
+
+      // Load HR settings for default entitlements
+      const settingsRes = await fetch("/api/hr/settings");
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json();
+        setHrSettings(settings);
+        setFormData((prev) => ({
+          ...prev,
+          annualLeaveEntitlement: Number(settings.annualLeaveEntitlement),
+          sickLeaveEntitlement: Number(settings.sickLeaveEntitlement),
+        }));
+      }
     } catch (error) {
-      console.error("Error loading employees:", error);
+      console.error("Error loading data:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const departments = Array.from(new Set(employees.map(e => e.department).filter(Boolean)));
-  
-  const filteredEmployees = filterDept === "ALL" 
-    ? employees 
-    : employees.filter(e => e.department === filterDept);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+
+    try {
+      const res = await fetch("/api/hr/employees", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || "Failed to create employee");
+        setSaving(false);
+        return;
+      }
+
+      alert("Employee created successfully!");
+      router.push("/dashboard/hr/employees");
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Failed to create employee");
+      setSaving(false);
+    }
+  };
+
+  if (status === "loading" || loading) {
+    return (
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+        <Header />
+        <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ height: "1rem", width: "150px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+            <div style={{ height: "2rem", width: "250px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "0.5rem" }}></div>
+            <div style={{ height: "1rem", width: "350px", background: "#E5E7EB", borderRadius: "4px" }}></div>
+          </div>
+
+          {/* Form Skeleton */}
+          <div style={{ background: "white", padding: "2rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ marginBottom: "2rem" }}>
+                <div style={{ height: "1.5rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px", marginBottom: "0.5rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px" }}></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      <div style={{ padding: "2rem" }}>
+      <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
-          <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-            <Link href="/dashboard/hr" style={{ color: theme.colors.textSecondary, textDecoration: "none" }}>
-              ← My Leave
-            </Link>
+          <Link
+            href="/dashboard/hr/employees"
+            style={{ color: theme.colors.textSecondary, textDecoration: "none" }}
+          >
+            ← Back to Employees
+          </Link>
+          <h1
+            style={{
+              fontSize: "2rem",
+              fontWeight: "bold",
+              marginTop: "1rem",
+              marginBottom: "0.5rem",
+            }}
+          >
+            Add Employee
+          </h1>
+          <p style={{ color: theme.colors.textSecondary }}>
+            Create a new employee profile for a team member
+          </p>
+        </div>
+
+        {users.length === 0 ? (
+          <div
+            style={{
+              background: "white",
+              padding: "3rem",
+              borderRadius: "12px",
+              textAlign: "center",
+            }}
+          >
+            <p style={{ color: theme.colors.textSecondary, marginBottom: "1rem" }}>
+              No users available to add as employees.
+            </p>
+            <p style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>
+              All users already have employee profiles.
+            </p>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div>
-              <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
-                Employee Management
-              </h1>
-              <p style={{ color: theme.colors.textSecondary }}>
-                View and manage employee profiles
-              </p>
-            </div>
-            <Link
-              href="/dashboard/hr/employees/new"
+        ) : (
+          <form onSubmit={handleSubmit}>
+            <div
               style={{
-                padding: "0.75rem 1.5rem",
-                background: theme.colors.primary,
-                color: "white",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem"
+                background: "white",
+                padding: "2rem",
+                borderRadius: "12px",
+                border: "1px solid #E5E7EB",
               }}
             >
-              <span>+</span> Add Employee
-            </Link>
-          </div>
-        </div>
+              {/* User Selection */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                  Team Member
+                </h2>
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Select User *
+                  </label>
+                  <select
+                    required
+                    value={formData.userId}
+                    onChange={(e) => setFormData({ ...formData, userId: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                  >
+                    <option value="">-- Select a user --</option>
+                    {users.map((user) => (
+                      <option key={user.id} value={user.id}>
+                        {user.name} ({user.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
-          <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
-            <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
-              Total Employees
-            </div>
-            <div style={{ fontSize: "2rem", fontWeight: "bold", color: theme.colors.textPrimary }}>
-              {employees.length}
-            </div>
-          </div>
+              <hr style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "2rem 0" }} />
 
-          <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
-            <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
-              Departments
-            </div>
-            <div style={{ fontSize: "2rem", fontWeight: "bold", color: theme.colors.textPrimary }}>
-              {departments.length}
-            </div>
-          </div>
-        </div>
+              {/* Employment Details */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                  Employment Details
+                </h2>
+                <div style={{ display: "grid", gap: "1.5rem" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Employee Number
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.employeeNumber}
+                      onChange={(e) =>
+                        setFormData({ ...formData, employeeNumber: e.target.value })
+                      }
+                      placeholder="e.g., EMP011"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                  </div>
 
-        {/* Filters */}
-        {departments.length > 0 && (
-          <div style={{ background: "white", padding: "1rem", borderRadius: "12px", border: "1px solid #E5E7EB", marginBottom: "1.5rem" }}>
-            <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
-              <button
-                onClick={() => setFilterDept("ALL")}
-                style={{
-                  padding: "0.5rem 1rem",
-                  border: filterDept === "ALL" ? `2px solid ${theme.colors.primary}` : "1px solid #E5E7EB",
-                  borderRadius: "8px",
-                  background: filterDept === "ALL" ? `${theme.colors.primary}10` : "white",
-                  color: filterDept === "ALL" ? theme.colors.primary : theme.colors.textSecondary,
-                  cursor: "pointer",
-                  fontSize: "0.875rem",
-                  fontWeight: filterDept === "ALL" ? "600" : "400"
-                }}
-              >
-                All Departments ({employees.length})
-              </button>
-              {departments.map((dept) => (
-                <button
-                  key={dept}
-                  onClick={() => setFilterDept(dept!)}
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Job Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.jobTitle}
+                      onChange={(e) => setFormData({ ...formData, jobTitle: e.target.value })}
+                      placeholder="e.g., Senior Developer"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Department *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.department}
+                      onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                      placeholder="e.g., Engineering, Marketing, Leadership"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                    <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                      Type any department name (creates new if doesn't exist)
+                    </p>
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        Employment Type
+                      </label>
+                      <select
+                        value={formData.employmentType}
+                        onChange={(e) =>
+                          setFormData({ ...formData, employmentType: e.target.value })
+                        }
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          fontSize: "0.875rem",
+                        }}
+                      >
+                        <option value="FULL_TIME">Full Time</option>
+                        <option value="PART_TIME">Part Time</option>
+                        <option value="CONTRACT">Contract</option>
+                        <option value="INTERN">Intern</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        Start Date *
+                      </label>
+                      <input
+                        type="date"
+                        required
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          fontSize: "0.875rem",
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Manager
+                    </label>
+                    <select
+                      value={formData.managerId}
+                      onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      <option value="">-- No manager --</option>
+                      {managers.map((manager) => (
+                        <option key={manager.id} value={manager.user.id}>
+                          {manager.user.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "2rem 0" }} />
+
+              {/* Leave Entitlements */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                  Leave Entitlements
+                </h2>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Annual Leave (days/year)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.annualLeaveEntitlement}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          annualLeaveEntitlement: parseInt(e.target.value),
+                        })
+                      }
+                      min="0"
+                      max="365"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Sick Leave (days/year)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.sickLeaveEntitlement}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          sickLeaveEntitlement: parseInt(e.target.value),
+                        })
+                      }
+                      min="0"
+                      max="365"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                  </div>
+                </div>
+                {hrSettings && (
+                  <p
+                    style={{
+                      fontSize: "0.75rem",
+                      color: theme.colors.textSecondary,
+                      marginTop: "0.5rem",
+                    }}
+                  >
+                    Default from HR Settings: {hrSettings.annualLeaveEntitlement} annual,{" "}
+                    {hrSettings.sickLeaveEntitlement} sick
+                  </p>
+                )}
+              </div>
+
+              <hr style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "2rem 0" }} />
+
+              {/* Emergency Contact */}
+              <div style={{ marginBottom: "2rem" }}>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+                  Emergency Contact (Optional)
+                </h2>
+                <div style={{ display: "grid", gap: "1.5rem" }}>
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.emergencyContactName}
+                      onChange={(e) =>
+                        setFormData({ ...formData, emergencyContactName: e.target.value })
+                      }
+                      placeholder="Emergency contact name"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        Phone
+                      </label>
+                      <input
+                        type="tel"
+                        value={formData.emergencyContactPhone}
+                        onChange={(e) =>
+                          setFormData({ ...formData, emergencyContactPhone: e.target.value })
+                        }
+                        placeholder="+971 50 123 4567"
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          fontSize: "0.875rem",
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        style={{
+                          display: "block",
+                          fontSize: "0.875rem",
+                          fontWeight: "600",
+                          marginBottom: "0.5rem",
+                        }}
+                      >
+                        Relationship
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.emergencyContactRelation}
+                        onChange={(e) =>
+                          setFormData({ ...formData, emergencyContactRelation: e.target.value })
+                        }
+                        placeholder="e.g., Spouse, Parent"
+                        style={{
+                          width: "100%",
+                          padding: "0.75rem",
+                          border: "1px solid #E5E7EB",
+                          borderRadius: "8px",
+                          fontSize: "0.875rem",
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Buttons */}
+              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
+                <Link
+                  href="/dashboard/hr/employees"
                   style={{
-                    padding: "0.5rem 1rem",
-                    border: filterDept === dept ? `2px solid ${theme.colors.primary}` : "1px solid #E5E7EB",
+                    padding: "0.75rem 1.5rem",
+                    border: "1px solid #E5E7EB",
                     borderRadius: "8px",
-                    background: filterDept === dept ? `${theme.colors.primary}10` : "white",
-                    color: filterDept === dept ? theme.colors.primary : theme.colors.textSecondary,
-                    cursor: "pointer",
+                    textDecoration: "none",
+                    color: theme.colors.textPrimary,
                     fontSize: "0.875rem",
-                    fontWeight: filterDept === dept ? "600" : "400"
+                    fontWeight: "600",
                   }}
                 >
-                  {dept} ({employees.filter(e => e.department === dept).length})
+                  Cancel
+                </Link>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  style={{
+                    padding: "0.75rem 1.5rem",
+                    background: theme.colors.primary,
+                    color: "white",
+                    border: "none",
+                    borderRadius: "8px",
+                    cursor: saving ? "not-allowed" : "pointer",
+                    fontSize: "0.875rem",
+                    fontWeight: "600",
+                    opacity: saving ? 0.5 : 1,
+                  }}
+                >
+                  {saving ? "Creating..." : "Create Employee"}
                 </button>
-              ))}
+              </div>
             </div>
-          </div>
+          </form>
         )}
-
-        {/* Employee List */}
-        <div style={{ background: "white", borderRadius: "12px", border: "1px solid #E5E7EB", overflow: "hidden" }}>
-          {loading ? (
-            <div style={{ padding: "3rem", textAlign: "center", color: theme.colors.textSecondary }}>
-              Loading employees...
-            </div>
-          ) : (
-            <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead style={{ background: "#F9FAFB", borderBottom: "1px solid #E5E7EB" }}>
-                  <tr>
-                    <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Employee
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Department
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "left", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Manager
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Annual Leave
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Sick Leave
-                    </th>
-                    <th style={{ padding: "1rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEmployees.map((employee) => (
-                    <tr key={employee.id} style={{ borderBottom: "1px solid #E5E7EB" }}>
-                      <td style={{ padding: "1rem" }}>
-                        <div>
-                          <div style={{ fontWeight: "600", fontSize: "0.875rem", marginBottom: "0.25rem" }}>
-                            {employee.user.name}
-                          </div>
-                          <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
-                            {employee.jobTitle || employee.user.email}
-                          </div>
-                          {employee.employeeNumber && (
-                            <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
-                              #{employee.employeeNumber}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                        {employee.department || "—"}
-                      </td>
-                      <td style={{ padding: "1rem", fontSize: "0.875rem" }}>
-                        {employee.manager?.name || "—"}
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#2563EB" }}>
-                          {employee.annualLeaveBalance}
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
-                          / {employee.annualLeaveEntitlement}
-                        </div>
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
-                        <div style={{ fontSize: "0.875rem", fontWeight: "600", color: "#10B981" }}>
-                          {employee.sickLeaveBalance}
-                        </div>
-                        <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
-                          / {employee.sickLeaveEntitlement}
-                        </div>
-                      </td>
-                      <td style={{ padding: "1rem", textAlign: "center" }}>
-                        <Link
-                          href={`/dashboard/hr/employees/${employee.id}/edit`}
-                          style={{
-                            padding: "0.5rem 1rem",
-                            background: theme.colors.primary,
-                            color: "white",
-                            borderRadius: "6px",
-                            fontSize: "0.75rem",
-                            fontWeight: "600",
-                            textDecoration: "none",
-                            display: "inline-block"
-                          }}
-                        >
-                          Edit
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );
