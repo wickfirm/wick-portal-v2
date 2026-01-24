@@ -11,12 +11,12 @@ export default function HRSettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  // Default settings (these would come from database in production)
   const [settings, setSettings] = useState({
     annualLeaveEntitlement: 21,
     sickLeaveEntitlement: 10,
-    weekendDays: "FRI_SAT", // UAE standard
+    weekendDays: "FRI_SAT",
     workingHoursPerDay: 8,
     carryOverEnabled: false,
     maxCarryOverDays: 5,
@@ -28,20 +28,64 @@ export default function HRSettingsPage() {
     }
   }, [status, router]);
 
-  const handleSave = async () => {
-    setSaving(true);
-    // TODO: Save to database via API
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert("Settings saved! (Note: This is currently display-only. Database integration coming next.)");
-    setSaving(false);
+  useEffect(() => {
+    if (status === "authenticated") {
+      loadSettings();
+    }
+  }, [status]);
+
+  const loadSettings = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/hr/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setSettings({
+          annualLeaveEntitlement: Number(data.annualLeaveEntitlement),
+          sickLeaveEntitlement: Number(data.sickLeaveEntitlement),
+          weekendDays: data.weekendDays,
+          workingHoursPerDay: data.workingHoursPerDay,
+          carryOverEnabled: data.carryOverEnabled,
+          maxCarryOverDays: data.maxCarryOverDays,
+        });
+      }
+    } catch (error) {
+      console.error("Error loading settings:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (status === "loading") {
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch("/api/hr/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings)
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || "Failed to save settings");
+        return;
+      }
+
+      alert("HR Settings saved successfully!");
+    } catch (error) {
+      console.error("Error saving settings:", error);
+      alert("Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (status === "loading" || loading) {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
-          Loading...
+          Loading settings...
         </div>
       </div>
     );
@@ -245,8 +289,7 @@ export default function HRSettingsPage() {
             <ul style={{ fontSize: "0.875rem", color: "#92400E", paddingLeft: "1.25rem", margin: 0 }}>
               <li style={{ marginBottom: "0.25rem" }}>Changes apply to new employees only</li>
               <li style={{ marginBottom: "0.25rem" }}>Existing employee entitlements must be updated individually</li>
-              <li style={{ marginBottom: "0.25rem" }}>Weekend changes affect future leave calculations</li>
-              <li>These settings are currently display-only (database integration coming next)</li>
+              <li>Weekend changes affect future leave calculations</li>
             </ul>
           </div>
 
