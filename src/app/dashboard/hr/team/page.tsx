@@ -18,6 +18,8 @@ interface LeaveRequest {
   reason?: string;
   status: LeaveStatus;
   requestedAt: string;
+  reviewedAt?: string;
+  reviewNotes?: string;
   employee: {
     user: {
       name: string;
