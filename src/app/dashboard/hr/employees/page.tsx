@@ -193,6 +193,9 @@ export default function EmployeesPage() {
                     <th style={{ padding: "1rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
                       Sick Leave
                     </th>
+                    <th style={{ padding: "1rem", textAlign: "center", fontSize: "0.75rem", fontWeight: "600", color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -234,6 +237,23 @@ export default function EmployeesPage() {
                         <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
                           / {employee.sickLeaveEntitlement}
                         </div>
+                      </td>
+                      <td style={{ padding: "1rem", textAlign: "center" }}>
+                        <Link
+                          href={`/dashboard/hr/employees/${employee.id}/edit`}
+                          style={{
+                            padding: "0.5rem 1rem",
+                            background: theme.colors.primary,
+                            color: "white",
+                            borderRadius: "6px",
+                            fontSize: "0.75rem",
+                            fontWeight: "600",
+                            textDecoration: "none",
+                            display: "inline-block"
+                          }}
+                        >
+                          Edit
+                        </Link>
                       </td>
                     </tr>
                   ))}
