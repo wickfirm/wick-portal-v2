@@ -211,11 +211,31 @@ export default function AddEmployeePage() {
               textAlign: "center",
             }}
           >
-            <p style={{ color: theme.colors.textSecondary, marginBottom: "1rem" }}>
+            <p style={{ color: theme.colors.textSecondary, marginBottom: "0.5rem", fontSize: "1rem", fontWeight: "600" }}>
               No users available to add as employees.
             </p>
-            <p style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>
+            <p style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "2rem" }}>
               All users already have employee profiles.
+            </p>
+            <Link
+              href="/team"
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: theme.colors.primary,
+                color: "white",
+                border: "none",
+                borderRadius: "8px",
+                textDecoration: "none",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                display: "inline-block",
+              }}
+            >
+              + Create New User in Team Section
+            </Link>
+            <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "1.5rem", lineHeight: "1.5" }}>
+              💡 To add a new employee: First create a user account in the Team section,<br />
+              then return here to create their employee profile.
             </p>
           </div>
         ) : (
