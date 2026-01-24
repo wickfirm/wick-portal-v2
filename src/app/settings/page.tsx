@@ -69,6 +69,14 @@ export default function SettingsPage() {
       roles: ["SUPER_ADMIN", "ADMIN", "MEMBER"],
     },
     {
+      title: "HR Settings",
+      description: "Configure leave policies and working hours",
+      href: "/settings/hr",
+      icon: "👥",
+      color: "#10B981",
+      roles: ["SUPER_ADMIN", "ADMIN"],
+    },
+    {
       title: "Agencies",
       description: "Manage agencies that service your clients",
       href: "/settings/agencies",
