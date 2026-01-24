@@ -91,10 +91,10 @@ export default function AddEmployeePage() {
 
       console.log("Current agency:", currentUserAgencyId);
       console.log("All users:", allUsers.length);
-      console.log("All users details:", allUsers.map(u => ({ name: u.name, email: u.email, agencyId: u.agencyId })));
+      console.log("All users details:", allUsers.map((u: User) => ({ name: u.name, email: u.email, agencyId: u.agencyId })));
       console.log("Employee user IDs:", employeeUserIds);
       console.log("Filtered users:", availableUsers.length);
-      console.log("Filtered users details:", availableUsers.map(u => ({ name: u.name, email: u.email, agencyId: u.agencyId })));
+      console.log("Filtered users details:", availableUsers.map((u: User) => ({ name: u.name, email: u.email, agencyId: u.agencyId })));
 
       setUsers(availableUsers);
       setManagers(employees);
