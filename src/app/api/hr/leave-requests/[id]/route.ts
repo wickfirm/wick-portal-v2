@@ -47,7 +47,7 @@ export async function PATCH(
 
     // Check permissions: Manager of employee OR Admin
     const isManager = leaveRequest.employee.managerId === user.id;
-    const isAdmin = ["ADMIN", "PLATFORM_ADMIN"].includes(user.role);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role);
 
     if (!isManager && !isAdmin) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
