@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: "User not assigned to agency" }, { status: 403 });
     }
 
-    // Only ADMIN, MANAGER, PLATFORM_ADMIN can view all employees
-    const canViewAll = ["ADMIN", "MANAGER", "PLATFORM_ADMIN"].includes(user.role);
+    // Only ADMIN, MANAGER, SUPER_ADMIN, PLATFORM_ADMIN can view all employees
+    const canViewAll = ["ADMIN", "SUPER_ADMIN", "MANAGER", "PLATFORM_ADMIN"].includes(user.role);
     
     if (!canViewAll) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
@@ -105,8 +105,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "User not assigned to agency" }, { status: 403 });
     }
 
-    // Only ADMIN can create employee profiles
-    if (user.role !== "ADMIN" && user.role !== "PLATFORM_ADMIN") {
+    // Only ADMIN and SUPER_ADMIN can create employee profiles
+    if (!["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
