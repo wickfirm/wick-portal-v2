@@ -2,17 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Calendar,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertCircle,
-  Plus,
-} from "lucide-react";
+import { useRouter } from "next/navigation";
+import Header from "@/components/Header";
+import { theme } from "@/lib/theme";
 
 type LeaveType = "ANNUAL" | "SICK";
 type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELLED";
@@ -47,31 +39,36 @@ interface EmployeeProfile {
 }
 
 export default function MyLeavePage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
+  const router = useRouter();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showRequestForm, setShowRequestForm] = useState(false);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (status === "unauthenticated") {
+      router.push("/login");
+    }
+  }, [status, router]);
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      loadData();
+    }
+  }, [status]);
 
   const loadData = async () => {
     try {
       setLoading(true);
 
-      // Load employee profile
       const profileRes = await fetch("/api/hr/employees");
       const profiles = await profileRes.json();
-      
-      // Find current user's profile
+
       const myProfile = profiles.find(
         (p: any) => p.user.email === session?.user?.email
       );
       setProfile(myProfile || null);
 
-      // Load leave requests
       const requestsRes = await fetch("/api/hr/leave-requests");
       const requests = await requestsRes.json();
       setLeaveRequests(requests);
@@ -84,27 +81,19 @@ export default function MyLeavePage() {
 
   const getStatusColor = (status: LeaveStatus) => {
     switch (status) {
-      case "PENDING":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
-      case "APPROVED":
-        return "bg-green-100 text-green-800 border-green-200";
-      case "REJECTED":
-        return "bg-red-100 text-red-800 border-red-200";
-      case "CANCELLED":
-        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "PENDING": return "#FEF3C7";
+      case "APPROVED": return "#D1FAE5";
+      case "REJECTED": return "#FEE2E2";
+      case "CANCELLED": return "#F3F4F6";
     }
   };
 
-  const getStatusIcon = (status: LeaveStatus) => {
+  const getStatusTextColor = (status: LeaveStatus) => {
     switch (status) {
-      case "PENDING":
-        return <Clock className="w-4 h-4" />;
-      case "APPROVED":
-        return <CheckCircle className="w-4 h-4" />;
-      case "REJECTED":
-        return <XCircle className="w-4 h-4" />;
-      case "CANCELLED":
-        return <AlertCircle className="w-4 h-4" />;
+      case "PENDING": return "#92400E";
+      case "APPROVED": return "#065F46";
+      case "REJECTED": return "#991B1B";
+      case "CANCELLED": return "#374151";
     }
   };
 
@@ -116,16 +105,24 @@ export default function MyLeavePage() {
     });
   };
 
-  if (loading) {
+  const cancelRequest = async (requestId: string) => {
+    if (!confirm("Are you sure you want to cancel this leave request?")) return;
+
+    try {
+      await fetch(`/api/hr/leave-requests/${requestId}`, { method: "DELETE" });
+      loadData();
+    } catch (error) {
+      console.error("Error cancelling request:", error);
+      alert("Failed to cancel request");
+    }
+  };
+
+  if (status === "loading" || loading) {
     return (
-      <div className="p-8">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="h-32 bg-gray-200 rounded"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
-            <div className="h-32 bg-gray-200 rounded"></div>
-          </div>
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+        <Header />
+        <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
+          Loading...
         </div>
       </div>
     );
@@ -133,184 +130,137 @@ export default function MyLeavePage() {
 
   if (!profile) {
     return (
-      <div className="p-8">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-12">
-              <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No Employee Profile
-              </h3>
-              <p className="text-gray-600 mb-4">
-                Your employee profile hasn't been created yet. Please contact
-                your HR administrator.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+        <Header />
+        <div style={{ padding: "2rem" }}>
+          <div style={{ background: "white", padding: "3rem", borderRadius: "12px", textAlign: "center" }}>
+            <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+              No Employee Profile
+            </h3>
+            <p style={{ color: theme.colors.textSecondary }}>
+              Contact your HR administrator.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
+  const pendingCount = leaveRequests.filter((r) => r.status === "PENDING").length;
+
   return (
-    <div className="p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">My Leave</h1>
-          <p className="text-gray-600 mt-1">
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <Header />
+      <div style={{ padding: "2rem" }}>
+        <div style={{ marginBottom: "2rem" }}>
+          <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
+            My Leave
+          </h1>
+          <p style={{ color: theme.colors.textSecondary }}>
             Manage your leave requests and view your balance
           </p>
         </div>
-        <Button
-          onClick={() => setShowRequestForm(true)}
-          className="flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          Request Leave
-        </Button>
-      </div>
 
-      {/* Leave Balance Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "1.5rem", marginBottom: "2rem" }}>
+          <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
               Annual Leave Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold text-blue-600">
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem" }}>
+              <span style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#2563EB" }}>
                 {profile.annualLeaveBalance}
               </span>
-              <span className="text-gray-500 mb-1">
+              <span style={{ color: theme.colors.textSecondary, marginBottom: "0.25rem" }}>
                 / {profile.annualLeaveEntitlement} days
               </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+          <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
               Sick Leave Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold text-green-600">
+            </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem" }}>
+              <span style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#10B981" }}>
                 {profile.sickLeaveBalance}
               </span>
-              <span className="text-gray-500 mb-1">
+              <span style={{ color: theme.colors.textSecondary, marginBottom: "0.25rem" }}>
                 / {profile.sickLeaveEntitlement} days
               </span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">
+          <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
               Pending Requests
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-end gap-2">
-              <span className="text-4xl font-bold text-yellow-600">
-                {leaveRequests.filter((r) => r.status === "PENDING").length}
-              </span>
-              <span className="text-gray-500 mb-1">awaiting approval</span>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div style={{ display: "flex", alignItems: "flex-end", gap: "0.5rem" }}>
+              <span style={{ fontSize: "2.5rem", fontWeight: "bold", color: "#F59E0B" }}>
+                {pendingCount}
+              </span>
+              <span style={{ color: theme.colors.textSecondary, marginBottom: "0.25rem" }}>
+                awaiting approval
+              </span>
+            </div>
+          </div>
+        </div>
 
-      {/* Leave Requests */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Calendar className="w-5 h-5" />
-            My Leave Requests
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
+        <div style={{ background: "white", padding: "1.5rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+          <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1.5rem" }}>
+            📅 My Leave Requests
+          </h2>
+
           {leaveRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <Calendar className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No Leave Requests
-              </h3>
-              <p className="text-gray-600 mb-4">
-                You haven't submitted any leave requests yet.
+            <div style={{ textAlign: "center", padding: "3rem 0" }}>
+              <p style={{ color: theme.colors.textSecondary }}>
+                No leave requests yet.
               </p>
-              <Button onClick={() => setShowRequestForm(true)}>
-                Request Your First Leave
-              </Button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {leaveRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="border rounded-lg p-4 hover:border-gray-300 transition-colors"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <Badge
-                          variant="outline"
-                          className={getStatusColor(request.status)}
-                        >
-                          {getStatusIcon(request.status)}
-                          <span className="ml-1">{request.status}</span>
-                        </Badge>
-                        <Badge variant="outline">
-                          {request.leaveType === "ANNUAL"
-                            ? "Annual Leave"
-                            : "Sick Leave"}
-                        </Badge>
-                        <span className="text-sm text-gray-600">
-                          {request.totalDays}{" "}
-                          {Number(request.totalDays) === 1 ? "day" : "days"}
+                <div key={request.id} style={{ border: "1px solid #E5E7EB", borderRadius: "8px", padding: "1rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                        <span style={{ display: "inline-block", padding: "0.25rem 0.75rem", borderRadius: "9999px", fontSize: "0.75rem", fontWeight: "600", background: getStatusColor(request.status), color: getStatusTextColor(request.status) }}>
+                          {request.status}
+                        </span>
+                        <span style={{ display: "inline-block", padding: "0.25rem 0.75rem", borderRadius: "9999px", fontSize: "0.75rem", background: "#F3F4F6", color: "#374151" }}>
+                          {request.leaveType === "ANNUAL" ? "Annual Leave" : "Sick Leave"}
+                        </span>
+                        <span style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>
+                          {request.totalDays} {Number(request.totalDays) === 1 ? "day" : "days"}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-2">
-                        <span>
-                          <strong>From:</strong> {formatDate(request.startDate)}
-                        </span>
-                        <span>
-                          <strong>To:</strong> {formatDate(request.endDate)}
-                        </span>
+                      <div style={{ display: "flex", gap: "1.5rem", fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "0.5rem" }}>
+                        <span><strong>From:</strong> {formatDate(request.startDate)}</span>
+                        <span><strong>To:</strong> {formatDate(request.endDate)}</span>
                       </div>
 
                       {request.reason && (
-                        <p className="text-sm text-gray-700 mb-2">
+                        <p style={{ fontSize: "0.875rem", marginBottom: "0.5rem" }}>
                           <strong>Reason:</strong> {request.reason}
                         </p>
                       )}
 
                       {request.status === "APPROVED" && request.reviewer && (
-                        <p className="text-sm text-green-700">
+                        <p style={{ fontSize: "0.875rem", color: "#065F46" }}>
                           <strong>Approved by:</strong> {request.reviewer.name}
-                          {request.reviewedAt &&
-                            ` on ${formatDate(request.reviewedAt)}`}
+                          {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
                         </p>
                       )}
 
                       {request.status === "REJECTED" && (
                         <>
                           {request.reviewer && (
-                            <p className="text-sm text-red-700">
-                              <strong>Rejected by:</strong>{" "}
-                              {request.reviewer.name}
-                              {request.reviewedAt &&
-                                ` on ${formatDate(request.reviewedAt)}`}
+                            <p style={{ fontSize: "0.875rem", color: "#991B1B" }}>
+                              <strong>Rejected by:</strong> {request.reviewer.name}
                             </p>
                           )}
                           {request.reviewNotes && (
-                            <p className="text-sm text-red-700 mt-1">
+                            <p style={{ fontSize: "0.875rem", color: "#991B1B", marginTop: "0.25rem" }}>
                               <strong>Reason:</strong> {request.reviewNotes}
                             </p>
                           )}
@@ -319,55 +269,17 @@ export default function MyLeavePage() {
                     </div>
 
                     {request.status === "PENDING" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={async () => {
-                          if (
-                            confirm(
-                              "Are you sure you want to cancel this leave request?"
-                            )
-                          ) {
-                            try {
-                              await fetch(
-                                `/api/hr/leave-requests/${request.id}`,
-                                {
-                                  method: "DELETE",
-                                }
-                              );
-                              loadData();
-                            } catch (error) {
-                              console.error("Error cancelling request:", error);
-                            }
-                          }
-                        }}
-                      >
+                      <button onClick={() => cancelRequest(request.id)} style={{ padding: "0.5rem 1rem", fontSize: "0.875rem", border: "1px solid #E5E7EB", borderRadius: "6px", background: "white", cursor: "pointer" }}>
                         Cancel
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Request Form Modal - Will add in next iteration */}
-      {showRequestForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">
-              Request Leave Form (Coming Soon)
-            </h3>
-            <p className="text-gray-600 mb-4">
-              For now, use the browser console to submit leave requests. UI form
-              coming next!
-            </p>
-            <Button onClick={() => setShowRequestForm(false)}>Close</Button>
-          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
