@@ -11,6 +11,7 @@ interface User {
   id: string;
   name: string;
   email: string;
+  agencyId?: string;
 }
 
 interface Manager {
@@ -28,7 +29,9 @@ export default function AddEmployeePage() {
   const [saving, setSaving] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [managers, setManagers] = useState<Manager[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [hrSettings, setHrSettings] = useState<any>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     userId: "",
@@ -61,6 +64,15 @@ export default function AddEmployeePage() {
     try {
       setLoading(true);
 
+      // Get current user's agency from session hook
+      const currentUserAgencyId = (session?.user as any)?.agencyId;
+
+      if (!currentUserAgencyId) {
+        console.error("No agency ID found in session");
+        setLoading(false);
+        return;
+      }
+
       // Load users without employee profiles
       const usersRes = await fetch("/api/users");
       const allUsers = await usersRes.json();
@@ -70,12 +82,26 @@ export default function AddEmployeePage() {
       const employees = await employeesRes.json();
 
       const employeeUserIds = employees.map((e: any) => e.userId);
+      
+      // Filter: Same agency + No employee profile
       const availableUsers = allUsers.filter(
-        (u: User) => !employeeUserIds.includes(u.id)
+        (u: User) => 
+          u.agencyId === currentUserAgencyId && 
+          !employeeUserIds.includes(u.id)
       );
+
+      console.log("Current agency:", currentUserAgencyId);
+      console.log("All users:", allUsers.length);
+      console.log("Filtered users:", availableUsers.length);
 
       setUsers(availableUsers);
       setManagers(employees);
+
+      // Extract unique departments from existing employees
+      const uniqueDepts = Array.from(
+        new Set(employees.map((e: any) => e.department).filter(Boolean))
+      ) as string[];
+      setDepartments(uniqueDepts.sort());
 
       // Load HR settings for default entitlements
       const settingsRes = await fetch("/api/hr/settings");
@@ -126,8 +152,24 @@ export default function AddEmployeePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
-          Loading...
+        <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ height: "1rem", width: "150px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+            <div style={{ height: "2rem", width: "250px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "0.5rem" }}></div>
+            <div style={{ height: "1rem", width: "350px", background: "#E5E7EB", borderRadius: "4px" }}></div>
+          </div>
+
+          {/* Form Skeleton */}
+          <div style={{ background: "white", padding: "2rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ marginBottom: "2rem" }}>
+                <div style={{ height: "1.5rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px", marginBottom: "0.5rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px" }}></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -298,12 +340,10 @@ export default function AddEmployeePage() {
                     >
                       Department *
                     </label>
-                    <input
-                      type="text"
+                    <select
                       required
                       value={formData.department}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                      placeholder="e.g., Engineering, Marketing, Leadership"
                       style={{
                         width: "100%",
                         padding: "0.75rem",
@@ -311,9 +351,16 @@ export default function AddEmployeePage() {
                         borderRadius: "8px",
                         fontSize: "0.875rem",
                       }}
-                    />
+                    >
+                      <option value="">-- Select a department --</option>
+                      {departments.map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                    </select>
                     <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
-                      Type any department name (creates new if doesn't exist)
+                      Manage departments in Settings → HR Settings
                     </p>
                   </div>
 
