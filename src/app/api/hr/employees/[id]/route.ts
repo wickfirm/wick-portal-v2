@@ -179,3 +179,63 @@ export async function PATCH(
     );
   }
 }
+
+// DELETE - Delete employee profile
+export async function DELETE(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { id: true, role: true, agencyId: true }
+    });
+
+    if (!user?.agencyId) {
+      return NextResponse.json({ error: "User not assigned to agency" }, { status: 403 });
+    }
+
+    // Only ADMIN, SUPER_ADMIN can delete employees
+    if (!["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
+      return NextResponse.json(
+        { error: "Insufficient permissions" },
+        { status: 403 }
+      );
+    }
+
+    const employee = await prisma.employeeProfile.findUnique({
+      where: { id: params.id },
+      include: {
+        user: { select: { name: true } }
+      }
+    });
+
+    if (!employee) {
+      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    }
+
+    if (employee.agencyId !== user.agencyId) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    // Delete employee profile (cascade will delete related records)
+    await prisma.employeeProfile.delete({
+      where: { id: params.id }
+    });
+
+    return NextResponse.json({
+      message: `Employee profile for ${employee.user.name} deleted successfully`
+    });
+  } catch (error) {
+    console.error("Error deleting employee:", error);
+    return NextResponse.json(
+      { error: "Failed to delete employee" },
+      { status: 500 }
+    );
+  }
+}
