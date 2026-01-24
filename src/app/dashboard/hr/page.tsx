@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
@@ -189,24 +190,65 @@ export default function MyLeavePage() {
                 Manage your leave requests and view your balance
               </p>
             </div>
-            <button
-              onClick={() => setShowRequestForm(true)}
-              style={{
-                padding: "0.75rem 1.5rem",
-                background: theme.colors.primary,
-                color: "white",
-                border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: "600",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.5rem"
-              }}
-            >
-              <span>+</span> Request Leave
-            </button>
+            <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
+              {/* Quick Links for Managers/Admins */}
+              {(session?.user as any)?.role !== "MEMBER" && (
+                <>
+                  <Link 
+                    href="/dashboard/hr/team"
+                    style={{ 
+                      padding: "0.75rem 1.5rem",
+                      border: `1px solid ${theme.colors.primary}`,
+                      color: theme.colors.primary,
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}
+                  >
+                    👥 Team Leave
+                  </Link>
+                  <Link 
+                    href="/dashboard/hr/employees"
+                    style={{ 
+                      padding: "0.75rem 1.5rem",
+                      border: "1px solid #E5E7EB",
+                      color: theme.colors.textPrimary,
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      textDecoration: "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.5rem"
+                    }}
+                  >
+                    📋 Employees
+                  </Link>
+                </>
+              )}
+              <button
+                onClick={() => setShowRequestForm(true)}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: theme.colors.primary,
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.5rem"
+                }}
+              >
+                <span>+</span> Request Leave
+              </button>
+            </div>
           </div>
         </div>
 
