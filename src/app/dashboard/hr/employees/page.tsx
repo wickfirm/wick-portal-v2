@@ -76,12 +76,33 @@ export default function EmployeesPage() {
               ← My Leave
             </Link>
           </div>
-          <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
-            Employee Management
-          </h1>
-          <p style={{ color: theme.colors.textSecondary }}>
-            View and manage employee profiles
-          </p>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <div>
+              <h1 style={{ fontSize: "2rem", fontWeight: "bold", marginBottom: "0.25rem" }}>
+                Employee Management
+              </h1>
+              <p style={{ color: theme.colors.textSecondary }}>
+                View and manage employee profiles
+              </p>
+            </div>
+            <Link
+              href="/dashboard/hr/employees/new"
+              style={{
+                padding: "0.75rem 1.5rem",
+                background: theme.colors.primary,
+                color: "white",
+                borderRadius: "8px",
+                fontSize: "0.875rem",
+                fontWeight: "600",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "0.5rem"
+              }}
+            >
+              <span>+</span> Add Employee
+            </Link>
+          </div>
         </div>
 
         {/* Stats */}
