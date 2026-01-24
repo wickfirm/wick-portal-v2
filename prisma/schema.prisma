@@ -517,6 +517,7 @@ model Agency {
   leaveRequests           LeaveRequest[]
   leaveBalanceAdjustments LeaveBalanceAdjustment[]
   publicHolidays          PublicHoliday[]
+  hrSettings              HRSettings?
   
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -827,6 +828,30 @@ model PublicHoliday {
   @@index([agencyId])
   @@index([date])
   @@map("public_holidays")
+}
+
+model HRSettings {
+  id          String   @id @default(cuid())
+  agencyId    String   @unique @map("agencyId")
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  
+  // Leave Entitlements
+  annualLeaveEntitlement  Decimal  @default(21) @db.Decimal(5, 2) @map("annual_leave_entitlement")
+  sickLeaveEntitlement    Decimal  @default(10) @db.Decimal(5, 2) @map("sick_leave_entitlement")
+  
+  // Working Schedule
+  weekendDays           String   @default("FRI_SAT") @map("weekend_days")
+  workingHoursPerDay    Int      @default(8) @map("working_hours_per_day")
+  
+  // Carry-Over Policy
+  carryOverEnabled      Boolean  @default(false) @map("carry_over_enabled")
+  maxCarryOverDays      Int      @default(5) @map("max_carry_over_days")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@index([agencyId])
+  @@map("hr_settings")
 }
 
 // ============ ENUMS ============
