@@ -72,7 +72,7 @@ export async function GET(
     // Check access: own profile, manager, or admin
     const isOwnProfile = employeeProfile.userId === user.id;
     const isManager = employeeProfile.managerId === user.id;
-    const isAdmin = ["ADMIN", "PLATFORM_ADMIN"].includes(user.role);
+    const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role);
 
     if (!isOwnProfile && !isManager && !isAdmin) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
@@ -112,8 +112,8 @@ export async function PATCH(
       return NextResponse.json({ error: "User not assigned to agency" }, { status: 403 });
     }
 
-    // Only ADMIN can update employee profiles
-    if (user.role !== "ADMIN" && user.role !== "PLATFORM_ADMIN") {
+    // Only ADMIN and SUPER_ADMIN can update employee profiles
+    if (!["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
       return NextResponse.json({ error: "Insufficient permissions" }, { status: 403 });
     }
 
