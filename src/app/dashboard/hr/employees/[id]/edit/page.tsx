@@ -25,6 +25,7 @@ export default function EditEmployeePage() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [managers, setManagers] = useState<Manager[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
   const [employee, setEmployee] = useState<any>(null);
 
   const [formData, setFormData] = useState({
@@ -74,6 +75,10 @@ export default function EditEmployeePage() {
       const managersRes = await fetch("/api/hr/employees");
       const allEmployees = await managersRes.json();
       setManagers(allEmployees.filter((e: any) => e.id !== employeeId));
+
+      // Extract departments from all employees
+      const depts = Array.from(new Set(allEmployees.map((e: any) => e.department).filter(Boolean))) as string[];
+      setDepartments(depts.sort());
 
       // Populate form
       setFormData({
@@ -158,8 +163,24 @@ export default function EditEmployeePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
-          Loading...
+        <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ height: "1rem", width: "150px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+            <div style={{ height: "2rem", width: "300px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "0.5rem" }}></div>
+            <div style={{ height: "1rem", width: "400px", background: "#E5E7EB", borderRadius: "4px" }}></div>
+          </div>
+
+          {/* Form Skeleton */}
+          <div style={{ background: "white", padding: "2rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{ marginBottom: "2rem" }}>
+                <div style={{ height: "1.5rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px", marginBottom: "0.5rem" }}></div>
+                <div style={{ height: "3rem", width: "100%", background: "#E5E7EB", borderRadius: "8px" }}></div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -294,8 +315,7 @@ export default function EditEmployeePage() {
                   >
                     Department *
                   </label>
-                  <input
-                    type="text"
+                  <select
                     required
                     value={formData.department}
                     onChange={(e) => setFormData({ ...formData, department: e.target.value })}
@@ -306,7 +326,17 @@ export default function EditEmployeePage() {
                       borderRadius: "8px",
                       fontSize: "0.875rem",
                     }}
-                  />
+                  >
+                    <option value="">-- Select a department --</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                    Manage departments in Settings → HR Settings
+                  </p>
                 </div>
 
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
