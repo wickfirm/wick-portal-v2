@@ -295,10 +295,17 @@ export default function MyLeavePage() {
                       )}
 
                       {request.status === "APPROVED" && request.reviewer && (
-                        <p style={{ fontSize: "0.875rem", color: "#065F46" }}>
-                          <strong>Approved by:</strong> {request.reviewer.name}
-                          {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
-                        </p>
+                        <>
+                          <p style={{ fontSize: "0.875rem", color: "#065F46" }}>
+                            <strong>Approved by:</strong> {request.reviewer.name}
+                            {request.reviewedAt && ` on ${formatDate(request.reviewedAt)}`}
+                          </p>
+                          {request.reviewNotes && (
+                            <p style={{ fontSize: "0.875rem", color: "#065F46", marginTop: "0.25rem" }}>
+                              <strong>Notes:</strong> {request.reviewNotes}
+                            </p>
+                          )}
+                        </>
                       )}
 
                       {request.status === "REJECTED" && (
