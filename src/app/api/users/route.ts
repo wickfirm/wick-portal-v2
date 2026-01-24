@@ -14,6 +14,7 @@ export async function GET() {
       name: true,
       email: true,
       role: true,
+      agencyId: true,
     },
     orderBy: { name: "asc" },
   });
