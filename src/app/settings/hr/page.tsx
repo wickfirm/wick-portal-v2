@@ -12,6 +12,11 @@ export default function HRSettingsPage() {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [newDepartment, setNewDepartment] = useState("");
+  const [editingDept, setEditingDept] = useState<string | null>(null);
+  const [editDeptValue, setEditDeptValue] = useState("");
   
   const [settings, setSettings] = useState({
     annualLeaveEntitlement: 21,
@@ -49,6 +54,15 @@ export default function HRSettingsPage() {
           maxCarryOverDays: data.maxCarryOverDays,
         });
       }
+
+      // Load employees to get departments
+      const empRes = await fetch("/api/hr/employees");
+      if (empRes.ok) {
+        const empData = await empRes.json();
+        setEmployees(empData);
+        const depts = Array.from(new Set(empData.map((e: any) => e.department).filter(Boolean))) as string[];
+        setDepartments(depts.sort());
+      }
     } catch (error) {
       console.error("Error loading settings:", error);
     } finally {
@@ -80,13 +94,103 @@ export default function HRSettingsPage() {
     }
   };
 
+  const handleAddDepartment = () => {
+    if (!newDepartment.trim()) {
+      alert("Please enter a department name");
+      return;
+    }
+    if (departments.includes(newDepartment.trim())) {
+      alert("Department already exists");
+      return;
+    }
+    setDepartments([...departments, newDepartment.trim()].sort());
+    setNewDepartment("");
+  };
+
+  const handleEditDepartment = (oldName: string) => {
+    if (!editDeptValue.trim()) {
+      alert("Department name cannot be empty");
+      return;
+    }
+    if (editDeptValue === oldName) {
+      setEditingDept(null);
+      return;
+    }
+    if (departments.includes(editDeptValue.trim())) {
+      alert("Department already exists");
+      return;
+    }
+
+    // Update department in state
+    setDepartments(departments.map(d => d === oldName ? editDeptValue.trim() : d).sort());
+    setEditingDept(null);
+
+    // Update all employees with this department
+    const employeesToUpdate = employees.filter(e => e.department === oldName);
+    if (employeesToUpdate.length > 0) {
+      if (confirm(`Update ${employeesToUpdate.length} employee(s) from "${oldName}" to "${editDeptValue.trim()}"?`)) {
+        updateEmployeeDepartments(oldName, editDeptValue.trim());
+      }
+    }
+  };
+
+  const handleDeleteDepartment = (deptName: string) => {
+    const employeesInDept = employees.filter(e => e.department === deptName);
+    
+    if (employeesInDept.length > 0) {
+      if (!confirm(`"${deptName}" has ${employeesInDept.length} employee(s). Delete anyway?\n\nEmployees will have no department until reassigned.`)) {
+        return;
+      }
+      // Update employees to null department
+      updateEmployeeDepartments(deptName, null);
+    }
+    
+    setDepartments(departments.filter(d => d !== deptName));
+  };
+
+  const updateEmployeeDepartments = async (oldDept: string, newDept: string | null) => {
+    const employeesToUpdate = employees.filter(e => e.department === oldDept);
+    
+    for (const emp of employeesToUpdate) {
+      try {
+        await fetch(`/api/hr/employees/${emp.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ department: newDept })
+        });
+      } catch (error) {
+        console.error(`Failed to update employee ${emp.id}:`, error);
+      }
+    }
+    
+    // Reload employees
+    loadSettings();
+  };
+
   if (status === "loading" || loading) {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
-          Loading settings...
-        </div>
+        <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: "2rem" }}>
+            <div style={{ height: "1rem", width: "120px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+            <div style={{ height: "2rem", width: "180px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "0.5rem" }}></div>
+            <div style={{ height: "1rem", width: "400px", background: "#E5E7EB", borderRadius: "4px" }}></div>
+          </div>
+
+          {/* Settings Form Skeleton */}
+          <div style={{ background: "white", padding: "2rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ marginBottom: "2rem" }}>
+                <div style={{ height: "1.5rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
+                <div style={{ height: "1rem", width: "350px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1.5rem" }}></div>
+                <div style={{ height: "3rem", width: "200px", background: "#E5E7EB", borderRadius: "8px", marginBottom: "1rem" }}></div>
+                <div style={{ height: "3rem", width: "200px", background: "#E5E7EB", borderRadius: "8px" }}></div>
+              </div>
+            ))}
+          </div>
+        </main>
       </div>
     );
   }
@@ -279,6 +383,176 @@ export default function HRSettingsPage() {
                 • Carry-Over: <strong>{settings.carryOverEnabled ? `Enabled (max ${settings.maxCarryOverDays} days)` : "Disabled"}</strong>
               </p>
             </div>
+          </div>
+
+          <hr style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "2rem 0" }} />
+
+          {/* Department Management */}
+          <div style={{ marginBottom: "2rem" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+              Department Management
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "1.5rem" }}>
+              Manage departments used across your organization. Changes update all employee profiles.
+            </p>
+
+            {/* Add Department */}
+            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.5rem" }}>
+              <input
+                type="text"
+                value={newDepartment}
+                onChange={(e) => setNewDepartment(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && handleAddDepartment()}
+                placeholder="Enter new department name"
+                style={{
+                  flex: 1,
+                  padding: "0.75rem",
+                  border: "1px solid #E5E7EB",
+                  borderRadius: "8px",
+                  fontSize: "0.875rem",
+                }}
+              />
+              <button
+                type="button"
+                onClick={handleAddDepartment}
+                style={{
+                  padding: "0.75rem 1.5rem",
+                  background: theme.colors.primary,
+                  color: "white",
+                  border: "none",
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "0.875rem",
+                  fontWeight: "600",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                + Add
+              </button>
+            </div>
+
+            {/* Departments List */}
+            {departments.length === 0 ? (
+              <div style={{ padding: "2rem", textAlign: "center", background: "#F9FAFB", borderRadius: "8px", border: "1px solid #E5E7EB" }}>
+                <p style={{ color: theme.colors.textSecondary, fontSize: "0.875rem" }}>
+                  No departments yet. Add your first department above.
+                </p>
+              </div>
+            ) : (
+              <div style={{ border: "1px solid #E5E7EB", borderRadius: "8px", overflow: "hidden" }}>
+                {departments.map((dept) => {
+                  const employeeCount = employees.filter(e => e.department === dept).length;
+                  const isEditing = editingDept === dept;
+
+                  return (
+                    <div
+                      key={dept}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "1rem",
+                        borderBottom: "1px solid #E5E7EB",
+                        background: "white",
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editDeptValue}
+                            onChange={(e) => setEditDeptValue(e.target.value)}
+                            onKeyPress={(e) => {
+                              if (e.key === "Enter") handleEditDepartment(dept);
+                              if (e.key === "Escape") setEditingDept(null);
+                            }}
+                            onBlur={() => setEditingDept(null)}
+                            autoFocus
+                            style={{
+                              padding: "0.5rem",
+                              border: "2px solid " + theme.colors.primary,
+                              borderRadius: "6px",
+                              fontSize: "0.875rem",
+                              width: "250px",
+                            }}
+                          />
+                        ) : (
+                          <div>
+                            <div style={{ fontWeight: "600", fontSize: "0.875rem" }}>
+                              {dept}
+                            </div>
+                            <div style={{ fontSize: "0.75rem", color: theme.colors.textSecondary }}>
+                              {employeeCount} employee{employeeCount !== 1 ? "s" : ""}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ display: "flex", gap: "0.5rem" }}>
+                        {!isEditing && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setEditingDept(dept);
+                                setEditDeptValue(dept);
+                              }}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                background: "white",
+                                color: theme.colors.primary,
+                                border: "1px solid " + theme.colors.primary,
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteDepartment(dept)}
+                              style={{
+                                padding: "0.5rem 1rem",
+                                background: "#FEE2E2",
+                                color: "#991B1B",
+                                border: "1px solid #FCA5A5",
+                                borderRadius: "6px",
+                                cursor: "pointer",
+                                fontSize: "0.75rem",
+                                fontWeight: "600",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </>
+                        )}
+                        {isEditing && (
+                          <button
+                            onClick={() => handleEditDepartment(dept)}
+                            style={{
+                              padding: "0.5rem 1rem",
+                              background: theme.colors.primary,
+                              color: "white",
+                              border: "none",
+                              borderRadius: "6px",
+                              cursor: "pointer",
+                              fontSize: "0.75rem",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Save
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.75rem" }}>
+              💡 Tip: When you rename or delete a department, all employees in that department will be updated automatically.
+            </p>
           </div>
 
           {/* Important Notes */}
