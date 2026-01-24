@@ -719,35 +719,35 @@ model EmployeeProfile {
   user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   // Employment Info
-  employeeNumber    String?   @unique
-  jobTitle          String?
+  employeeNumber    String?   @unique @map("employee_number")
+  jobTitle          String?   @map("job_title")
   department        String?
-  employmentType    EmploymentType  @default(FULL_TIME)
-  startDate         DateTime?
-  endDate           DateTime?   // For terminated employees
+  employmentType    EmploymentType  @default(FULL_TIME) @map("employment_type")
+  startDate         DateTime?  @map("start_date")
+  endDate           DateTime?  @map("end_date")
   
   // Leave Balances (in days)
-  annualLeaveBalance      Decimal  @default(0) @db.Decimal(5, 2)  // e.g., 21.5 days
-  sickLeaveBalance        Decimal  @default(0) @db.Decimal(5, 2)
+  annualLeaveBalance      Decimal  @default(0) @db.Decimal(5, 2) @map("annual_leave_balance")
+  sickLeaveBalance        Decimal  @default(0) @db.Decimal(5, 2) @map("sick_leave_balance")
   
   // Leave Accrual Settings (days per year)
-  annualLeaveEntitlement  Decimal  @default(21) @db.Decimal(5, 2)
-  sickLeaveEntitlement    Decimal  @default(10) @db.Decimal(5, 2)
+  annualLeaveEntitlement  Decimal  @default(21) @db.Decimal(5, 2) @map("annual_leave_entitlement")
+  sickLeaveEntitlement    Decimal  @default(10) @db.Decimal(5, 2) @map("sick_leave_entitlement")
   
   // Emergency Contact
-  emergencyContactName    String?
-  emergencyContactPhone   String?
-  emergencyContactRelation String?
+  emergencyContactName    String?  @map("emergency_contact_name")
+  emergencyContactPhone   String?  @map("emergency_contact_phone")
+  emergencyContactRelation String? @map("emergency_contact_relation")
   
   // Manager
-  managerId         String?
+  managerId         String?  @map("managerId")
   manager           User?     @relation("ManagerReports", fields: [managerId], references: [id])
   
-  agencyId          String
+  agencyId          String   @map("agencyId")
   agency            Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
   
   leaveRequests     LeaveRequest[]
   leaveBalanceAdjustments LeaveBalanceAdjustment[]
@@ -759,29 +759,29 @@ model EmployeeProfile {
 
 model LeaveRequest {
   id              String          @id @default(cuid())
-  employeeId      String
+  employeeId      String          @map("employeeId")
   employee        EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   
-  leaveType       LeaveType
-  startDate       DateTime
-  endDate         DateTime
+  leaveType       LeaveType       @map("leave_type")
+  startDate       DateTime        @map("start_date")
+  endDate         DateTime        @map("end_date")
   
-  totalDays       Decimal         @db.Decimal(5, 2)  // Calculated: 1, 2, 3, etc.
+  totalDays       Decimal         @db.Decimal(5, 2) @map("total_days")
   reason          String?
   status          LeaveStatus     @default(PENDING)
   
   // Approval workflow
-  requestedAt     DateTime        @default(now())
-  reviewedAt      DateTime?
-  reviewedBy      String?
+  requestedAt     DateTime        @default(now()) @map("requested_at")
+  reviewedAt      DateTime?       @map("reviewed_at")
+  reviewedBy      String?         @map("reviewedBy")
   reviewer        User?           @relation(fields: [reviewedBy], references: [id])
-  reviewNotes     String?
+  reviewNotes     String?         @map("review_notes")
   
-  agencyId        String
+  agencyId        String          @map("agencyId")
   agency          Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
   
   @@index([employeeId])
   @@index([agencyId])
@@ -792,19 +792,19 @@ model LeaveRequest {
 
 model LeaveBalanceAdjustment {
   id              String          @id @default(cuid())
-  employeeId      String
+  employeeId      String          @map("employeeId")
   employee        EmployeeProfile @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   
-  leaveType       LeaveType
-  adjustment      Decimal         @db.Decimal(5, 2)  // Can be positive or negative
+  leaveType       LeaveType       @map("leave_type")
+  adjustment      Decimal         @db.Decimal(5, 2)
   reason          String
-  adjustedBy      String
+  adjustedBy      String          @map("adjustedBy")
   adjuster        User            @relation(fields: [adjustedBy], references: [id])
   
-  agencyId        String
+  agencyId        String          @map("agencyId")
   agency          Agency          @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
-  createdAt       DateTime        @default(now())
+  createdAt       DateTime        @default(now()) @map("created_at")
   
   @@index([employeeId])
   @@index([agencyId])
@@ -815,14 +815,14 @@ model PublicHoliday {
   id          String   @id @default(cuid())
   name        String
   date        DateTime
-  country     String   @default("AE")  // UAE by default
-  isRecurring Boolean  @default(true)  // Recurring yearly
+  country     String   @default("AE")
+  isRecurring Boolean  @default(true) @map("is_recurring")
   
-  agencyId    String
+  agencyId    String   @map("agencyId")
   agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
   
   @@index([agencyId])
   @@index([date])
