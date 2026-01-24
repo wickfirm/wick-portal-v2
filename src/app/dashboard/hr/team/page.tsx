@@ -270,6 +270,19 @@ export default function TeamLeavePage() {
                           <strong>Reason:</strong> {request.reason}
                         </div>
                       )}
+
+                      {/* Show Review Notes for Approved/Rejected */}
+                      {request.status === "APPROVED" && (
+                        <div style={{ fontSize: "0.875rem", color: "#065F46", marginTop: "0.5rem", padding: "0.75rem", background: "#ECFDF5", borderRadius: "6px" }}>
+                          <strong>✓ Approval Notes:</strong> {request.reviewNotes || "No notes provided"}
+                        </div>
+                      )}
+
+                      {request.status === "REJECTED" && (
+                        <div style={{ fontSize: "0.875rem", color: "#991B1B", marginTop: "0.5rem", padding: "0.75rem", background: "#FEF2F2", borderRadius: "6px" }}>
+                          <strong>✗ Rejection Reason:</strong> {request.reviewNotes || "No reason provided"}
+                        </div>
+                      )}
                     </div>
 
                     {/* Action Buttons */}
