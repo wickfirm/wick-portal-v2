@@ -274,156 +274,269 @@ model ClientMetrics {
   gaSessions           Int?     @map("ga_sessions")
   gaUsers              Int?     @map("ga_users")
   gaPageviews          Int?     @map("ga_pageviews")
-  gaBounceRate         Decimal? @db.Decimal(5, 2) @map("ga_bounce_rate")
+  gaBounceRate         Decimal? @map("ga_bounce_rate") @db.Decimal(5, 2)
   gaAvgSessionDuration Int?     @map("ga_avg_session_duration")
 
   // Google Search Console
-  gscImpressions      Int?     @map("gsc_impressions")
-  gscClicks           Int?     @map("gsc_clicks")
-  gscCtr              Decimal? @db.Decimal(5, 2) @map("gsc_ctr")
-  gscAvgPosition      Decimal? @db.Decimal(5, 2) @map("gsc_avg_position")
+  gscImpressions Int?     @map("gsc_impressions")
+  gscClicks      Int?     @map("gsc_clicks")
+  gscCtr         Decimal? @map("gsc_ctr") @db.Decimal(5, 2)
+  gscAvgPosition Decimal? @map("gsc_avg_position") @db.Decimal(5, 2)
 
   // SEO Rankings
-  seoKeywordsTop3     Int?     @map("seo_keywords_top_3")
-  seoKeywordsTop10    Int?     @map("seo_keywords_top_10")
-  seoKeywordsTop20    Int?     @map("seo_keywords_top_20")
-  seoOrganicTraffic   Int?     @map("seo_organic_traffic")
+  seoKeywordsTop3   Int?     @map("seo_keywords_top3")
+  seoKeywordsTop10  Int?     @map("seo_keywords_top10")
+  seoKeywordsTop100 Int?     @map("seo_keywords_top100")
+  seoBacklinks      Int?     @map("seo_backlinks")
+  seoDomainRating   Decimal? @map("seo_domain_rating") @db.Decimal(5, 2)
 
-  // Social Media
-  socialFollowers     Int?     @map("social_followers")
-  socialEngagement    Int?     @map("social_engagement")
-  socialReach         Int?     @map("social_reach")
+  // AEO
+  aeoVisibilityScore Decimal? @map("aeo_visibility_score") @db.Decimal(5, 2)
+  aeoCitations       Int?     @map("aeo_citations")
+  aeoBrandMentions   Int?     @map("aeo_brand_mentions")
 
-  // Paid Media
-  paidImpressions     Int?     @map("paid_impressions")
-  paidClicks          Int?     @map("paid_clicks")
-  paidSpend           Decimal? @db.Decimal(10, 2) @map("paid_spend")
-  paidConversions     Int?     @map("paid_conversions")
-  paidCost            Decimal? @db.Decimal(10, 2) @map("paid_cost")
+  // META Ads
+  metaSpend       Decimal? @map("meta_spend") @db.Decimal(10, 2)
+  metaImpressions Int?     @map("meta_impressions")
+  metaClicks      Int?     @map("meta_clicks")
+  metaConversions Int?     @map("meta_conversions")
+  metaCtr         Decimal? @map("meta_ctr") @db.Decimal(5, 2)
+  metaCpc         Decimal? @map("meta_cpc") @db.Decimal(10, 2)
+  metaRoas        Decimal? @map("meta_roas") @db.Decimal(5, 2)
 
+  // Google Ads
+  googleAdsSpend       Decimal? @map("google_ads_spend") @db.Decimal(10, 2)
+  googleAdsImpressions Int?     @map("google_ads_impressions")
+  googleAdsClicks      Int?     @map("google_ads_clicks")
+  googleAdsConversions Int?     @map("google_ads_conversions")
+  googleAdsCtr         Decimal? @map("google_ads_ctr") @db.Decimal(5, 2)
+  googleAdsCpc         Decimal? @map("google_ads_cpc") @db.Decimal(10, 2)
+  googleAdsRoas        Decimal? @map("google_ads_roas") @db.Decimal(5, 2)
+
+  // LinkedIn Ads
+  linkedinAdsSpend       Decimal? @map("linkedin_ads_spend") @db.Decimal(10, 2)
+  linkedinAdsImpressions Int?     @map("linkedin_ads_impressions")
+  linkedinAdsClicks      Int?     @map("linkedin_ads_clicks")
+  linkedinAdsConversions Int?     @map("linkedin_ads_conversions")
+  linkedinAdsCtr         Decimal? @map("linkedin_ads_ctr") @db.Decimal(5, 2)
+  linkedinAdsCpc         Decimal? @map("linkedin_ads_cpc") @db.Decimal(10, 2)
+
+  // TikTok Ads
+  tiktokAdsSpend       Decimal? @map("tiktok_ads_spend") @db.Decimal(10, 2)
+  tiktokAdsImpressions Int?     @map("tiktok_ads_impressions")
+  tiktokAdsClicks      Int?     @map("tiktok_ads_clicks")
+  tiktokAdsConversions Int?     @map("tiktok_ads_conversions")
+  tiktokAdsCtr         Decimal? @map("tiktok_ads_ctr") @db.Decimal(5, 2)
+  tiktokAdsCpc         Decimal? @map("tiktok_ads_cpc") @db.Decimal(10, 2)
+
+  // Instagram
+  igFollowers      Int?     @map("ig_followers")
+  igFollowing      Int?     @map("ig_following")
+  igPosts          Int?     @map("ig_posts")
+  igReach          Int?     @map("ig_reach")
+  igEngagementRate Decimal? @map("ig_engagement_rate") @db.Decimal(5, 2)
+
+  // Facebook
+  fbFollowers      Int?     @map("fb_followers")
+  fbPosts          Int?     @map("fb_posts")
+  fbReach          Int?     @map("fb_reach")
+  fbEngagementRate Decimal? @map("fb_engagement_rate") @db.Decimal(5, 2)
+
+  // LinkedIn Organic
+  liFollowers      Int?     @map("li_followers")
+  liPosts          Int?     @map("li_posts")
+  liImpressions    Int?     @map("li_impressions")
+  liEngagementRate Decimal? @map("li_engagement_rate") @db.Decimal(5, 2)
+
+  // TikTok Organic
+  ttFollowers      Int?     @map("tt_followers")
+  ttVideos         Int?     @map("tt_videos")
+  ttViews          Int?     @map("tt_views")
+  ttEngagementRate Decimal? @map("tt_engagement_rate") @db.Decimal(5, 2)
+
+  // Twitter/X
+  twFollowers      Int?     @map("tw_followers")
+  twTweets         Int?     @map("tw_tweets")
+  twImpressions    Int?     @map("tw_impressions")
+  twEngagementRate Decimal? @map("tw_engagement_rate") @db.Decimal(5, 2)
+
+  // Content Deliverables
+  contentBlogPosts       Int? @map("content_blog_posts")
+  contentSocialPosts     Int? @map("content_social_posts")
+  contentEmailsSent      Int? @map("content_emails_sent")
+  contentVideosProduced  Int? @map("content_videos_produced")
+  contentGraphicsCreated Int? @map("content_graphics_created")
+  contentLandingPages    Int? @map("content_landing_pages")
+
+  // Hours Worked
+  hoursSeo         Decimal? @map("hours_seo") @db.Decimal(5, 1)
+  hoursContent     Decimal? @map("hours_content") @db.Decimal(5, 1)
+  hoursPaidMedia   Decimal? @map("hours_paid_media") @db.Decimal(5, 1)
+  hoursSocial      Decimal? @map("hours_social") @db.Decimal(5, 1)
+  hoursDesign      Decimal? @map("hours_design") @db.Decimal(5, 1)
+  hoursMaintenance Decimal? @map("hours_maintenance") @db.Decimal(5, 1)
+  hoursStrategy    Decimal? @map("hours_strategy") @db.Decimal(5, 1)
+
+  notes     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([clientId, month])
-  @@index([month])
+  @@index([clientId])          // For filtering by client
+  @@index([month])             // For ordering by month
   @@map("client_metrics")
 }
 
-model ClientTeamMember {
+model TaskStatusOption {
   id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   @default("TEAM_MEMBER")
-  isPrimary Boolean  @default(false)
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@map("task_status_options")
+}
+
+model TaskPriorityOption {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String   @default("#6B7280")
+  order     Int      @default(0)
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("task_priority_options")
+}
+
+model ClientAgency {
+  id        String   @id @default(cuid())
+  clientId  String   @map("client_id")
+  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  agencyId  String   @map("agency_id")
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([clientId, agencyId])
+  @@map("client_agencies")
+}
+
+model PartnerAgency {
+  id        String   @id @default(cuid())
+  name      String
+  isDefault Boolean  @default(false)
+  agencyId  String   @map("agency_id")  // NEW
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)  // NEW
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("partner_agencies")
+}
+
+model ClientTeamMember {
+  id         String   @id @default(cuid())
+  clientId   String
+  client     Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
   @@unique([clientId, userId])
-  @@index([clientId])
-  @@index([userId])
   @@map("client_team_members")
 }
 
-model Agency {
+// ============ TIME TRACKING ============
+
+model TimeEntry {
+  id          String     @id @default(cuid())
+  userId      String
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client     @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId      String
+  task        ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  date        DateTime   @db.Date
+  duration    Int        // Duration in seconds
+  description String?
+  billable    Boolean    @default(true)
+  source      String     @default("MANUAL")  // "MANUAL" or "TIMER"
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([userId, date])
+  @@index([clientId])
+  @@index([projectId])
+  @@map("time_entries")
+}
+
+model ActiveTimer {
   id          String   @id @default(cuid())
-  name        String
-  slug        String   @unique
-  email       String?
-  phone       String?
-  website     String?
-  logo        String?
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  projectId   String
+  taskId      String
+  description String?
+  startedAt   DateTime @default(now())
   createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  users       User[]
-  clients     ClientAgency[]
-  conversations      Conversation[]
-  aiConfiguration    AIConfiguration?
-  leads              Lead[]
-  bookings           Booking[]
-  conversationAnalytics ConversationAnalytics[]
+
+  @@map("active_timers")
+}
+
+// ============ MULTI-TENANT (OMNIXIA) ============
+
+model Agency {
+  id        String   @id @default(cuid())
+  name      String   // "The Wick Firm"
+  slug      String   @unique // "wick" -> subdomain
+  domain    String?  // Custom domain if needed
+  
+  // Branding
+  logo      String?
+  primaryColor String? @default("#000000")
+  
+  // Settings
+  isActive  Boolean  @default(true)
+  
+  // Relations
+  users                    User[]
+  aiConfigurations         AIConfiguration[]
+  conversations            Conversation[]
+  leads                    Lead[]
+  bookings                 Booking[]
+  conversationAnalytics    ConversationAnalytics[]
+  clientAgencies           ClientAgency[]
+  partnerAgencies PartnerAgency[]
   
   // HR System Relations
   employeeProfiles        EmployeeProfile[]
   leaveRequests           LeaveRequest[]
   leaveBalanceAdjustments LeaveBalanceAdjustment[]
   publicHolidays          PublicHoliday[]
-
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@index([slug])
   @@map("agencies")
-}
-
-model ClientAgency {
-  id        String   @id @default(cuid())
-  clientId  String
-  client    Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  agencyId  String
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
-  isPrimary Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@unique([clientId, agencyId])
-  @@index([clientId])
-  @@index([agencyId])
-  @@map("client_agencies")
-}
-
-model TimeEntry {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId    String
-  client      Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  projectId   String
-  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  taskId      String
-  task        ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  date        DateTime  @db.Date
-  duration    Int
-  description String?
-  billable    Boolean   @default(true)
-  source      String    @default("MANUAL")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([userId])
-  @@index([clientId])
-  @@index([projectId])
-  @@index([taskId])
-  @@index([date])
-  @@index([userId, date])
-  @@map("time_entries")
-}
-
-model ActiveTimer {
-  id          String    @id @default(cuid())
-  userId      String    @unique
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  clientId    String
-  projectId   String
-  taskId      String
-  description String?
-  startedAt   DateTime  @default(now())
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-
-  @@index([userId])
-  @@map("active_timers")
 }
 
 model AIConfiguration {
   id        String   @id @default(cuid())
-  agencyId  String   @unique @map("agency_id")
-  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId  String?  @map("agency_id")
+  agency    Agency?  @relation(fields: [agencyId], references: [id], onDelete: SetNull)
   
-  // BANT Questions
-  budgetQuestion    String @default("What's your budget range for this project?") @db.Text
-  authorityQuestion String @default("Are you the decision-maker for this project?") @db.Text
-  needQuestion      String @default("What specific challenges are you looking to solve?") @db.Text
-  timelineQuestion  String @default("When are you looking to start this project?") @db.Text
+  // Services & Positioning
+  services          Json     // ["SEO", "AEO", "WEB_DEVELOPMENT"]
+  targetIndustries  Json     // ["Hospitality", "F&B", "SaaS"]
+  minBudget         Int      @default(5000)
+  targetCompanySize String   @default("SMB") // "SMB", "MID_MARKET", "ENTERPRISE"
   
-  // BANT Scoring
+  // Qualification Criteria (BANT weights)
   budgetWeight            Int @default(30)
   authorityWeight         Int @default(25)
   needWeight              Int @default(25)
