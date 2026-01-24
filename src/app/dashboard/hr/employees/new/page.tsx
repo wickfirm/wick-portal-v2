@@ -31,7 +31,6 @@ export default function AddEmployeePage() {
   const [managers, setManagers] = useState<Manager[]>([]);
   const [departments, setDepartments] = useState<string[]>([]);
   const [hrSettings, setHrSettings] = useState<any>(null);
-  const [departments, setDepartments] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     userId: "",
