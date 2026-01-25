@@ -6,7 +6,7 @@ export default function WidgetTestPage() {
   useEffect(() => {
     // Configuration
     (window as any).WickLeadQualifier = {
-      agencyId: 'YOUR_AGENCY_ID_HERE', // ⚠️ REPLACE THIS
+      agencyId: 'agency-wick', // ⚠️ REPLACE THIS
       apiEndpoint: 'https://wick.omnixia.ai/api/lead-qualifier',
       position: 'bottom-right',
       primaryColor: '#667eea',
