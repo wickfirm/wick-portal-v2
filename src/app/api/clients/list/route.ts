@@ -27,18 +27,12 @@ export async function GET() {
     let clientFilter: any = {};
     
     if (currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN") {
-      // ADMINs see all clients where any team member from their agency is assigned
+      // ADMINs and SUPER_ADMINs see all clients that belong to their agency
       if (currentUser.agencyId) {
-        const agencyTeamMembers = await prisma.user.findMany({
-          where: { agencyId: currentUser.agencyId },
-          select: { id: true },
-        });
-        const teamMemberIds = agencyTeamMembers.map(u => u.id);
-        
         clientFilter = {
-          teamMembers: {
+          agencies: {
             some: {
-              userId: { in: teamMemberIds }
+              agencyId: currentUser.agencyId
             }
           }
         };
