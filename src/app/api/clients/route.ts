@@ -43,15 +43,13 @@ export async function GET() {
       },
     });
   }
-  // SUPER_ADMIN sees clients where ANY team member is from their agency
+  // SUPER_ADMIN sees ALL clients that belong to their agency
   else if (currentUser.role === "SUPER_ADMIN" && currentUser.agencyId) {
     clients = await prisma.client.findMany({
       where: {
-        teamMembers: {
+        agencies: {
           some: {
-            user: {
-              agencyId: currentUser.agencyId
-            }
+            agencyId: currentUser.agencyId
           }
         }
       },
@@ -67,15 +65,13 @@ export async function GET() {
       },
     });
   } 
-  // ADMIN sees all clients where any team member from their agency is assigned
+  // ADMIN sees all clients that belong to their agency
   else if (currentUser.role === "ADMIN" && currentUser.agencyId) {
     clients = await prisma.client.findMany({
       where: {
-        teamMembers: {
+        agencies: {
           some: {
-            user: {
-              agencyId: currentUser.agencyId
-            }
+            agencyId: currentUser.agencyId
           }
         }
       },
