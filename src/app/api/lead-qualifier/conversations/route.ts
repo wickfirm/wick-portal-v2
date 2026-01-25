@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import Anthropic from "@anthropic-ai/sdk";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -13,7 +14,7 @@ export async function GET() {
   }
 
   try {
-    // Get user's agency from session (instead of tenant context)
+    // Get user's agency from session
     const user = await prisma.user.findUnique({
       where: { email: session.user?.email || "" },
       select: { agencyId: true },
@@ -71,12 +72,12 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { agencyId, visitorId, conversationId, message, channel, sourceUrl, utmParams } = body;
+    const { agencyId, visitorId, message, channel, sourceUrl, utmParams } = body;
 
     // Validate required fields
     if (!agencyId || !visitorId || !message) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Missing required fields: agencyId, visitorId, message" },
         { status: 400 }
       );
     }
@@ -112,37 +113,43 @@ export async function POST(request: Request) {
       }
     });
 
-    // Get AI settings for this agency
-    const aiConfig = await prisma.aIConfig.findUnique({
+    // Get AI configuration for this agency
+    const aiConfig = await prisma.aIConfiguration.findFirst({
       where: { agencyId }
     });
 
-    // Generate AI response using Claude
-    const Anthropic = require('@anthropic-ai/sdk');
+    // Initialize Anthropic client
     const anthropic = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY
+      apiKey: process.env.ANTHROPIC_API_KEY || ''
     });
 
     // Get conversation history
     const messages = await prisma.message.findMany({
       where: { conversationId: conversation.id },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { timestamp: 'asc' }
     });
 
+    // Map to Anthropic format
     const conversationHistory = messages.map(m => ({
       role: m.role.toLowerCase() as 'user' | 'assistant',
       content: m.content
     }));
 
+    // Build system prompt
+    const systemPrompt = aiConfig?.greetingMessage || 
+      'You are a helpful AI assistant for lead qualification. Ask relevant questions to understand the visitor\'s needs, budget, and timeline. Be professional, friendly, and consultative.';
+
     // Call Claude API
     const response = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
-      system: aiConfig?.systemPrompt || 'You are a helpful AI assistant for lead qualification. Ask relevant questions to understand the visitor\'s needs and qualify them as a lead.',
+      system: systemPrompt,
       messages: conversationHistory
     });
 
-    const assistantMessage = response.content[0].text;
+    const assistantMessage = response.content[0].type === 'text' 
+      ? response.content[0].text 
+      : 'I apologize, but I encountered an error. Please try again.';
 
     // Save assistant message
     await prisma.message.create({
@@ -155,7 +162,6 @@ export async function POST(request: Request) {
 
     // Calculate lead score if conversation has enough messages
     if (messages.length >= 4) {
-      // Simple scoring logic - can be enhanced
       const userMessages = messages.filter(m => m.role === 'USER');
       const avgLength = userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length;
       const hasEmail = userMessages.some(m => m.content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/));
@@ -180,7 +186,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Failed to process message:", error);
     return NextResponse.json(
-      { error: "Failed to process message" },
+      { error: "Failed to process message", details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
