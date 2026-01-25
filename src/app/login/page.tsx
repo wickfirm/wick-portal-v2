@@ -24,16 +24,49 @@ export default function LoginPage() {
       email,
       password,
       redirect: false,
-      callbackUrl: "/dashboard",
     });
 
     if (result?.error) {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      // After successful login, redirect to /dashboard
-      // Middleware will handle redirecting to correct subdomain
-      window.location.href = "/dashboard";
+      // Get session to determine correct subdomain
+      const sessionRes = await fetch('/api/auth/session');
+      const session = await sessionRes.json();
+      
+      if (session?.user) {
+        const userRole = session.user.role;
+        const userAgencyId = session.user.agencyId;
+        
+        // Determine correct subdomain
+        let targetSubdomain = 'dash';
+        
+        if (userRole === 'PLATFORM_ADMIN') {
+          targetSubdomain = 'dash';
+        } else if (userAgencyId === 'agency-wick') {
+          targetSubdomain = 'wick';
+        } else if (userAgencyId === 'agency-udms') {
+          targetSubdomain = 'udms';
+        } else if (userAgencyId === 'agency-atc') {
+          targetSubdomain = 'atc';
+        } else if (userAgencyId === 'agency-crepe') {
+          targetSubdomain = 'crepe';
+        }
+        
+        // Check if we're already on correct subdomain
+        const currentHost = window.location.hostname;
+        const currentSubdomain = currentHost.split('.')[0];
+        
+        if (currentSubdomain === targetSubdomain) {
+          // Already on correct subdomain, just go to dashboard
+          window.location.href = "/dashboard";
+        } else {
+          // Redirect to correct subdomain
+          const isProduction = currentHost.includes('omnixia.ai');
+          const baseDomain = isProduction ? 'omnixia.ai' : 'localhost:3000';
+          window.location.href = `https://${targetSubdomain}.${baseDomain}/dashboard`;
+        }
+      }
     }
   }
 
