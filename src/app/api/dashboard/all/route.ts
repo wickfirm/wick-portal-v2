@@ -76,7 +76,7 @@ export async function GET() {
          INNER JOIN clients c ON p."clientId" = c.id
          INNER JOIN client_agencies ca ON c.id = ca.client_id 
          WHERE ca.agency_id = ${currentUser.agencyId} AND p.status = 'IN_PROGRESS') as "activeProjects",
-        (SELECT COUNT(*) FROM users WHERE "agencyId" = ${currentUser.agencyId}) as "teamCount",
+        (SELECT COUNT(*) FROM users WHERE agency_id = ${currentUser.agencyId}) as "teamCount",
         (SELECT COUNT(*) FROM client_tasks ct 
          INNER JOIN clients c ON ct."clientId" = c.id
          INNER JOIN client_agencies ca ON c.id = ca.client_id 
