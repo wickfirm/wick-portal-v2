@@ -10,7 +10,24 @@ export default function SignOutPage() {
 
   async function handleSignOut() {
     setSigningOut(true);
-    await signOut({ callbackUrl: "/login" });
+    
+    // Sign out from NextAuth (clears session token)
+    await signOut({ 
+      callbackUrl: "/login",
+      redirect: false // Don't auto-redirect, we'll do it manually
+    });
+    
+    // Force clear any remaining cookies (belt & suspenders approach)
+    document.cookie.split(";").forEach((c) => {
+      const name = c.split("=")[0].trim();
+      // Clear for current domain
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
+      // Clear for parent domain (.omnixia.ai)
+      document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.omnixia.ai`;
+    });
+    
+    // Hard redirect to login with full page reload to clear all state
+    window.location.href = "/login";
   }
 
   return (
