@@ -33,12 +33,9 @@ export async function GET(
       return NextResponse.json({ error: 'User not associated with an agency' }, { status: 403 });
     }
 
-    // Get file with folder info
+    // Get file
     const file = await prisma.mediaFile.findUnique({
       where: { id: fileId },
-      include: {
-        folder: true,
-      },
     });
 
     if (!file) {
