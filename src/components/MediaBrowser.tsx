@@ -46,23 +46,44 @@ export default function MediaBrowser({
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUploader, setShowUploader] = useState(false);
+  
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    type: 'file' | 'folder';
+    id: string;
+    x: number;
+    y: number;
+  } | null>(null);
+  
+  // Rename modal state
+  const [renameModal, setRenameModal] = useState<{
+    type: 'file' | 'folder';
+    id: string;
+    currentName: string;
+  } | null>(null);
+  const [newName, setNewName] = useState('');
 
   useEffect(() => {
     loadFolder();
   }, [currentFolderId]);
+
+  useEffect(() => {
+    // Close context menu on click
+    const handleClick = () => setContextMenu(null);
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   const loadFolder = async () => {
     try {
       setLoading(true);
 
       if (currentFolderId) {
-        // Load specific folder
         const res = await fetch(`/api/media/folders/${currentFolderId}`);
         const data = await res.json();
         setFolders(data.subfolders || []);
         setFiles(data.files || []);
       } else {
-        // Load root folders
         const params = new URLSearchParams();
         if (clientId) params.append('clientId', clientId);
         if (projectId) params.append('projectId', projectId);
@@ -83,12 +104,105 @@ export default function MediaBrowser({
     try {
       const res = await fetch(`/api/media/download-url/${fileId}`);
       const data = await res.json();
-
-      // Open download in new tab
       window.open(data.downloadUrl, '_blank');
     } catch (error) {
       console.error('Failed to download file:', error);
     }
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    if (!confirm('Are you sure you want to delete this file?')) return;
+
+    try {
+      const res = await fetch(`/api/media/files/${fileId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        loadFolder();
+      } else {
+        alert('Failed to delete file');
+      }
+    } catch (error) {
+      console.error('Failed to delete file:', error);
+      alert('Failed to delete file');
+    }
+  };
+
+  const handleDeleteFolder = async (folderId: string) => {
+    if (!confirm('Are you sure you want to delete this folder? It must be empty.')) return;
+
+    try {
+      const res = await fetch(`/api/media/folders/${folderId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        loadFolder();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete folder');
+      }
+    } catch (error) {
+      console.error('Failed to delete folder:', error);
+      alert('Failed to delete folder');
+    }
+  };
+
+  const handleRenameFile = async () => {
+    if (!renameModal || !newName.trim()) return;
+
+    try {
+      const res = await fetch(`/api/media/files/${renameModal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          filename: newName,
+        }),
+      });
+
+      if (res.ok) {
+        setRenameModal(null);
+        setNewName('');
+        loadFolder();
+      } else {
+        alert('Failed to rename file');
+      }
+    } catch (error) {
+      console.error('Failed to rename file:', error);
+      alert('Failed to rename file');
+    }
+  };
+
+  const handleRenameFolder = async () => {
+    if (!renameModal || !newName.trim()) return;
+
+    try {
+      const res = await fetch(`/api/media/folders/${renameModal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newName,
+        }),
+      });
+
+      if (res.ok) {
+        setRenameModal(null);
+        setNewName('');
+        loadFolder();
+      } else {
+        alert('Failed to rename folder');
+      }
+    } catch (error) {
+      console.error('Failed to rename folder:', error);
+      alert('Failed to rename folder');
+    }
+  };
+
+  const openRenameModal = (type: 'file' | 'folder', id: string, currentName: string) => {
+    setRenameModal({ type, id, currentName });
+    setNewName(currentName);
+    setContextMenu(null);
   };
 
   const formatFileSize = (bytes: string) => {
@@ -215,6 +329,15 @@ export default function MediaBrowser({
             {folders.map((folder) => (
               <div
                 key={folder.id}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    type: 'folder',
+                    id: folder.id,
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
+                }}
                 onClick={() => setCurrentFolderId(folder.id)}
                 style={{
                   background: 'white',
@@ -262,6 +385,15 @@ export default function MediaBrowser({
             {files.map((file) => (
               <div
                 key={file.id}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    type: 'file',
+                    id: file.id,
+                    x: e.clientX,
+                    y: e.clientY,
+                  });
+                }}
                 style={{
                   background: 'white',
                   border: '1px solid #E5E7EB',
@@ -313,6 +445,202 @@ export default function MediaBrowser({
               ? 'Upload files to get started'
               : 'Create a folder to organize your media'}
           </p>
+        </div>
+      )}
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            top: contextMenu.y,
+            left: contextMenu.x,
+            background: 'white',
+            border: '1px solid #E5E7EB',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            minWidth: '150px',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            onClick={() => {
+              if (contextMenu.type === 'file') {
+                handleDownload(contextMenu.id);
+              }
+              setContextMenu(null);
+            }}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              background: 'transparent',
+              border: 'none',
+              textAlign: 'left',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#F9FAFB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            {contextMenu.type === 'file' ? '⬇️ Download' : '📂 Open'}
+          </button>
+          <button
+            onClick={() => {
+              const item = contextMenu.type === 'file' 
+                ? files.find(f => f.id === contextMenu.id)
+                : folders.find(f => f.id === contextMenu.id);
+              
+              if (item) {
+                openRenameModal(
+                  contextMenu.type,
+                  contextMenu.id,
+                  contextMenu.type === 'file' ? (item as MediaFile).originalName : (item as Folder).name
+                );
+              }
+            }}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              background: 'transparent',
+              border: 'none',
+              textAlign: 'left',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#F9FAFB';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            ✏️ Rename
+          </button>
+          <button
+            onClick={() => {
+              if (contextMenu.type === 'file') {
+                handleDeleteFile(contextMenu.id);
+              } else {
+                handleDeleteFolder(contextMenu.id);
+              }
+              setContextMenu(null);
+            }}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              background: 'transparent',
+              border: 'none',
+              textAlign: 'left',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              color: '#EF4444',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#FEF2F2';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            🗑️ Delete
+          </button>
+        </div>
+      )}
+
+      {/* Rename Modal */}
+      {renameModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setRenameModal(null)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '500px',
+              width: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+              Rename {renameModal.type === 'file' ? 'File' : 'Folder'}
+            </h2>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.875rem',
+                  fontWeight: 600,
+                  marginBottom: '0.5rem',
+                }}
+              >
+                New Name
+              </label>
+              <input
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  fontSize: '0.875rem',
+                }}
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setRenameModal(null)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={renameModal.type === 'file' ? handleRenameFile : handleRenameFolder}
+                disabled={!newName.trim()}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: theme.colors.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: !newName.trim() ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  opacity: !newName.trim() ? 0.5 : 1,
+                }}
+              >
+                Rename
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
