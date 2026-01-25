@@ -65,23 +65,30 @@ export async function GET() {
 
     const statsQueryAdmin = Prisma.sql`
       SELECT 
-        (SELECT COUNT(*) FROM clients WHERE "agencyId" = ${currentUser.agencyId}) as "clientCount",
-        (SELECT COUNT(*) FROM projects p 
+        (SELECT COUNT(DISTINCT c.id) FROM clients c
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
+         WHERE ca.agency_id = ${currentUser.agencyId} AND c.status = 'ACTIVE') as "clientCount",
+        (SELECT COUNT(DISTINCT p.id) FROM projects p 
          INNER JOIN clients c ON p."clientId" = c.id 
-         WHERE c."agencyId" = ${currentUser.agencyId}) as "projectCount",
-        (SELECT COUNT(*) FROM projects p 
-         INNER JOIN clients c ON p."clientId" = c.id 
-         WHERE c."agencyId" = ${currentUser.agencyId} AND p.status = 'IN_PROGRESS') as "activeProjects",
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
+         WHERE ca.agency_id = ${currentUser.agencyId}) as "projectCount",
+        (SELECT COUNT(DISTINCT p.id) FROM projects p 
+         INNER JOIN clients c ON p."clientId" = c.id
+         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         WHERE ca.agency_id = ${currentUser.agencyId} AND p.status = 'IN_PROGRESS') as "activeProjects",
         (SELECT COUNT(*) FROM users WHERE "agencyId" = ${currentUser.agencyId}) as "teamCount",
         (SELECT COUNT(*) FROM client_tasks ct 
-         INNER JOIN clients c ON ct."clientId" = c.id 
-         WHERE c."agencyId" = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" < ${today}) as "overdueTasks",
+         INNER JOIN clients c ON ct."clientId" = c.id
+         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" < ${today}) as "overdueTasks",
         (SELECT COUNT(*) FROM client_tasks ct 
-         INNER JOIN clients c ON ct."clientId" = c.id 
-         WHERE c."agencyId" = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" >= ${today} AND ct."dueDate" < ${tomorrow}) as "dueTodayTasks",
+         INNER JOIN clients c ON ct."clientId" = c.id
+         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" >= ${today} AND ct."dueDate" < ${tomorrow}) as "dueTodayTasks",
         (SELECT COUNT(*) FROM client_tasks ct 
-         INNER JOIN clients c ON ct."clientId" = c.id 
-         WHERE c."agencyId" = ${currentUser.agencyId} AND ct.status != 'COMPLETED') as "totalTasks"
+         INNER JOIN clients c ON ct."clientId" = c.id
+         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED') as "totalTasks"
     `;
 
     const statsQueryNonAdmin = Prisma.sql`
