@@ -482,7 +482,7 @@ export default function MediaBrowser({
               style={{
                 padding: '0.5rem 1rem',
                 background: isMultiSelectMode ? theme.colors.primary : 'white',
-                color: isMultiSelectMode ? 'white' : theme.colors.text,
+                color: isMultiSelectMode ? 'white' : theme.colors.textPrimary,
                 border: '1px solid #E5E7EB',
                 borderRadius: '6px',
                 cursor: 'pointer',
@@ -582,7 +582,7 @@ export default function MediaBrowser({
               <div key={crumb.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <span>/</span>
                 {index === breadcrumbs.length - 1 ? (
-                  <span style={{ fontWeight: 600, color: theme.colors.text }}>{crumb.name}</span>
+                  <span style={{ fontWeight: 600, color: theme.colors.textPrimary }}>{crumb.name}</span>
                 ) : (
                   <button
                     onClick={() => setCurrentFolderId(crumb.id)}
