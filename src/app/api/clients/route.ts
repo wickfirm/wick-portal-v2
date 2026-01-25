@@ -164,6 +164,16 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    // CRITICAL: Link client to the creator's agency via client_agencies
+    if (currentUser.agencyId) {
+      await prisma.clientAgency.create({
+        data: {
+          clientId: client.id,
+          agencyId: currentUser.agencyId,
+        },
+      });
+    }
+
     return NextResponse.json(client);
   } catch (error) {
     console.error("Failed to create client:", error);
