@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { theme } from '@/lib/theme';
 import FileUploader from './FileUploader';
 
@@ -25,6 +25,19 @@ interface MediaFile {
   uploader: {
     name: string;
   };
+  tags?: string[];
+  description?: string;
+  folder?: {
+    id: string;
+    name: string;
+    path: string;
+  };
+}
+
+interface BreadcrumbItem {
+  id: string;
+  name: string;
+  path: string;
 }
 
 interface MediaBrowserProps {
@@ -47,6 +60,23 @@ export default function MediaBrowser({
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUploader, setShowUploader] = useState(false);
   
+  // Breadcrumbs
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([]);
+  
+  // Search
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<MediaFile[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  
+  // Drag & Drop for moving files
+  const [draggedFileIds, setDraggedFileIds] = useState<string[]>([]);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+  
+  // Multi-select
+  const [selectedFileIds, setSelectedFileIds] = useState<Set<string>>(new Set());
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  
   // Preview modal
   const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -68,8 +98,15 @@ export default function MediaBrowser({
   } | null>(null);
   const [newName, setNewName] = useState('');
 
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   useEffect(() => {
     loadFolder();
+    if (currentFolderId) {
+      loadBreadcrumbs();
+    } else {
+      setBreadcrumbs([]);
+    }
   }, [currentFolderId]);
 
   useEffect(() => {
@@ -78,6 +115,29 @@ export default function MediaBrowser({
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+
+  // Debounced search
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    if (searchQuery.trim().length === 0) {
+      setShowSearchResults(false);
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      performSearch(searchQuery);
+    }, 300);
+
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchQuery]);
 
   const loadFolder = async () => {
     try {
@@ -102,6 +162,39 @@ export default function MediaBrowser({
       console.error('Failed to load folder:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBreadcrumbs = async () => {
+    if (!currentFolderId) {
+      setBreadcrumbs([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/media/folders/breadcrumbs/${currentFolderId}`);
+      const data = await res.json();
+      setBreadcrumbs(data.breadcrumbs || []);
+    } catch (error) {
+      console.error('Failed to load breadcrumbs:', error);
+    }
+  };
+
+  const performSearch = async (query: string) => {
+    try {
+      setIsSearching(true);
+      const params = new URLSearchParams({ q: query });
+      if (clientId) params.append('clientId', clientId);
+      if (projectId) params.append('projectId', projectId);
+
+      const res = await fetch(`/api/media/search?${params}`);
+      const data = await res.json();
+      setSearchResults(data.files || []);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error('Failed to search:', error);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -136,6 +229,7 @@ export default function MediaBrowser({
 
       if (res.ok) {
         loadFolder();
+        setSelectedFileIds(new Set());
       } else {
         alert('Failed to delete file');
       }
@@ -206,6 +300,7 @@ export default function MediaBrowser({
         setRenameModal(null);
         setNewName('');
         loadFolder();
+        loadBreadcrumbs();
       } else {
         alert('Failed to rename folder');
       }
@@ -215,236 +310,624 @@ export default function MediaBrowser({
     }
   };
 
-  const formatFileSize = (bytes: string) => {
-    const size = parseInt(bytes);
-    if (size < 1024) return `${size} B`;
-    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
-    if (size < 1024 * 1024 * 1024)
-      return `${(size / 1024 / 1024).toFixed(1)} MB`;
-    return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`;
+  // Multi-select handlers
+  const toggleFileSelection = (fileId: string) => {
+    const newSelected = new Set(selectedFileIds);
+    if (newSelected.has(fileId)) {
+      newSelected.delete(fileId);
+    } else {
+      newSelected.add(fileId);
+    }
+    setSelectedFileIds(newSelected);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+  const selectAllFiles = () => {
+    setSelectedFileIds(new Set(files.map(f => f.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedFileIds(new Set());
+  };
+
+  // Drag & Drop handlers
+  const handleDragStart = (e: React.DragEvent, fileIds: string[]) => {
+    e.dataTransfer.effectAllowed = 'move';
+    setDraggedFileIds(fileIds);
+  };
+
+  const handleDragOver = (e: React.DragEvent, folderId: string) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverFolderId(folderId);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverFolderId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+
+    if (draggedFileIds.length === 0) return;
+
+    try {
+      const res = await fetch('/api/media/files/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileIds: draggedFileIds,
+          targetFolderId,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Moved ${data.movedCount} file(s) successfully`);
+        loadFolder();
+        setDraggedFileIds([]);
+        setSelectedFileIds(new Set());
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to move files');
+      }
+    } catch (error) {
+      console.error('Failed to move files:', error);
+      alert('Failed to move files');
+    }
+  };
+
+  const handleBulkMove = async () => {
+    if (selectedFileIds.size === 0) {
+      alert('No files selected');
+      return;
+    }
+
+    const targetFolderId = prompt('Enter target folder ID to move selected files:');
+    if (!targetFolderId) return;
+
+    try {
+      const res = await fetch('/api/media/files/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileIds: Array.from(selectedFileIds),
+          targetFolderId,
+        }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        alert(`Moved ${data.movedCount} file(s) successfully`);
+        loadFolder();
+        setSelectedFileIds(new Set());
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to move files');
+      }
+    } catch (error) {
+      console.error('Failed to move files:', error);
+      alert('Failed to move files');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedFileIds.size === 0) {
+      alert('No files selected');
+      return;
+    }
+
+    if (!confirm(`Delete ${selectedFileIds.size} selected file(s)?`)) return;
+
+    try {
+      await Promise.all(
+        Array.from(selectedFileIds).map(fileId =>
+          fetch(`/api/media/files/${fileId}`, { method: 'DELETE' })
+        )
+      );
+      loadFolder();
+      setSelectedFileIds(new Set());
+    } catch (error) {
+      console.error('Failed to delete files:', error);
+      alert('Failed to delete files');
+    }
   };
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.startsWith('image/')) return '🖼️';
     if (mimeType.startsWith('video/')) return '🎬';
     if (mimeType === 'application/pdf') return '📄';
-    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+    if (mimeType.includes('word')) return '📝';
     if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
     if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📽️';
-    if (mimeType === 'text/plain') return '📃';
     if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return '📦';
-    return '📁';
+    return '📄';
   };
 
-  if (loading) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <div style={{ fontSize: '2rem', marginBottom: '1rem' }}>⏳</div>
-        <div style={{ color: theme.colors.textSecondary }}>Loading...</div>
-      </div>
-    );
-  }
+  const formatFileSize = (bytes: string) => {
+    const num = parseInt(bytes);
+    if (num < 1024) return `${num} B`;
+    if (num < 1024 * 1024) return `${(num / 1024).toFixed(1)} KB`;
+    if (num < 1024 * 1024 * 1024) return `${(num / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(num / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString();
+  };
+
+  const displayFiles = showSearchResults ? searchResults : files;
 
   return (
     <div style={{ padding: '2rem' }}>
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem',
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Media Hub</h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: '0.875rem' }}>
-            {folders.length} folders • {files.length} files
-          </p>
+      <div style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h1 style={{ fontSize: '1.875rem', fontWeight: 700 }}>Media Hub</h1>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => setView(view === 'grid' ? 'list' : 'grid')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: 'white',
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              {view === 'grid' ? '📋 List' : '⊞ Grid'}
+            </button>
+            <button
+              onClick={() => setIsMultiSelectMode(!isMultiSelectMode)}
+              style={{
+                padding: '0.5rem 1rem',
+                background: isMultiSelectMode ? theme.colors.primary : 'white',
+                color: isMultiSelectMode ? 'white' : theme.colors.text,
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              ☑️ Multi-Select
+            </button>
+            {currentFolderId && (
+              <button
+                onClick={() => setShowUploader(true)}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: theme.colors.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                }}
+              >
+                📤 Upload Files
+              </button>
+            )}
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <button
-            onClick={() => setView('grid')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: view === 'grid' ? theme.colors.primary : 'white',
-              color: view === 'grid' ? 'white' : theme.colors.textPrimary,
-              border: '1px solid #E5E7EB',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            Grid
-          </button>
-          <button
-            onClick={() => setView('list')}
-            style={{
-              padding: '0.5rem 1rem',
-              background: view === 'list' ? theme.colors.primary : 'white',
-              color: view === 'list' ? 'white' : theme.colors.textPrimary,
-              border: '1px solid #E5E7EB',
-              borderRadius: '6px',
-              cursor: 'pointer',
-            }}
-          >
-            List
-          </button>
-          <button
-            onClick={() => setShowUploader(!showUploader)}
-            style={{
-              padding: '0.5rem 1rem',
-              background: theme.colors.primary,
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            + Upload Files
-          </button>
-        </div>
-      </div>
 
-      {/* Upload Section */}
-      {showUploader && currentFolderId && (
-        <div style={{ marginBottom: '2rem' }}>
-          <FileUploader
-            folderId={currentFolderId}
-            onUploadComplete={() => {
-              setShowUploader(false);
-              loadFolder();
+        {/* Search Bar */}
+        <div style={{ position: 'relative', marginBottom: '1rem' }}>
+          <input
+            type="text"
+            placeholder="🔍 Search files by name, tags, or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem 1rem',
+              border: '1px solid #E5E7EB',
+              borderRadius: '6px',
+              fontSize: '0.875rem',
             }}
           />
+          {isSearching && (
+            <div style={{
+              position: 'absolute',
+              right: '1rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: theme.colors.textSecondary,
+            }}>
+              Searching...
+            </div>
+          )}
+          {showSearchResults && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                setShowSearchResults(false);
+              }}
+              style={{
+                position: 'absolute',
+                right: '1rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                fontSize: '1.25rem',
+              }}
+            >
+              ✕
+            </button>
+          )}
         </div>
-      )}
 
-      {/* Folders */}
-      {folders.length > 0 && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
-            Folders
-          </h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: view === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
-              gap: '1rem',
-            }}
-          >
-            {folders.map((folder) => (
-              <div
-                key={folder.id}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({
-                    type: 'folder',
-                    id: folder.id,
-                    name: folder.name,
-                    x: e.clientX,
-                    y: e.clientY,
-                  });
-                }}
-                onClick={() => setCurrentFolderId(folder.id)}
-                style={{
-                  background: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.borderColor = theme.colors.primary;
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#E5E7EB';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-              >
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
-                <div style={{ fontWeight: 600, marginBottom: '0.25rem' }}>
-                  {folder.name}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
-                  {folder._count.files} files • {folder._count.subfolders} folders
-                </div>
+        {/* Breadcrumbs */}
+        {breadcrumbs.length > 0 && !showSearchResults && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            fontSize: '0.875rem',
+            color: theme.colors.textSecondary,
+          }}>
+            <button
+              onClick={() => setCurrentFolderId(null)}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                color: theme.colors.primary,
+                textDecoration: 'underline',
+              }}
+            >
+              🏠 Home
+            </button>
+            {breadcrumbs.map((crumb, index) => (
+              <div key={crumb.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span>/</span>
+                {index === breadcrumbs.length - 1 ? (
+                  <span style={{ fontWeight: 600, color: theme.colors.text }}>{crumb.name}</span>
+                ) : (
+                  <button
+                    onClick={() => setCurrentFolderId(crumb.id)}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: theme.colors.primary,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    {crumb.name}
+                  </button>
+                )}
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Search Results Header */}
+        {showSearchResults && (
+          <div style={{
+            padding: '0.75rem',
+            background: '#F0F9FF',
+            border: '1px solid #BAE6FD',
+            borderRadius: '6px',
+            fontSize: '0.875rem',
+          }}>
+            Found {searchResults.length} file(s) matching "{searchQuery}"
+          </div>
+        )}
+
+        {/* Bulk Actions Bar */}
+        {isMultiSelectMode && selectedFileIds.size > 0 && (
+          <div style={{
+            marginTop: '1rem',
+            padding: '1rem',
+            background: '#F9FAFB',
+            border: '1px solid #E5E7EB',
+            borderRadius: '6px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}>
+            <span style={{ fontSize: '0.875rem', fontWeight: 600 }}>
+              {selectedFileIds.size} file(s) selected
+            </span>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={deselectAll}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: 'white',
+                  border: '1px solid #E5E7EB',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                Deselect All
+              </button>
+              <button
+                onClick={handleBulkMove}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: theme.colors.primary,
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                📁 Move Selected
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                style={{
+                  padding: '0.5rem 1rem',
+                  background: '#EF4444',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+              >
+                🗑️ Delete Selected
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Upload Modal */}
+      {showUploader && currentFolderId && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowUploader(false)}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '600px',
+              width: '90%',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FileUploader
+              folderId={currentFolderId}
+              onUploadComplete={() => {
+                setShowUploader(false);
+                loadFolder();
+              }}
+            />
           </div>
         </div>
       )}
 
-      {/* Files */}
-      {files.length > 0 && (
+      {/* Loading State */}
+      {loading && (
+        <div style={{ textAlign: 'center', padding: '4rem', color: theme.colors.textSecondary }}>
+          Loading...
+        </div>
+      )}
+
+      {/* Folders & Files Grid */}
+      {!loading && (
         <div>
-          <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
-            Files
-          </h2>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: view === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
-              gap: '1rem',
-            }}
-          >
-            {files.map((file) => (
+          {/* Folders */}
+          {!showSearchResults && folders.length > 0 && (
+            <div style={{ marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
+                Folders
+              </h2>
               <div
-                key={file.id}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({
-                    type: 'file',
-                    id: file.id,
-                    name: file.originalName,
-                    x: e.clientX,
-                    y: e.clientY,
-                  });
-                }}
                 style={{
-                  background: 'white',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  padding: '1rem',
-                  cursor: 'pointer',
+                  display: 'grid',
+                  gridTemplateColumns: view === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
+                  gap: '1rem',
                 }}
-                onClick={() => handlePreview(file)}
               >
-                <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
-                  {getFileIcon(file.mimeType)}
-                </div>
-                <div
-                  style={{
-                    fontWeight: 600,
-                    marginBottom: '0.25rem',
-                    fontSize: '0.875rem',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {file.originalName}
-                </div>
-                <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
-                  {formatFileSize(file.size)} • {formatDate(file.uploadedAt)}
-                </div>
+                {folders.map((folder) => (
+                  <div
+                    key={folder.id}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        type: 'folder',
+                        id: folder.id,
+                        name: folder.name,
+                        x: e.clientX,
+                        y: e.clientY,
+                      });
+                    }}
+                    onDragOver={(e) => handleDragOver(e, folder.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, folder.id)}
+                    style={{
+                      background: dragOverFolderId === folder.id ? '#F0F9FF' : 'white',
+                      border: dragOverFolderId === folder.id ? '2px dashed ' + theme.colors.primary : '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setCurrentFolderId(folder.id)}
+                  >
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📁</div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        marginBottom: '0.25rem',
+                        fontSize: '0.875rem',
+                      }}
+                    >
+                      {folder.name}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
+                      {folder._count.files} files • {folder._count.subfolders} folders
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Files */}
+          {displayFiles.length > 0 && (
+            <div>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: '1rem',
+              }}>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 600 }}>
+                  Files {showSearchResults && `(${displayFiles.length} results)`}
+                </h2>
+                {isMultiSelectMode && !showSearchResults && (
+                  <button
+                    onClick={selectAllFiles}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'white',
+                      border: '1px solid #E5E7EB',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      fontSize: '0.875rem',
+                    }}
+                  >
+                    Select All
+                  </button>
+                )}
+              </div>
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: view === 'grid' ? 'repeat(auto-fill, minmax(200px, 1fr))' : '1fr',
+                  gap: '1rem',
+                }}
+              >
+                {displayFiles.map((file) => (
+                  <div
+                    key={file.id}
+                    draggable={!showSearchResults && (isMultiSelectMode ? selectedFileIds.has(file.id) : true)}
+                    onDragStart={(e) => {
+                      const filesToDrag = isMultiSelectMode && selectedFileIds.has(file.id)
+                        ? Array.from(selectedFileIds)
+                        : [file.id];
+                      handleDragStart(e, filesToDrag);
+                    }}
+                    onContextMenu={(e) => {
+                      e.preventDefault();
+                      setContextMenu({
+                        type: 'file',
+                        id: file.id,
+                        name: file.originalName,
+                        x: e.clientX,
+                        y: e.clientY,
+                      });
+                    }}
+                    style={{
+                      background: selectedFileIds.has(file.id) ? '#F0F9FF' : 'white',
+                      border: selectedFileIds.has(file.id) ? '2px solid ' + theme.colors.primary : '1px solid #E5E7EB',
+                      borderRadius: '8px',
+                      padding: '1rem',
+                      cursor: 'pointer',
+                      position: 'relative',
+                    }}
+                    onClick={(e) => {
+                      if (isMultiSelectMode) {
+                        toggleFileSelection(file.id);
+                      } else {
+                        handlePreview(file);
+                      }
+                    }}
+                  >
+                    {isMultiSelectMode && (
+                      <input
+                        type="checkbox"
+                        checked={selectedFileIds.has(file.id)}
+                        onChange={() => {}}
+                        style={{
+                          position: 'absolute',
+                          top: '0.5rem',
+                          right: '0.5rem',
+                          width: '1.25rem',
+                          height: '1.25rem',
+                          cursor: 'pointer',
+                        }}
+                      />
+                    )}
+                    <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
+                      {getFileIcon(file.mimeType)}
+                    </div>
+                    <div
+                      style={{
+                        fontWeight: 600,
+                        marginBottom: '0.25rem',
+                        fontSize: '0.875rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {file.originalName}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: theme.colors.textSecondary }}>
+                      {formatFileSize(file.size)} • {formatDate(file.uploadedAt)}
+                    </div>
+                    {showSearchResults && file.folder && (
+                      <div style={{
+                        fontSize: '0.75rem',
+                        color: theme.colors.primary,
+                        marginTop: '0.25rem',
+                      }}>
+                        📁 {file.folder.name}
+                      </div>
+                    )}
+                    {file.tags && file.tags.length > 0 && (
+                      <div style={{
+                        marginTop: '0.5rem',
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        gap: '0.25rem',
+                      }}>
+                        {file.tags.slice(0, 3).map(tag => (
+                          <span
+                            key={tag}
+                            style={{
+                              fontSize: '0.625rem',
+                              padding: '0.125rem 0.375rem',
+                              background: '#F3F4F6',
+                              borderRadius: '4px',
+                              color: theme.colors.textSecondary,
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* Empty State */}
-      {folders.length === 0 && files.length === 0 && (
+      {!loading && folders.length === 0 && displayFiles.length === 0 && (
         <div
           style={{
             textAlign: 'center',
@@ -452,12 +935,18 @@ export default function MediaBrowser({
             color: theme.colors.textSecondary,
           }}
         >
-          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📂</div>
+          <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+            {showSearchResults ? '🔍' : '📂'}
+          </div>
           <p style={{ fontSize: '1.125rem', marginBottom: '0.5rem' }}>
-            This folder is empty
+            {showSearchResults
+              ? `No files found for "${searchQuery}"`
+              : 'This folder is empty'}
           </p>
           <p style={{ fontSize: '0.875rem' }}>
-            {currentFolderId
+            {showSearchResults
+              ? 'Try a different search query'
+              : currentFolderId
               ? 'Upload files to get started'
               : 'Create a folder to organize your media'}
           </p>
@@ -590,167 +1079,6 @@ export default function MediaBrowser({
         </div>
       )}
 
-      {/* Preview Modal */}
-      {previewFile && previewUrl && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0,0,0,0.9)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1000,
-            padding: '2rem',
-          }}
-          onClick={() => {
-            setPreviewFile(null);
-            setPreviewUrl(null);
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '90vw',
-              maxHeight: '90vh',
-              position: 'relative',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Close button */}
-            <button
-              onClick={() => {
-                setPreviewFile(null);
-                setPreviewUrl(null);
-              }}
-              style={{
-                position: 'absolute',
-                top: '-40px',
-                right: '0',
-                background: 'white',
-                border: 'none',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                cursor: 'pointer',
-                fontSize: '1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              ✕
-            </button>
-
-            {/* File name */}
-            <div
-              style={{
-                position: 'absolute',
-                top: '-40px',
-                left: '0',
-                color: 'white',
-                fontSize: '1rem',
-                fontWeight: 600,
-                maxWidth: 'calc(100% - 50px)',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {previewFile.originalName}
-            </div>
-
-            {/* Preview content */}
-            {previewFile.mimeType.startsWith('image/') && (
-              <img
-                src={previewUrl}
-                alt={previewFile.originalName}
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '90vh',
-                  objectFit: 'contain',
-                }}
-              />
-            )}
-            
-            {previewFile.mimeType.startsWith('video/') && (
-              <video
-                src={previewUrl}
-                controls
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '90vh',
-                }}
-              />
-            )}
-            
-            {previewFile.mimeType === 'application/pdf' && (
-              <object
-                data={`${previewUrl}#toolbar=1&navpanes=0&scrollbar=1`}
-                type="application/pdf"
-                style={{
-                  width: '80vw',
-                  height: '90vh',
-                  border: 'none',
-                }}
-              >
-                <p style={{ padding: '2rem', background: 'white', borderRadius: '8px' }}>
-                  PDF preview not available in this browser.{' '}
-                  <button
-                    onClick={() => window.open(previewUrl, '_blank')}
-                    style={{
-                      color: theme.colors.primary,
-                      background: 'none',
-                      border: 'none',
-                      textDecoration: 'underline',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Open in new tab
-                  </button>
-                </p>
-              </object>
-            )}
-
-            {!previewFile.mimeType.startsWith('image/') &&
-             !previewFile.mimeType.startsWith('video/') &&
-             previewFile.mimeType !== 'application/pdf' && (
-              <div
-                style={{
-                  background: 'white',
-                  padding: '3rem',
-                  borderRadius: '12px',
-                  textAlign: 'center',
-                }}
-              >
-                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
-                  {getFileIcon(previewFile.mimeType)}
-                </div>
-                <p style={{ marginBottom: '1rem' }}>
-                  Preview not available for this file type
-                </p>
-                <button
-                  onClick={() => handleDownload(previewFile.id)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    background: theme.colors.primary,
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
-                  Download File
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Rename Modal */}
       {renameModal && (
         <div
@@ -773,71 +1101,169 @@ export default function MediaBrowser({
               background: 'white',
               borderRadius: '12px',
               padding: '2rem',
-              maxWidth: '500px',
+              maxWidth: '400px',
               width: '90%',
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '1rem' }}>
               Rename {renameModal.type === 'file' ? 'File' : 'Folder'}
-            </h2>
-            
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: '0.875rem',
-                  fontWeight: 600,
-                  marginBottom: '0.5rem',
-                }}
-              >
-                New Name
-              </label>
-              <input
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                }}
-                autoFocus
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            </h3>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.75rem',
+                border: '1px solid #E5E7EB',
+                borderRadius: '6px',
+                marginBottom: '1rem',
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  if (renameModal.type === 'file') {
+                    handleRenameFile();
+                  } else {
+                    handleRenameFolder();
+                  }
+                }
+              }}
+            />
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
               <button
                 onClick={() => setRenameModal(null)}
                 style={{
-                  padding: '0.75rem 1.5rem',
+                  padding: '0.5rem 1rem',
                   background: 'white',
                   border: '1px solid #E5E7EB',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
-                  fontWeight: 600,
                 }}
               >
                 Cancel
               </button>
               <button
-                onClick={renameModal.type === 'file' ? handleRenameFile : handleRenameFolder}
-                disabled={!newName.trim()}
+                onClick={() => {
+                  if (renameModal.type === 'file') {
+                    handleRenameFile();
+                  } else {
+                    handleRenameFolder();
+                  }
+                }}
                 style={{
-                  padding: '0.75rem 1.5rem',
+                  padding: '0.5rem 1rem',
                   background: theme.colors.primary,
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
-                  cursor: !newName.trim() ? 'not-allowed' : 'pointer',
-                  fontWeight: 600,
-                  opacity: !newName.trim() ? 0.5 : 1,
+                  borderRadius: '6px',
+                  cursor: 'pointer',
                 }}
               >
                 Rename
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewFile && previewUrl && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => {
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+        >
+          <div
+            style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 600 }}>{previewFile.originalName}</h3>
+              <button
+                onClick={() => {
+                  setPreviewFile(null);
+                  setPreviewUrl(null);
+                }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {previewFile.mimeType.startsWith('image/') && (
+              <img
+                src={previewUrl}
+                alt={previewFile.originalName}
+                style={{ maxWidth: '100%', maxHeight: '70vh' }}
+              />
+            )}
+            
+            {previewFile.mimeType.startsWith('video/') && (
+              <video
+                src={previewUrl}
+                controls
+                style={{ maxWidth: '100%', maxHeight: '70vh' }}
+              />
+            )}
+            
+            {previewFile.mimeType === 'application/pdf' && (
+              <iframe
+                src={previewUrl}
+                style={{ width: '80vw', height: '70vh', border: 'none' }}
+              />
+            )}
+            
+            {!previewFile.mimeType.startsWith('image/') &&
+             !previewFile.mimeType.startsWith('video/') &&
+             previewFile.mimeType !== 'application/pdf' && (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <p style={{ marginBottom: '1rem' }}>Preview not available for this file type</p>
+                <button
+                  onClick={() => handleDownload(previewFile.id)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: theme.colors.primary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Download File
+                </button>
+              </div>
+            )}
+
+            <div style={{ marginTop: '1rem', fontSize: '0.875rem', color: theme.colors.textSecondary }}>
+              <div>Size: {formatFileSize(previewFile.size)}</div>
+              <div>Uploaded: {formatDate(previewFile.uploadedAt)}</div>
+              <div>Uploader: {previewFile.uploader.name}</div>
             </div>
           </div>
         </div>
