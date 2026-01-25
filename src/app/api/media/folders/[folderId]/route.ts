@@ -200,7 +200,14 @@ export async function DELETE(
       where: { id: folderId },
       include: {
         _count: {
-          select: { files: true, subfolders: true },
+          select: {
+            files: {
+              where: {
+                isDeleted: false,
+              },
+            },
+            subfolders: true,
+          },
         },
       },
     });
