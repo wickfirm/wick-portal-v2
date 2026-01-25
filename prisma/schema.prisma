@@ -1055,9 +1055,6 @@ model MediaFile {
   description  String?  @db.Text
   metadata     Json?    // EXIF data, video duration, etc.
   
-  // Search (full-text search vector)
-  searchVector String?  @db.Text // For PostgreSQL full-text search
-  
   // Access tracking
   downloadCount Int     @default(0) @map("download_count")
   viewCount     Int     @default(0) @map("view_count")
