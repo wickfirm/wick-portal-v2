@@ -976,3 +976,166 @@ enum LeaveStatus {
   
   @@map("leave_status")
 }
+
+// Add these models to your schema.prisma file
+// Media Hub Module - File Storage & Sharing
+
+model MediaFolder {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  path        String   // "/client-baladna/2024-photoshoot"
+  
+  // Multi-tenant structure
+  agencyId    String   @map("agency_id")
+  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId    String?  @map("client_id")
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String?  @map("project_id")
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  
+  // Folder hierarchy
+  parentId    String?  @map("parent_id")
+  parent      MediaFolder?  @relation("FolderHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  subfolders  MediaFolder[] @relation("FolderHierarchy")
+  
+  // Relations
+  files       MediaFile[]
+  activities  MediaActivity[]
+  
+  // Metadata
+  createdBy   String   @map("created_by")
+  creator     User     @relation("FolderCreator", fields: [createdBy], references: [id])
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@index([agencyId, clientId])
+  @@index([agencyId, path])
+  @@index([parentId])
+  @@map("media_folders")
+}
+
+model MediaFile {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String   @map("original_name")
+  mimeType     String   @map("mime_type")
+  size         BigInt   // File size in bytes
+  
+  // R2 Storage
+  r2Key        String   @unique @map("r2_key") // "agency-wick/client-baladna/uuid-filename.jpg"
+  r2Bucket     String   @map("r2_bucket")
+  
+  // Organization
+  folderId     String   @map("folder_id")
+  folder       MediaFolder @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  
+  // Multi-tenant (denormalized for faster queries)
+  agencyId     String   @map("agency_id")
+  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  clientId     String?  @map("client_id")
+  client       Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Thumbnails & Previews
+  thumbnailUrl String?  @map("thumbnail_url") @db.Text
+  previewUrl   String?  @map("preview_url") @db.Text
+  
+  // Metadata
+  tags         String[] // ["photoshoot", "product", "baladna"]
+  description  String?  @db.Text
+  metadata     Json?    // EXIF data, video duration, etc.
+  
+  // Search (full-text search vector)
+  searchVector String?  @db.Text // For PostgreSQL full-text search
+  
+  // Access tracking
+  downloadCount Int     @default(0) @map("download_count")
+  viewCount     Int     @default(0) @map("view_count")
+  lastAccessedAt DateTime? @map("last_accessed_at")
+  
+  // Soft delete
+  isDeleted    Boolean  @default(false) @map("is_deleted")
+  deletedAt    DateTime? @map("deleted_at")
+  deletedBy    String?  @map("deleted_by")
+  
+  // Upload info
+  uploadedBy   String   @map("uploaded_by")
+  uploader     User     @relation("FileUploader", fields: [uploadedBy], references: [id])
+  uploadedAt   DateTime @default(now()) @map("uploaded_at")
+  
+  // Relations
+  activities   MediaActivity[]
+  
+  @@index([agencyId, clientId, isDeleted])
+  @@index([folderId, isDeleted])
+  @@index([r2Key])
+  @@index([tags])
+  @@map("media_files")
+}
+
+model MediaActivity {
+  id           String   @id @default(cuid())
+  
+  // What happened
+  action       MediaActivityAction // UPLOAD, DOWNLOAD, VIEW, SHARE, DELETE
+  
+  // Who did it
+  userId       String?  @map("user_id")
+  user         User?    @relation("MediaActivityUser", fields: [userId], references: [id], onDelete: SetNull)
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent") @db.Text
+  
+  // What was affected
+  fileId       String?  @map("file_id")
+  file         MediaFile? @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  folderId     String?  @map("folder_id")
+  folder       MediaFolder? @relation(fields: [folderId], references: [id], onDelete: Cascade)
+  
+  // Multi-tenant
+  agencyId     String   @map("agency_id")
+  agency       Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  
+  // Additional context
+  metadata     Json?    // Share link details, download method, etc.
+  
+  // Timestamp
+  createdAt    DateTime @default(now()) @map("created_at")
+  
+  @@index([agencyId, createdAt])
+  @@index([userId, createdAt])
+  @@index([fileId, action])
+  @@map("media_activity")
+}
+
+enum MediaActivityAction {
+  UPLOAD
+  DOWNLOAD
+  VIEW
+  SHARE
+  DELETE
+  RESTORE
+  MOVE
+  RENAME
+  
+  @@map("media_activity_action")
+}
+
+// Add these relations to existing models:
+
+// In model Agency, add:
+//   mediaFolders  MediaFolder[]
+//   mediaFiles    MediaFile[]
+//   mediaActivity MediaActivity[]
+
+// In model Client, add:
+//   mediaFolders  MediaFolder[]
+//   mediaFiles    MediaFile[]
+
+// In model Project, add:
+//   mediaFolders  MediaFolder[]
+
+// In model User, add:
+//   createdFolders  MediaFolder[]  @relation("FolderCreator")
+//   uploadedFiles   MediaFile[]    @relation("FileUploader")
+//   mediaActivities MediaActivity[] @relation("MediaActivityUser")
+
