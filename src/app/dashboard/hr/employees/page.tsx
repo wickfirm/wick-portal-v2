@@ -23,7 +23,7 @@ interface Employee {
     user: {
       name: string;
     };
-  };
+  } | null;
 }
 
 export default function EmployeesPage() {
@@ -65,10 +65,10 @@ export default function EmployeesPage() {
 
   const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
-      emp.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.employeeNumber.toLowerCase().includes(searchTerm.toLowerCase());
+      emp.user?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.user?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.employeeNumber?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesDepartment =
       departmentFilter === "all" || emp.department === departmentFilter;
@@ -263,12 +263,12 @@ export default function EmployeesPage() {
                     flexShrink: 0,
                   }}
                 >
-                  {employee.user.name.charAt(0).toUpperCase()}
+                  {employee.user?.name?.charAt(0)?.toUpperCase() || "?"}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.25rem" }}>
                     <span style={{ fontWeight: "600", fontSize: "0.9375rem" }}>
-                      {employee.user.name}
+                      {employee.user?.name || "Unknown"}
                     </span>
                     <span
                       style={{
@@ -286,7 +286,7 @@ export default function EmployeesPage() {
                     <span>{employee.jobTitle}</span>
                     <span>•</span>
                     <span>{employee.department}</span>
-                    {employee.manager && (
+                    {employee.manager?.user?.name && (
                       <>
                         <span>•</span>
                         <span>Reports to {employee.manager.user.name}</span>
