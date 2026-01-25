@@ -60,6 +60,7 @@ export default function Header() {
     // ADMINs and SUPER_ADMINs see full navigation
     { href: "/dashboard", label: "Dashboard" },
     { href: "/dashboard/hr", label: "HR" },
+    { href: "/lead-qualifier", label: "Lead Qualifier" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
