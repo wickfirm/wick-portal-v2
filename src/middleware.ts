@@ -10,8 +10,8 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const subdomain = getSubdomainFromHost(hostname);
   
-  // Skip middleware for NextAuth API routes, static files, and signout
-  const skipPaths = ['/api/auth', '/_next', '/favicon.ico', '/static', '/auth/signout'];
+  // Skip middleware for ALL API routes, NextAuth, static files, and signout
+  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout'];
   if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
