@@ -47,10 +47,15 @@ export default function MediaBrowser({
   const [view, setView] = useState<'grid' | 'list'>('grid');
   const [showUploader, setShowUploader] = useState(false);
   
+  // Preview modal
+  const [previewFile, setPreviewFile] = useState<MediaFile | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  
   // Context menu state
   const [contextMenu, setContextMenu] = useState<{
     type: 'file' | 'folder';
     id: string;
+    name: string;
     x: number;
     y: number;
   } | null>(null);
@@ -97,6 +102,17 @@ export default function MediaBrowser({
       console.error('Failed to load folder:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePreview = async (file: MediaFile) => {
+    try {
+      const res = await fetch(`/api/media/download-url/${file.id}`);
+      const data = await res.json();
+      setPreviewFile(file);
+      setPreviewUrl(data.downloadUrl);
+    } catch (error) {
+      console.error('Failed to get preview URL:', error);
     }
   };
 
@@ -197,12 +213,6 @@ export default function MediaBrowser({
       console.error('Failed to rename folder:', error);
       alert('Failed to rename folder');
     }
-  };
-
-  const openRenameModal = (type: 'file' | 'folder', id: string, currentName: string) => {
-    setRenameModal({ type, id, currentName });
-    setNewName(currentName);
-    setContextMenu(null);
   };
 
   const formatFileSize = (bytes: string) => {
@@ -334,6 +344,7 @@ export default function MediaBrowser({
                   setContextMenu({
                     type: 'folder',
                     id: folder.id,
+                    name: folder.name,
                     x: e.clientX,
                     y: e.clientY,
                   });
@@ -390,6 +401,7 @@ export default function MediaBrowser({
                   setContextMenu({
                     type: 'file',
                     id: file.id,
+                    name: file.originalName,
                     x: e.clientX,
                     y: e.clientY,
                   });
@@ -401,7 +413,7 @@ export default function MediaBrowser({
                   padding: '1rem',
                   cursor: 'pointer',
                 }}
-                onClick={() => handleDownload(file.id)}
+                onClick={() => handlePreview(file)}
               >
                 <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>
                   {getFileIcon(file.mimeType)}
@@ -464,44 +476,66 @@ export default function MediaBrowser({
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {contextMenu.type === 'file' && (
+            <>
+              <button
+                onClick={() => {
+                  const file = files.find(f => f.id === contextMenu.id);
+                  if (file) handlePreview(file);
+                  setContextMenu(null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  background: 'transparent',
+                  border: 'none',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#F9FAFB';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                👁️ Preview
+              </button>
+              <button
+                onClick={() => {
+                  handleDownload(contextMenu.id);
+                  setContextMenu(null);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem',
+                  background: 'transparent',
+                  border: 'none',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#F9FAFB';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                ⬇️ Download
+              </button>
+            </>
+          )}
           <button
             onClick={() => {
-              if (contextMenu.type === 'file') {
-                handleDownload(contextMenu.id);
-              }
+              setRenameModal({
+                type: contextMenu.type,
+                id: contextMenu.id,
+                currentName: contextMenu.name,
+              });
+              setNewName(contextMenu.name);
               setContextMenu(null);
-            }}
-            style={{
-              width: '100%',
-              padding: '0.75rem 1rem',
-              background: 'transparent',
-              border: 'none',
-              textAlign: 'left',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = '#F9FAFB';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-            }}
-          >
-            {contextMenu.type === 'file' ? '⬇️ Download' : '📂 Open'}
-          </button>
-          <button
-            onClick={() => {
-              const item = contextMenu.type === 'file' 
-                ? files.find(f => f.id === contextMenu.id)
-                : folders.find(f => f.id === contextMenu.id);
-              
-              if (item) {
-                openRenameModal(
-                  contextMenu.type,
-                  contextMenu.id,
-                  contextMenu.type === 'file' ? (item as MediaFile).originalName : (item as Folder).name
-                );
-              }
             }}
             style={{
               width: '100%',
@@ -549,6 +583,150 @@ export default function MediaBrowser({
           >
             🗑️ Delete
           </button>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewFile && previewUrl && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.9)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '2rem',
+          }}
+          onClick={() => {
+            setPreviewFile(null);
+            setPreviewUrl(null);
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '90vw',
+              maxHeight: '90vh',
+              position: 'relative',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button */}
+            <button
+              onClick={() => {
+                setPreviewFile(null);
+                setPreviewUrl(null);
+              }}
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                right: '0',
+                background: 'white',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                cursor: 'pointer',
+                fontSize: '1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ✕
+            </button>
+
+            {/* File name */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-40px',
+                left: '0',
+                color: 'white',
+                fontSize: '1rem',
+                fontWeight: 600,
+                maxWidth: 'calc(100% - 50px)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {previewFile.originalName}
+            </div>
+
+            {/* Preview content */}
+            {previewFile.mimeType.startsWith('image/') && (
+              <img
+                src={previewUrl}
+                alt={previewFile.originalName}
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '90vh',
+                  objectFit: 'contain',
+                }}
+              />
+            )}
+            
+            {previewFile.mimeType.startsWith('video/') && (
+              <video
+                src={previewUrl}
+                controls
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '90vh',
+                }}
+              />
+            )}
+            
+            {previewFile.mimeType === 'application/pdf' && (
+              <iframe
+                src={previewUrl}
+                style={{
+                  width: '80vw',
+                  height: '90vh',
+                  border: 'none',
+                }}
+              />
+            )}
+
+            {!previewFile.mimeType.startsWith('image/') &&
+             !previewFile.mimeType.startsWith('video/') &&
+             previewFile.mimeType !== 'application/pdf' && (
+              <div
+                style={{
+                  background: 'white',
+                  padding: '3rem',
+                  borderRadius: '12px',
+                  textAlign: 'center',
+                }}
+              >
+                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>
+                  {getFileIcon(previewFile.mimeType)}
+                </div>
+                <p style={{ marginBottom: '1rem' }}>
+                  Preview not available for this file type
+                </p>
+                <button
+                  onClick={() => handleDownload(previewFile.id)}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: theme.colors.primary,
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                  }}
+                >
+                  Download File
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
