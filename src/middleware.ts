@@ -30,6 +30,28 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
   
+  // If user IS authenticated and trying to access /login, redirect to dashboard on their correct subdomain
+  if (pathname === '/login') {
+    const userRole = token.role as string;
+    const userAgencyId = token.agencyId as string | null;
+    const expectedSubdomain = getExpectedSubdomain(userAgencyId, userRole);
+    
+    // If already on correct subdomain, go to dashboard
+    if (subdomain === expectedSubdomain) {
+      const dashboardUrl = new URL('/dashboard', request.url);
+      return NextResponse.redirect(dashboardUrl);
+    }
+    
+    // If on wrong subdomain, redirect to correct subdomain's dashboard
+    const isProduction = hostname.includes('omnixia.ai');
+    const baseDomain = isProduction ? 'omnixia.ai' : 'omnixia.vercel.app';
+    const redirectHost = expectedSubdomain === 'dash' 
+      ? `dash.${baseDomain}`
+      : `${expectedSubdomain}.${baseDomain}`;
+    const redirectUrl = new URL('/dashboard', `https://${redirectHost}`);
+    return NextResponse.redirect(redirectUrl);
+  }
+  
   // User IS authenticated - check if they're on the correct subdomain
   const userRole = token.role as string;
   const userAgencyId = token.agencyId as string | null;
