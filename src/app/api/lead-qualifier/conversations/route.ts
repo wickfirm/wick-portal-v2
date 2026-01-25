@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       where: {
         agencyId,
         visitorId,
-        status: { in: ['ACTIVE', 'PENDING'] }
+        status: 'ACTIVE'
       }
     });
 
