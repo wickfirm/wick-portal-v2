@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         userId: user.id,
         fileId: file.id,
         folderId: targetFolderId,
-        agencyId: user.agencyId,
+        agencyId: user.agencyId!, // Non-null assertion is safe here (checked above)
         metadata: {
           previousFolderId: files.find(f => f.id === file.id)?.folderId,
           targetFolderId,
