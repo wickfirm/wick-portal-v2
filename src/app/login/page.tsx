@@ -31,8 +31,9 @@ export default function LoginPage() {
       setError("Invalid email or password");
       setLoading(false);
     } else {
-      router.push("/dashboard");
-      router.refresh();
+      // After successful login, redirect to /dashboard
+      // Middleware will handle redirecting to correct subdomain
+      window.location.href = "/dashboard";
     }
   }
 
