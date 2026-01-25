@@ -67,7 +67,14 @@ export async function GET(
       where: { parentId: folderId },
       include: {
         _count: {
-          select: { files: true, subfolders: true },
+          select: {
+            files: {
+              where: {
+                isDeleted: false,
+              },
+            },
+            subfolders: true,
+          },
         },
       },
       orderBy: { name: 'asc' },
