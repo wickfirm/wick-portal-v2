@@ -236,7 +236,11 @@ export default function MediaBrowser({
     if (mimeType.startsWith('image/')) return '🖼️';
     if (mimeType.startsWith('video/')) return '🎬';
     if (mimeType === 'application/pdf') return '📄';
-    if (mimeType.includes('zip') || mimeType.includes('rar')) return '📦';
+    if (mimeType.includes('word') || mimeType.includes('document')) return '📝';
+    if (mimeType.includes('excel') || mimeType.includes('spreadsheet')) return '📊';
+    if (mimeType.includes('powerpoint') || mimeType.includes('presentation')) return '📽️';
+    if (mimeType === 'text/plain') return '📃';
+    if (mimeType.includes('zip') || mimeType.includes('rar') || mimeType.includes('7z')) return '📦';
     return '📁';
   };
 
@@ -683,14 +687,31 @@ export default function MediaBrowser({
             )}
             
             {previewFile.mimeType === 'application/pdf' && (
-              <iframe
-                src={previewUrl}
+              <object
+                data={`${previewUrl}#toolbar=1&navpanes=0&scrollbar=1`}
+                type="application/pdf"
                 style={{
                   width: '80vw',
                   height: '90vh',
                   border: 'none',
                 }}
-              />
+              >
+                <p style={{ padding: '2rem', background: 'white', borderRadius: '8px' }}>
+                  PDF preview not available in this browser.{' '}
+                  <button
+                    onClick={() => window.open(previewUrl, '_blank')}
+                    style={{
+                      color: theme.colors.primary,
+                      background: 'none',
+                      border: 'none',
+                      textDecoration: 'underline',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Open in new tab
+                  </button>
+                </p>
+              </object>
             )}
 
             {!previewFile.mimeType.startsWith('image/') &&
