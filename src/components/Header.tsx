@@ -54,6 +54,7 @@ export default function Header() {
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/settings", label: "Settings" },
   ] : [
@@ -64,6 +65,7 @@ export default function Header() {
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/team", label: "Team" },
     { href: "/agencies", label: "Agencies" },
