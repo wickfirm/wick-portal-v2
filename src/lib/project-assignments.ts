@@ -34,17 +34,11 @@ export async function getProjectFilterForUser(
   if (role === "ADMIN" || role === "SUPER_ADMIN") {
     if (!agencyId) return {};
     
-    const agencyTeamMembers = await prisma.user.findMany({
-      where: { agencyId },
-      select: { id: true },
-    });
-    const teamMemberIds = agencyTeamMembers.map(u => u.id);
-    
     return {
       client: {
-        teamMembers: {
+        agencies: {
           some: {
-            userId: { in: teamMemberIds }
+            agencyId: agencyId
           }
         }
       }
