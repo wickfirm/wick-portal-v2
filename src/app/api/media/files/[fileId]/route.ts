@@ -20,7 +20,7 @@ export async function PATCH(
 
     const { fileId } = params;
     const body = await request.json();
-    const { description, tags } = body;
+    const { description, tags, filename } = body;
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -51,6 +51,7 @@ export async function PATCH(
       data: {
         description: description !== undefined ? description : undefined,
         tags: tags || undefined,
+        originalName: filename || undefined,
       },
     });
 
