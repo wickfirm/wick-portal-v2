@@ -107,7 +107,7 @@ export async function POST(request: Request) {
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
-        role: 'user',
+        role: 'USER',
         content: message,
         agencyId
       }
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     });
 
     const conversationHistory = messages.map(m => ({
-      role: m.role,
+      role: m.role.toLowerCase() as 'user' | 'assistant',
       content: m.content
     }));
 
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     await prisma.message.create({
       data: {
         conversationId: conversation.id,
-        role: 'assistant',
+        role: 'ASSISTANT',
         content: assistantMessage,
         agencyId
       }
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
     // Calculate lead score if conversation has enough messages
     if (messages.length >= 4) {
       // Simple scoring logic - can be enhanced
-      const userMessages = messages.filter(m => m.role === 'user');
+      const userMessages = messages.filter(m => m.role === 'USER');
       const avgLength = userMessages.reduce((sum, m) => sum + m.content.length, 0) / userMessages.length;
       const hasEmail = userMessages.some(m => m.content.match(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/));
       const hasPhone = userMessages.some(m => m.content.match(/\+?\d{1,4}?[-.\s]?\(?\d{1,3}?\)?[-.\s]?\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9}/));
