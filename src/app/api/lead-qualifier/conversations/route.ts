@@ -108,8 +108,7 @@ export async function POST(request: Request) {
       data: {
         conversationId: conversation.id,
         role: 'USER',
-        content: message,
-        agencyId
+        content: message
       }
     });
 
@@ -150,8 +149,7 @@ export async function POST(request: Request) {
       data: {
         conversationId: conversation.id,
         role: 'ASSISTANT',
-        content: assistantMessage,
-        agencyId
+        content: assistantMessage
       }
     });
 
