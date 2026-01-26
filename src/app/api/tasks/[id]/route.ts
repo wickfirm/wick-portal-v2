@@ -24,6 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.internalLink !== undefined) updateData.internalLink = data.internalLink;
     if (data.internalLinkLabel !== undefined) updateData.internalLinkLabel = data.internalLinkLabel;
     if (data.ownerType !== undefined) updateData.ownerType = data.ownerType;
+    if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId || null;
     if (data.order !== undefined) updateData.order = data.order;
 
     const task = await prisma.clientTask.update({
@@ -31,6 +32,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data: updateData,
       include: { 
         category: true,
+        assignee: { select: { name: true, email: true } },
         client: { 
           select: { 
             nickname: true, 
