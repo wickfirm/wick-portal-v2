@@ -823,20 +823,24 @@ model LeaveBalanceAdjustment {
 }
 
 model PublicHoliday {
-  id          String   @id @default(cuid())
-  name        String
-  date        DateTime
-  country     String   @default("AE")
-  isRecurring Boolean  @default(true) @map("is_recurring")
+  id            String        @id @default(cuid())
+  name          String
+  date          DateTime
+  numberOfDays  Int           @default(1) @map("number_of_days")
+  country       String        @default("AE")
+  status        HolidayStatus @default(UNTOUCHABLE)
+  description   String?       @db.Text
+  isRecurring   Boolean       @default(true) @map("is_recurring")
   
-  agencyId    String   @map("agencyId")
-  agency      Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  agencyId      String        @map("agencyId")
+  agency        Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
   
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
   
   @@index([agencyId])
   @@index([date])
+  @@index([status])
   @@map("public_holidays")
 }
 
@@ -985,6 +989,14 @@ enum LeaveStatus {
   CANCELLED
   
   @@map("leave_status")
+}
+
+enum HolidayStatus {
+  UNTOUCHABLE
+  COMPENSABLE
+  DISMISSIBLE
+  
+  @@map("holiday_status")
 }
 
 // Add these models to your schema.prisma file
