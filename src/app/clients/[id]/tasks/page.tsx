@@ -146,6 +146,7 @@ export default function ClientTasksPage() {
       internalLinkLabel: task.internalLinkLabel || "",
       categoryId: task.category?.id || "",
       ownerType: task.ownerType || "AGENCY",
+      assigneeId: task.assigneeId || "",
     });
   }
 
@@ -875,6 +876,21 @@ export default function ClientTasksPage() {
                     <option value="CLIENT">{clientDisplayName}</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Assignee */}
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Assigned To</label>
+                <select
+                  value={editForm.assigneeId || ""}
+                  onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value || null })}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
+                  <option value="">Unassigned</option>
+                  {users.map((u: any) => (
+                    <option key={u.id} value={u.id}>{u.name}</option>
+                  ))}
+                </select>
               </div>
 
               {/* Due Date */}
