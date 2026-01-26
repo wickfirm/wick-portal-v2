@@ -44,6 +44,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   try {
     const data = await req.json();
     
+    if (!data.projectId) {
+      return NextResponse.json({ error: "projectId is required. All tasks must belong to a project." }, { status: 400 });
+    }
+    
     // Get current user to auto-assign task
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user?.email || "" },
@@ -59,7 +63,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       data: {
         name: data.name,
         clientId: params.id,
-        projectId: data.projectId || null,
+        projectId: data.projectId,
         categoryId: data.categoryId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
