@@ -52,6 +52,7 @@ export default function ClientTasksPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [users, setUsers] = useState<any[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   
@@ -69,6 +70,7 @@ export default function ClientTasksPage() {
   // Quick add state per category
   const [quickAddCategory, setQuickAddCategory] = useState<string | null>(null);
   const [quickAddName, setQuickAddName] = useState("");
+  const [quickAddProject, setQuickAddProject] = useState("");
 
   useEffect(() => {
     Promise.all([
@@ -76,11 +78,13 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
       fetch("/api/users").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData, usersData]) => {
+      fetch("/api/projects?clientId=" + clientId).then(res => res.json()),
+    ]).then(([clientData, tasksData, categoriesData, usersData, projectsData]) => {
       setClient(clientData);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
       setUsers(Array.isArray(usersData) ? usersData : []);
+      setProjects(Array.isArray(projectsData) ? projectsData : []);
       setLoading(false);
     }).catch(err => {
       console.error("Failed to load data:", err);
@@ -122,6 +126,7 @@ export default function ClientTasksPage() {
       body: JSON.stringify({
         name: quickAddName,
         categoryId: categoryId || null,
+        projectId: quickAddProject || null,
         status: "PENDING",
         priority: "MEDIUM",
         ownerType: "AGENCY",
@@ -129,6 +134,7 @@ export default function ClientTasksPage() {
     });
     
     setQuickAddName("");
+    setQuickAddProject("");
     setQuickAddCategory(null);
     fetchTasks();
   }
@@ -145,6 +151,7 @@ export default function ClientTasksPage() {
       internalLink: task.internalLink || "",
       internalLinkLabel: task.internalLinkLabel || "",
       categoryId: task.category?.id || "",
+      projectId: task.projectId || "",
       ownerType: task.ownerType || "AGENCY",
       assigneeId: task.assigneeId || "",
     });
@@ -521,20 +528,30 @@ export default function ClientTasksPage() {
           }}>
             {/* Quick Add Row */}
             {quickAddCategory === categoryId && (
-              <div style={{ padding: "12px 16px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", gap: 8 }}>
+              <div style={{ padding: "12px 16px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", gap: 8, flexWrap: "wrap" }}>
                 <input
                   value={quickAddName}
                   onChange={(e) => setQuickAddName(e.target.value)}
                   placeholder="Task name..."
                   autoFocus
-                  style={{ ...inputStyle, flex: 1 }}
+                  style={{ ...inputStyle, flex: "1 1 250px" }}
                   onKeyDown={(e) => {
                     if (e.key === "Enter") quickAddTask(category?.id || "");
-                    if (e.key === "Escape") { setQuickAddCategory(null); setQuickAddName(""); }
+                    if (e.key === "Escape") { setQuickAddCategory(null); setQuickAddName(""); setQuickAddProject(""); }
                   }}
                 />
+                <select
+                  value={quickAddProject}
+                  onChange={(e) => setQuickAddProject(e.target.value)}
+                  style={{ ...inputStyle, flex: "0 1 200px", cursor: "pointer" }}
+                >
+                  <option value="">No Project</option>
+                  {projects.map((p: any) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
                 <button onClick={() => quickAddTask(category?.id || "")} style={{ padding: "10px 20px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 8, fontWeight: 500, cursor: "pointer" }}>Add</button>
-                <button onClick={() => { setQuickAddCategory(null); setQuickAddName(""); }} style={{ padding: "10px 16px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                <button onClick={() => { setQuickAddCategory(null); setQuickAddName(""); setQuickAddProject(""); }} style={{ padding: "10px 16px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, cursor: "pointer" }}>Cancel</button>
               </div>
             )}
 
@@ -878,19 +895,34 @@ export default function ClientTasksPage() {
                 </div>
               </div>
 
-              {/* Assignee */}
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Assigned To</label>
-                <select
-                  value={editForm.assigneeId || ""}
-                  onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value || null })}
-                  style={{ ...inputStyle, cursor: "pointer" }}
-                >
-                  <option value="">Unassigned</option>
-                  {users.map((u: any) => (
-                    <option key={u.id} value={u.id}>{u.name}</option>
-                  ))}
-                </select>
+              {/* Project & Assignee */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Project</label>
+                  <select
+                    value={editForm.projectId || ""}
+                    onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value || null })}
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    <option value="">No Project</option>
+                    {projects.map((p: any) => (
+                      <option key={p.id} value={p.id}>{p.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 13, color: theme.colors.textSecondary }}>Assigned To</label>
+                  <select
+                    value={editForm.assigneeId || ""}
+                    onChange={(e) => setEditForm({ ...editForm, assigneeId: e.target.value || null })}
+                    style={{ ...inputStyle, cursor: "pointer" }}
+                  >
+                    <option value="">Unassigned</option>
+                    {users.map((u: any) => (
+                      <option key={u.id} value={u.id}>{u.name}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* Due Date */}
