@@ -27,6 +27,13 @@ export default function HRSettingsPage() {
     workingHoursPerDay: 8,
     carryOverEnabled: false,
     maxCarryOverDays: 5,
+    // Leave Request Policies
+    shortLeaveMinDays: 14,
+    mediumLeaveMinDays: 30,
+    longLeaveMinDays: 30,
+    approvalEmail: "management@thewickfirm.com",
+    requireCoverageHandover: true,
+    leaveRequestGuidelines: "",
   });
 
   useEffect(() => {
@@ -54,6 +61,12 @@ export default function HRSettingsPage() {
           workingHoursPerDay: data.workingHoursPerDay,
           carryOverEnabled: data.carryOverEnabled,
           maxCarryOverDays: data.maxCarryOverDays,
+          shortLeaveMinDays: data.shortLeaveMinDays || 14,
+          mediumLeaveMinDays: data.mediumLeaveMinDays || 30,
+          longLeaveMinDays: data.longLeaveMinDays || 30,
+          approvalEmail: data.approvalEmail || "management@thewickfirm.com",
+          requireCoverageHandover: data.requireCoverageHandover ?? true,
+          leaveRequestGuidelines: data.leaveRequestGuidelines || "",
         });
       }
 
@@ -401,6 +414,137 @@ export default function HRSettingsPage() {
                   </p>
                 </div>
               )}
+            </div>
+          </div>
+
+          <hr style={{ border: "none", borderTop: "1px solid #E5E7EB", margin: "2rem 0" }} />
+
+          {/* Leave Request Policies */}
+          <div style={{ marginBottom: "2rem" }}>
+            <h2 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "1rem" }}>
+              Leave Request Policies
+            </h2>
+            <p style={{ fontSize: "0.875rem", color: theme.colors.textSecondary, marginBottom: "1.5rem" }}>
+              Set minimum notice periods for different types of leave requests
+            </p>
+
+            <div style={{ display: "grid", gap: "1.5rem" }}>
+              {/* Short Leave (1-2 days) */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Short Leave (1-2 days) - Minimum Notice
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.shortLeaveMinDays}
+                    onChange={(e) => setSettings({...settings, shortLeaveMinDays: parseInt(e.target.value) || 14})}
+                    style={{ width: "100px", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
+                  />
+                  <span style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>days notice required</span>
+                </div>
+                <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                  Default: 14 days (2 weeks)
+                </p>
+              </div>
+
+              {/* Medium Leave (3-5 days) */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Medium Leave (3-5 days) - Minimum Notice
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.mediumLeaveMinDays}
+                    onChange={(e) => setSettings({...settings, mediumLeaveMinDays: parseInt(e.target.value) || 30})}
+                    style={{ width: "100px", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
+                  />
+                  <span style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>days notice required</span>
+                </div>
+                <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                  Default: 30 days (1 month)
+                </p>
+              </div>
+
+              {/* Long Leave (7+ days) */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Long Leave (7+ days) - Minimum Notice
+                </label>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                  <input
+                    type="number"
+                    min="1"
+                    value={settings.longLeaveMinDays}
+                    onChange={(e) => setSettings({...settings, longLeaveMinDays: parseInt(e.target.value) || 30})}
+                    style={{ width: "100px", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
+                  />
+                  <span style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>days notice required</span>
+                </div>
+                <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                  Default: 30 days (1 month). Long leaves also require confirmation before final dates.
+                </p>
+              </div>
+
+              {/* Approval Email */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Approval Email Address
+                </label>
+                <input
+                  type="email"
+                  value={settings.approvalEmail}
+                  onChange={(e) => setSettings({...settings, approvalEmail: e.target.value})}
+                  placeholder="management@thewickfirm.com"
+                  style={{ width: "100%", maxWidth: "400px", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
+                />
+                <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                  Email address where leave requests will be sent for approval
+                </p>
+              </div>
+
+              {/* Require Coverage Handover */}
+              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                <input
+                  type="checkbox"
+                  checked={settings.requireCoverageHandover}
+                  onChange={(e) => setSettings({...settings, requireCoverageHandover: e.target.checked})}
+                  style={{ width: "20px", height: "20px", cursor: "pointer" }}
+                />
+                <label style={{ fontSize: "0.875rem", fontWeight: "600" }}>
+                  Require coverage handover details
+                </label>
+              </div>
+              <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "-0.75rem", marginLeft: "2rem" }}>
+                Employees must specify who will handle their responsibilities during their absence
+              </p>
+
+              {/* Custom Guidelines */}
+              <div>
+                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
+                  Additional Guidelines (Optional)
+                </label>
+                <textarea
+                  value={settings.leaveRequestGuidelines}
+                  onChange={(e) => setSettings({...settings, leaveRequestGuidelines: e.target.value})}
+                  placeholder="Add any additional leave request guidelines for your team..."
+                  rows={4}
+                  style={{ 
+                    width: "100%", 
+                    padding: "0.75rem", 
+                    border: "1px solid #E5E7EB", 
+                    borderRadius: "8px", 
+                    fontSize: "0.875rem",
+                    resize: "vertical"
+                  }}
+                />
+                <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                  These guidelines will be shown to employees when they submit leave requests
+                </p>
+              </div>
             </div>
           </div>
 
