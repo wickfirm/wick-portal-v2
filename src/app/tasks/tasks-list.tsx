@@ -51,6 +51,81 @@ export default function TasksList({
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [sortColumn, setSortColumn] = useState<string>("createdAt");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newTask, setNewTask] = useState({
+    name: "",
+    clientId: "",
+    projectId: "",
+    priority: "MEDIUM",
+    status: "TODO",
+    dueDate: "",
+  });
+  const [savingTask, setSavingTask] = useState(false);
+
+  // Delete task
+  const deleteTask = async (taskId: string) => {
+    if (!confirm("Are you sure you want to delete this task?")) return;
+    
+    setDeletingTaskId(taskId);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "DELETE",
+      });
+      
+      if (res.ok) {
+        // Remove task from local state
+        setTasks(tasks.filter(t => t.id !== taskId));
+      } else {
+        alert("Failed to delete task");
+      }
+    } catch (error) {
+      console.error("Error deleting task:", error);
+      alert("Failed to delete task");
+    } finally {
+      setDeletingTaskId(null);
+    }
+  };
+
+  // Create task
+  const createTask = async () => {
+    if (!newTask.name.trim() || !newTask.clientId) {
+      alert("Please fill in task name and select a client");
+      return;
+    }
+
+    setSavingTask(true);
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newTask),
+      });
+
+      if (res.ok) {
+        const createdTask = await res.json();
+        // Add to local state
+        setTasks([createdTask, ...tasks]);
+        // Reset form and close modal
+        setNewTask({
+          name: "",
+          clientId: "",
+          projectId: "",
+          priority: "MEDIUM",
+          status: "TODO",
+          dueDate: "",
+        });
+        setShowAddModal(false);
+      } else {
+        alert("Failed to create task");
+      }
+    } catch (error) {
+      console.error("Error creating task:", error);
+      alert("Failed to create task");
+    } finally {
+      setSavingTask(false);
+    }
+  };
 
   // Filter projects based on selected client
   const filteredProjects = useMemo(() => {
@@ -343,6 +418,24 @@ export default function TasksList({
               Clear Filters
             </button>
           )}
+
+          {/* Add Task Button */}
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              padding: "8px 16px",
+              background: theme.colors.primary,
+              border: "none",
+              borderRadius: theme.borderRadius.md,
+              color: "white",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            + Add Task
+          </button>
         </div>
 
         {/* Results Count */}
@@ -460,6 +553,18 @@ export default function TasksList({
                 >
                   Due Date {sortColumn === "dueDate" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
+                {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
+                  <th style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "right", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                  }}>
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -541,12 +646,257 @@ export default function TasksList({
                         <span style={{ fontSize: 13, color: theme.colors.textMuted }}>—</span>
                       )}
                     </td>
+                    {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
+                      <td style={{ padding: "16px 24px", textAlign: "right" }}>
+                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                          <Link
+                            href={task.projectId ? `/projects/${task.projectId}?tab=tasks` : `/clients/${task.client.id}/tasks`}
+                            style={{
+                              padding: "6px 12px",
+                              background: theme.colors.bgTertiary,
+                              color: theme.colors.textSecondary,
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: 12,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                              textDecoration: "none",
+                              display: "inline-block",
+                            }}
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteTask(task.id);
+                            }}
+                            disabled={deletingTaskId === task.id}
+                            style={{
+                              padding: "6px 12px",
+                              background: deletingTaskId === task.id ? theme.colors.bgTertiary : theme.colors.errorBg,
+                              color: deletingTaskId === task.id ? theme.colors.textMuted : theme.colors.error,
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: 12,
+                              fontWeight: 500,
+                              cursor: deletingTaskId === task.id ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            {deletingTaskId === task.id ? "..." : "Delete"}
+                          </button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddModal && (
+        <>
+          <div 
+            onClick={() => setShowAddModal(false)}
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: "rgba(0,0,0,0.5)",
+              zIndex: 999,
+            }}
+          />
+          <div style={{
+            position: "fixed",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: "90%",
+            maxWidth: 500,
+            background: theme.colors.bgSecondary,
+            borderRadius: theme.borderRadius.lg,
+            border: "1px solid " + theme.colors.borderLight,
+            zIndex: 1000,
+            padding: 24,
+          }}>
+            <h3 style={{ margin: 0, marginBottom: 20, fontSize: 18, fontWeight: 600 }}>Add New Task</h3>
+            
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                  Task Name *
+                </label>
+                <input
+                  value={newTask.name}
+                  onChange={(e) => setNewTask({ ...newTask, name: e.target.value })}
+                  placeholder="Enter task name..."
+                  style={{
+                    width: "100%",
+                    padding: "10px 12px",
+                    border: "1px solid " + theme.colors.borderLight,
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: 14,
+                    boxSizing: "border-box",
+                  }}
+                />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                    Client *
+                  </label>
+                  <select
+                    value={newTask.clientId}
+                    onChange={(e) => {
+                      setNewTask({ ...newTask, clientId: e.target.value, projectId: "" });
+                    }}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid " + theme.colors.borderLight,
+                      borderRadius: theme.borderRadius.md,
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="">Select client...</option>
+                    {clients.map(client => (
+                      <option key={client.id} value={client.id}>{client.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                    Project
+                  </label>
+                  <select
+                    value={newTask.projectId}
+                    onChange={(e) => setNewTask({ ...newTask, projectId: e.target.value })}
+                    disabled={!newTask.clientId}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid " + theme.colors.borderLight,
+                      borderRadius: theme.borderRadius.md,
+                      fontSize: 14,
+                      opacity: !newTask.clientId ? 0.5 : 1,
+                    }}
+                  >
+                    <option value="">No project</option>
+                    {projects.filter(p => p.clientId === newTask.clientId).map(project => (
+                      <option key={project.id} value={project.id}>{project.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                    Priority
+                  </label>
+                  <select
+                    value={newTask.priority}
+                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid " + theme.colors.borderLight,
+                      borderRadius: theme.borderRadius.md,
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                    Status
+                  </label>
+                  <select
+                    value={newTask.status}
+                    onChange={(e) => setNewTask({ ...newTask, status: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid " + theme.colors.borderLight,
+                      borderRadius: theme.borderRadius.md,
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>
+                    Due Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newTask.dueDate}
+                    onChange={(e) => setNewTask({ ...newTask, dueDate: e.target.value })}
+                    style={{
+                      width: "100%",
+                      padding: "10px 12px",
+                      border: "1px solid " + theme.colors.borderLight,
+                      borderRadius: theme.borderRadius.md,
+                      fontSize: 14,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
+                <button
+                  onClick={createTask}
+                  disabled={savingTask}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    background: savingTask ? theme.colors.bgTertiary : theme.colors.primary,
+                    color: savingTask ? theme.colors.textMuted : "white",
+                    border: "none",
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: savingTask ? "not-allowed" : "pointer",
+                  }}
+                >
+                  {savingTask ? "Creating..." : "Create Task"}
+                </button>
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  disabled={savingTask}
+                  style={{
+                    padding: "12px 20px",
+                    background: theme.colors.bgTertiary,
+                    color: theme.colors.textSecondary,
+                    border: "none",
+                    borderRadius: theme.borderRadius.md,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    cursor: savingTask ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
