@@ -83,6 +83,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const session = await getServerSession(authOptions);
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  // Check if this is a default project
+  const project = await prisma.project.findUnique({
+    where: { id: params.id },
+    select: { isDefault: true, name: true },
+  });
+
+  if (!project) {
+    return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  }
+
+  if (project.isDefault) {
+    return NextResponse.json(
+      { error: "Cannot delete Admin/Operations project. This is a system-required project." },
+      { status: 403 }
+    );
+  }
+
   await prisma.project.delete({ where: { id: params.id } });
   return NextResponse.json({ success: true });
 }
