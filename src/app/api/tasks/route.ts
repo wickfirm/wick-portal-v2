@@ -35,6 +35,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "clientId and name are required" }, { status: 400 });
     }
 
+    // Get current user to auto-assign task
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user?.email || "" },
+      select: { id: true },
+    });
+
     const lastTask = await prisma.clientTask.findFirst({
       where: { clientId: data.clientId, categoryId: data.categoryId },
       orderBy: { order: "desc" },
@@ -55,9 +61,10 @@ export async function POST(req: NextRequest) {
         externalLinkLabel: data.externalLinkLabel || null,
         internalLink: data.internalLink || null,
         internalLinkLabel: data.internalLinkLabel || null,
+        assigneeId: currentUser?.id || null, // Auto-assign to creator
         order: (lastTask?.order ?? 0) + 1,
       },
-      include: { category: true },
+      include: { category: true, assignee: { select: { name: true, email: true } } },
     });
 
     return NextResponse.json(task);
