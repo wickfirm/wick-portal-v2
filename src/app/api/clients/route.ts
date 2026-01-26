@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
         description: "General administrative tasks and operations",
         clientId: client.id,
         serviceType: "CONSULTING",
-        status: "ACTIVE",
+        status: "IN_PROGRESS",
         isDefault: true,
       },
     });
