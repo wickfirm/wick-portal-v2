@@ -91,6 +91,7 @@ export default function TimesheetPage() {
   
   const [week, setWeek] = useState(searchParams.get("week") || "");
   const [userId, setUserId] = useState(searchParams.get("userId") || "");
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -189,6 +190,18 @@ export default function TimesheetPage() {
     total: data.total,
   }));
 
+  // Filter entries based on search query
+  const filteredEntries = searchQuery.trim()
+    ? serializedEntries.filter((row) => {
+        const query = searchQuery.toLowerCase();
+        const clientMatch = row.client?.name?.toLowerCase().includes(query) || 
+                           row.client?.nickname?.toLowerCase().includes(query);
+        const projectMatch = row.project?.name?.toLowerCase().includes(query);
+        const taskMatch = row.task?.name?.toLowerCase().includes(query);
+        return clientMatch || projectMatch || taskMatch;
+      })
+    : serializedEntries;
+
   // Navigation functions
   const goToPreviousWeek = () => {
     const prevWeek = new Date(startDate);
@@ -258,6 +271,35 @@ export default function TimesheetPage() {
           )}
         </div>
 
+        {/* Search Bar */}
+        <div style={{ marginBottom: 20 }}>
+          <input
+            type="text"
+            placeholder="Search by client, project, or task..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "12px 16px",
+              borderRadius: theme.borderRadius.md,
+              border: "1px solid " + theme.colors.borderLight,
+              background: theme.colors.bgSecondary,
+              color: theme.colors.textPrimary,
+              fontSize: 14,
+              outline: "none",
+            }}
+          />
+          {searchQuery && (
+            <div style={{ 
+              marginTop: 8, 
+              fontSize: 13, 
+              color: theme.colors.textSecondary 
+            }}>
+              Showing {filteredEntries.length} of {serializedEntries.length} entries
+            </div>
+          )}
+        </div>
+
         {/* Week Navigation */}
         <div style={{ display: "flex", justifyContent: "center", gap: 12, marginBottom: 24 }}>
           <button
@@ -324,7 +366,7 @@ export default function TimesheetPage() {
         {/* Timesheet Grid */}
         <TimesheetGrid
           weekDates={weekDates}
-          entries={serializedEntries}
+          entries={filteredEntries}
           clients={clients}
           userId={userId || currentUser.id}
           canEdit={!userId || userId === currentUser.id || canViewOthers}
