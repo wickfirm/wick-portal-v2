@@ -49,6 +49,8 @@ export default function TasksList({
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [selectedPriority, setSelectedPriority] = useState<string>("");
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
+  const [sortColumn, setSortColumn] = useState<string>("createdAt");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
 
   // Filter projects based on selected client
   const filteredProjects = useMemo(() => {
@@ -56,9 +58,20 @@ export default function TasksList({
     return projects.filter(p => p.clientId === selectedClient);
   }, [selectedClient, projects]);
 
-  // Apply all filters
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
+  // Handle column sort
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  // Apply filters and sorting
+  const filteredAndSortedTasks = useMemo(() => {
+    // First filter
+    let result = tasks.filter(task => {
       // Search filter
       if (searchQuery && !task.name.toLowerCase().includes(searchQuery.toLowerCase())) {
         return false;
@@ -91,7 +104,49 @@ export default function TasksList({
 
       return true;
     });
-  }, [tasks, searchQuery, selectedClient, selectedProject, selectedStatus, selectedPriority, selectedAssignee]);
+
+    // Then sort
+    result.sort((a, b) => {
+      let aVal: any;
+      let bVal: any;
+
+      switch (sortColumn) {
+        case "name":
+          aVal = a.name.toLowerCase();
+          bVal = b.name.toLowerCase();
+          break;
+        case "client":
+          aVal = a.client.name.toLowerCase();
+          bVal = b.client.name.toLowerCase();
+          break;
+        case "status":
+          aVal = a.status;
+          bVal = b.status;
+          break;
+        case "priority":
+          const priorityOrder: Record<string, number> = { HIGH: 3, MEDIUM: 2, LOW: 1 };
+          aVal = priorityOrder[a.priority] || 0;
+          bVal = priorityOrder[b.priority] || 0;
+          break;
+        case "assignee":
+          aVal = a.assignee?.name?.toLowerCase() || "";
+          bVal = b.assignee?.name?.toLowerCase() || "";
+          break;
+        case "dueDate":
+          aVal = a.dueDate ? new Date(a.dueDate).getTime() : 0;
+          bVal = b.dueDate ? new Date(b.dueDate).getTime() : 0;
+          break;
+        default:
+          return 0;
+      }
+
+      if (aVal < bVal) return sortDirection === "asc" ? -1 : 1;
+      if (aVal > bVal) return sortDirection === "asc" ? 1 : -1;
+      return 0;
+    });
+
+    return result;
+  }, [tasks, searchQuery, selectedClient, selectedProject, selectedStatus, selectedPriority, selectedAssignee, sortColumn, sortDirection]);
 
   const clearFilters = () => {
     setSearchQuery("");
@@ -292,13 +347,13 @@ export default function TasksList({
 
         {/* Results Count */}
         <div style={{ marginTop: 12, fontSize: 13, color: theme.colors.textMuted }}>
-          Showing {filteredTasks.length} of {tasks.length} tasks
+          Showing {filteredAndSortedTasks.length} of {tasks.length} tasks
           {hasActiveFilters && " (filtered)"}
         </div>
       </div>
 
       {/* Tasks Table */}
-      {filteredTasks.length === 0 ? (
+      {filteredAndSortedTasks.length === 0 ? (
         <div style={{ padding: 64, textAlign: "center", color: theme.colors.textMuted }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
           <div style={{ fontSize: 16, fontWeight: 500, marginBottom: 8 }}>
@@ -313,30 +368,102 @@ export default function TasksList({
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
-                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                  Task
+                <th 
+                  onClick={() => handleSort("name")}
+                  style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "left", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Task {sortColumn === "name" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
-                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                  Client / Project
+                <th 
+                  onClick={() => handleSort("client")}
+                  style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "left", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Client / Project {sortColumn === "client" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
-                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                  Status
+                <th 
+                  onClick={() => handleSort("status")}
+                  style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "left", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Status {sortColumn === "status" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
-                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                  Priority
+                <th 
+                  onClick={() => handleSort("priority")}
+                  style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "left", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Priority {sortColumn === "priority" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
                 {currentUserRole !== "MEMBER" && (
-                  <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                    Assignee
+                  <th 
+                    onClick={() => handleSort("assignee")}
+                    style={{ 
+                      padding: "12px 24px", 
+                      textAlign: "left", 
+                      fontSize: 12, 
+                      fontWeight: 600, 
+                      color: theme.colors.textSecondary, 
+                      textTransform: "uppercase",
+                      cursor: "pointer",
+                      userSelect: "none",
+                    }}
+                  >
+                    Assignee {sortColumn === "assignee" && (sortDirection === "asc" ? "↑" : "↓")}
                   </th>
                 )}
-                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
-                  Due Date
+                <th 
+                  onClick={() => handleSort("dueDate")}
+                  style={{ 
+                    padding: "12px 24px", 
+                    textAlign: "left", 
+                    fontSize: 12, 
+                    fontWeight: 600, 
+                    color: theme.colors.textSecondary, 
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    userSelect: "none",
+                  }}
+                >
+                  Due Date {sortColumn === "dueDate" && (sortDirection === "asc" ? "↑" : "↓")}
                 </th>
               </tr>
             </thead>
             <tbody>
-              {filteredTasks.map((task, idx) => {
+              {filteredAndSortedTasks.map((task, idx) => {
                 const isOverdue = task.dueDate && new Date(task.dueDate) < today && task.status !== "COMPLETED";
                 const taskProject = projects.find(p => p.id === task.projectId);
                 
@@ -344,7 +471,7 @@ export default function TasksList({
                   <tr
                     key={task.id}
                     style={{
-                      borderBottom: idx < filteredTasks.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                      borderBottom: idx < filteredAndSortedTasks.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
                       transition: "background 0.2s",
                     }}
                   >
