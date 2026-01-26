@@ -23,7 +23,18 @@ export default function EditProjectPage() {
       fetch("/api/clients").then(res => res.json()),
     ]).then(([projectData, clientsData]) => {
       setProject(projectData);
-      setClients(clientsData);
+      // Handle both response formats: { clients: [...] } or [...]
+      if (clientsData && clientsData.clients && Array.isArray(clientsData.clients)) {
+        setClients(clientsData.clients);
+      } else if (Array.isArray(clientsData)) {
+        setClients(clientsData);
+      } else {
+        setClients([]);
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load data:", err);
+      setError("Failed to load project data");
       setLoading(false);
     });
   }, [projectId]);
