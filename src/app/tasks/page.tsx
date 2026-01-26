@@ -14,7 +14,15 @@ type Task = {
   status: string;
   priority: string;
   dueDate: Date | null;
-  projectId: string;
+  projectId: string | null;
+  notes: string | null;
+  nextSteps: string | null;
+  ownerType: string;
+  externalLink: string | null;
+  externalLinkLabel: string | null;
+  internalLink: string | null;
+  internalLinkLabel: string | null;
+  assigneeId: string | null;
   client: {
     id: string;
     name: string;
