@@ -11,6 +11,13 @@ type Task = {
   priority: string;
   dueDate: Date | null;
   projectId: string | null;
+  notes: string | null;
+  nextSteps: string | null;
+  ownerType: string;
+  externalLink: string | null;
+  externalLinkLabel: string | null;
+  internalLink: string | null;
+  internalLinkLabel: string | null;
   client: {
     id: string;
     name: string;
@@ -19,6 +26,7 @@ type Task = {
     id: string;
     name: string | null;
   } | null;
+  assigneeId: string | null;
 };
 
 type Client = { id: string; name: string };
@@ -33,6 +41,10 @@ interface TasksListProps {
   currentUserId: string;
   currentUserRole: string;
 }
+
+const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
+const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
+const OWNER_OPTIONS = ["AGENCY", "CLIENT"];
 
 export default function TasksList({
   initialTasks,
@@ -124,6 +136,24 @@ export default function TasksList({
       alert("Failed to create task");
     } finally {
       setSavingTask(false);
+    }
+  };
+
+  // Update task field inline
+  const updateTaskField = async (taskId: string, field: string, value: any) => {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTasks(tasks.map(t => t.id === taskId ? { ...t, ...updatedTask } : t));
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
     }
   };
 
@@ -461,107 +491,38 @@ export default function TasksList({
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
-                <th 
-                  onClick={() => handleSort("name")}
-                  style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "left", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  Task {sortColumn === "name" && (sortDirection === "asc" ? "↑" : "↓")}
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Task
                 </th>
-                <th 
-                  onClick={() => handleSort("client")}
-                  style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "left", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  Client / Project {sortColumn === "client" && (sortDirection === "asc" ? "↑" : "↓")}
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Client / Project
                 </th>
-                <th 
-                  onClick={() => handleSort("status")}
-                  style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "left", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  Status {sortColumn === "status" && (sortDirection === "asc" ? "↑" : "↓")}
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Assignee
                 </th>
-                <th 
-                  onClick={() => handleSort("priority")}
-                  style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "left", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  Priority {sortColumn === "priority" && (sortDirection === "asc" ? "↑" : "↓")}
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Owner
                 </th>
-                {currentUserRole !== "MEMBER" && (
-                  <th 
-                    onClick={() => handleSort("assignee")}
-                    style={{ 
-                      padding: "12px 24px", 
-                      textAlign: "left", 
-                      fontSize: 12, 
-                      fontWeight: 600, 
-                      color: theme.colors.textSecondary, 
-                      textTransform: "uppercase",
-                      cursor: "pointer",
-                      userSelect: "none",
-                    }}
-                  >
-                    Assignee {sortColumn === "assignee" && (sortDirection === "asc" ? "↑" : "↓")}
-                  </th>
-                )}
-                <th 
-                  onClick={() => handleSort("dueDate")}
-                  style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "left", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    userSelect: "none",
-                  }}
-                >
-                  Due Date {sortColumn === "dueDate" && (sortDirection === "asc" ? "↑" : "↓")}
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Due Date
+                </th>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Priority
+                </th>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Status
+                </th>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Notes
+                </th>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Next Steps
+                </th>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
+                  Internal
                 </th>
                 {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
-                  <th style={{ 
-                    padding: "12px 24px", 
-                    textAlign: "right", 
-                    fontSize: 12, 
-                    fontWeight: 600, 
-                    color: theme.colors.textSecondary, 
-                    textTransform: "uppercase",
-                  }}>
+                  <th style={{ padding: "12px 24px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase" }}>
                     Actions
                   </th>
                 )}
