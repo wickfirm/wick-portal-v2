@@ -101,16 +101,31 @@ export async function POST(req: NextRequest) {
     // Get current user's agency
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user?.email || "" },
-      select: { agencyId: true, role: true },
+      select: { id: true, agencyId: true, role: true },
     });
 
     if (!currentUser?.agencyId) {
       return NextResponse.json({ error: "User has no agency" }, { status: 400 });
     }
 
-    // Create the client
+    // Generate friendly client ID from nickname or name
+    const baseSlug = (data.nickname || data.name || "client")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+    
+    // Check if slug exists and append number if needed
+    let clientId = `client-${baseSlug}`;
+    let counter = 1;
+    while (await prisma.client.findUnique({ where: { id: clientId } })) {
+      clientId = `client-${baseSlug}-${counter}`;
+      counter++;
+    }
+
+    // Create the client with friendly ID
     const client = await prisma.client.create({
       data: {
+        id: clientId,
         name: data.name,
         nickname: data.nickname || null,
         industry: data.industry || null,
@@ -122,7 +137,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Link client to agency (using the agencyId from form or current user's agency)
+    // Link client to agency
     const agencyIdToUse = data.agencyId || currentUser.agencyId;
     
     await prisma.clientAgency.create({
@@ -131,6 +146,16 @@ export async function POST(req: NextRequest) {
         agencyId: agencyIdToUse,
       },
     });
+
+    // Auto-add creator to client team (for ADMIN and SUPER_ADMIN)
+    if (currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN") {
+      await prisma.clientTeamMember.create({
+        data: {
+          clientId: client.id,
+          userId: currentUser.id,
+        },
+      });
+    }
 
     return NextResponse.json(client);
   } catch (error) {
