@@ -91,8 +91,11 @@ export default function TimerWidget() {
     if (showModal && clients.length === 0) {
       fetch("/api/clients")
         .then((res) => res.json())
-        .then((data) => setClients(data))
-        .catch(console.error);
+        .then((data) => setClients(Array.isArray(data) ? data : []))
+        .catch((err) => {
+          console.error("Error fetching clients:", err);
+          setClients([]);
+        });
     }
   }, [showModal, clients.length]);
 
@@ -106,8 +109,11 @@ export default function TimerWidget() {
       
       fetch(`/api/projects?clientId=${selectedClient}`)
         .then((res) => res.json())
-        .then((data) => setProjects(data))
-        .catch(console.error);
+        .then((data) => setProjects(Array.isArray(data) ? data : []))
+        .catch((err) => {
+          console.error("Error fetching projects:", err);
+          setProjects([]);
+        });
     }
   }, [selectedClient]);
 
@@ -120,7 +126,10 @@ export default function TimerWidget() {
       fetch(`/api/clients/${selectedClient}/tasks?projectId=${selectedProject}`)
         .then((res) => res.json())
         .then((data) => setTasks(Array.isArray(data) ? data : []))
-        .catch(console.error);
+        .catch((err) => {
+          console.error("Error fetching tasks:", err);
+          setTasks([]);
+        });
     }
   }, [selectedProject, selectedClient]);
 
