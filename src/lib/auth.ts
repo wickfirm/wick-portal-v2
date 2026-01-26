@@ -1,17 +1,51 @@
-import { NextAuthOptions } from "next-auth";
+import { NextAuthOptions, User } from "next-auth";
+import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import prisma from "./prisma";
 
+// Extend the built-in session types
+declare module "next-auth" {
+  interface Session {
+    user: {
+      id: string;
+      email: string;
+      name: string;
+      role: string;
+      agencyId: string | null;
+      agencySlug: string | null;
+    };
+  }
+  
+  interface User {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    agencyId: string | null;
+    agencySlug: string | null;
+  }
+}
+
+declare module "next-auth/jwt" {
+  interface JWT {
+    id: string;
+    role: string;
+    agencyId: string | null;
+    agencySlug: string | null;
+  }
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     CredentialsProvider({
-      name: "credentials",
+      id: "credentials",
+      name: "Credentials",
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials): Promise<User | null> {
         console.log("Login attempt for:", credentials?.email);
         
         if (!credentials?.email || !credentials?.password) {
@@ -48,7 +82,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             role: user.role,
             agencyId: user.agencyId,
-            agencySlug: user.agency?.slug,
+            agencySlug: user.agency?.slug || null,
           };
         } catch (error) {
           console.error("Auth error:", error);
@@ -59,6 +93,7 @@ export const authOptions: NextAuthOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   cookies: {
     sessionToken: {
@@ -67,8 +102,8 @@ export const authOptions: NextAuthOptions = {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
-        secure: true,
-        domain: '.omnixia.ai' // Share cookie across all subdomains
+        secure: process.env.NODE_ENV === "production",
+        domain: process.env.NODE_ENV === "production" ? '.omnixia.ai' : undefined,
       }
     }
   },
@@ -76,30 +111,32 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
-        token.agencyId = (user as any).agencyId;
-        token.agencySlug = (user as any).agencySlug;
+        token.role = user.role;
+        token.agencyId = user.agencyId;
+        token.agencySlug = user.agencySlug;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        (session.user as any).id = token.id;
-        (session.user as any).role = token.role;
-        (session.user as any).agencyId = token.agencyId;
-        (session.user as any).agencySlug = token.agencySlug;
+        session.user.id = token.id;
+        session.user.role = token.role;
+        session.user.agencyId = token.agencyId;
+        session.user.agencySlug = token.agencySlug;
       }
       return session;
     },
   },
   pages: {
     signIn: "/login",
-    signOut: "/login", // Redirect to login after sign out
+    signOut: "/login",
+    error: "/login",
   },
   events: {
     async signOut({ token }) {
-      // Clear session data on sign out
       console.log("User signed out:", token?.email);
     }
-  }
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  debug: process.env.NODE_ENV === "development",
 };
