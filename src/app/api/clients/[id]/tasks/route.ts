@@ -27,7 +27,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           } 
         },
       },
-      orderBy: [{ category: { order: "asc" } }, { order: "asc" }],
+      orderBy: [{ createdAt: "desc" }],
     });
 
     return NextResponse.json(tasks);
