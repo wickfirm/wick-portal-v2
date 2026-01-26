@@ -157,6 +157,18 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Auto-create "Admin/Operations" default project
+    await prisma.project.create({
+      data: {
+        name: "Admin/Operations",
+        description: "General administrative tasks and operations",
+        clientId: client.id,
+        serviceType: "CONSULTING",
+        status: "ACTIVE",
+        isDefault: true,
+      },
+    });
+
     return NextResponse.json(client);
   } catch (error) {
     console.error("Error creating client:", error);
