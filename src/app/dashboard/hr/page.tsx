@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import LeaveRequestForm from "./leave-request-form";
 import { theme } from "@/lib/theme";
 
 type LeaveType = "ANNUAL" | "SICK";
@@ -381,118 +382,10 @@ export default function MyLeavePage() {
 
       {/* Leave Request Form Modal */}
       {showRequestForm && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 50 }}>
-          <div style={{ background: "white", borderRadius: "12px", padding: "2rem", maxWidth: "500px", width: "90%", maxHeight: "90vh", overflow: "auto" }}>
-            <h3 style={{ fontSize: "1.5rem", fontWeight: "600", marginBottom: "1.5rem" }}>
-              Request Leave
-            </h3>
-            
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setSubmitting(true);
-              
-              const formData = new FormData(e.currentTarget);
-              const data = {
-                leaveType: formData.get("leaveType"),
-                startDate: formData.get("startDate"),
-                endDate: formData.get("endDate"),
-                reason: formData.get("reason")
-              };
-
-              try {
-                const res = await fetch("/api/hr/leave-requests", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify(data)
-                });
-
-                if (!res.ok) {
-                  const error = await res.json();
-                  alert(error.error || "Failed to submit request");
-                  setSubmitting(false);
-                  return;
-                }
-
-                alert("Leave request submitted successfully!");
-                setShowRequestForm(false);
-                loadData();
-              } catch (error) {
-                console.error("Error:", error);
-                alert("Failed to submit request");
-              } finally {
-                setSubmitting(false);
-              }
-            }}>
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                  Leave Type
-                </label>
-                <select
-                  name="leaveType"
-                  required
-                  style={{ width: "100%", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
-                >
-                  <option value="ANNUAL">Annual Leave</option>
-                  <option value="SICK">Sick Leave</option>
-                </select>
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                  Start Date
-                </label>
-                <input
-                  type="date"
-                  name="startDate"
-                  required
-                  style={{ width: "100%", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                  End Date
-                </label>
-                <input
-                  type="date"
-                  name="endDate"
-                  required
-                  style={{ width: "100%", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem" }}
-                />
-              </div>
-
-              <div style={{ marginBottom: "1.5rem" }}>
-                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: "600", marginBottom: "0.5rem" }}>
-                  Reason (Optional)
-                </label>
-                <textarea
-                  name="reason"
-                  rows={3}
-                  style={{ width: "100%", padding: "0.75rem", border: "1px solid #E5E7EB", borderRadius: "8px", fontSize: "0.875rem", resize: "vertical" }}
-                  placeholder="Why are you taking leave?"
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: "1rem", justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  onClick={() => setShowRequestForm(false)}
-                  disabled={submitting}
-                  style={{ padding: "0.75rem 1.5rem", border: "1px solid #E5E7EB", borderRadius: "8px", background: "white", cursor: "pointer", fontSize: "0.875rem", fontWeight: "600" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{ padding: "0.75rem 1.5rem", background: theme.colors.primary, color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "0.875rem", fontWeight: "600" }}
-                >
-                  {submitting ? "Submitting..." : "Submit Request"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <LeaveRequestForm
+          onClose={() => setShowRequestForm(false)}
+          onSuccess={loadData}
+        />
       )}
     </div>
   );
