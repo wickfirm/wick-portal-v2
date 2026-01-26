@@ -14,6 +14,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     
     if (data.name !== undefined) updateData.name = data.name;
     if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
+    if (data.projectId !== undefined) updateData.projectId = data.projectId || null;
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.status !== undefined) updateData.status = data.status;
