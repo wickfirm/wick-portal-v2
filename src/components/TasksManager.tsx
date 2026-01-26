@@ -60,6 +60,7 @@ export default function TasksManager({
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
   
   // Filter state
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
@@ -288,6 +289,16 @@ export default function TasksManager({
     setCollapsedCategories(newCollapsed);
   }
 
+  function toggleClient(clientId: string) {
+    const newCollapsed = new Set(collapsedClients);
+    if (newCollapsed.has(clientId)) {
+      newCollapsed.delete(clientId);
+    } else {
+      newCollapsed.add(clientId);
+    }
+    setCollapsedClients(newCollapsed);
+  }
+
   // Apply filters
   const filteredTasks = tasks.filter(task => {
     if (hideCompleted && task.status === "COMPLETED") return false;
@@ -297,20 +308,34 @@ export default function TasksManager({
     return true;
   });
 
-  // Group tasks by category
+  // Group tasks - in general context, group by client first, then by category
+  // In client/project context, just group by category
+  const groupedByClient: Record<string, Task[]> = {};
   const groupedTasks: Record<string, Task[]> = {};
   const uncategorized: Task[] = [];
   
-  filteredTasks.forEach(task => {
-    if (task.category) {
-      if (!groupedTasks[task.category.id]) {
-        groupedTasks[task.category.id] = [];
+  if (context === "general") {
+    // Group by client first
+    filteredTasks.forEach(task => {
+      const clientKey = task.client?.id || "unknown";
+      if (!groupedByClient[clientKey]) {
+        groupedByClient[clientKey] = [];
       }
-      groupedTasks[task.category.id].push(task);
-    } else {
-      uncategorized.push(task);
-    }
-  });
+      groupedByClient[clientKey].push(task);
+    });
+  } else {
+    // Group by category directly
+    filteredTasks.forEach(task => {
+      if (task.category) {
+        if (!groupedTasks[task.category.id]) {
+          groupedTasks[task.category.id] = [];
+        }
+        groupedTasks[task.category.id].push(task);
+      } else {
+        uncategorized.push(task);
+      }
+    });
+  }
 
   // Sort categories by order
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
@@ -798,15 +823,106 @@ export default function TasksManager({
         </div>
       </div>
 
-      {/* Categories */}
+      {/* Categories or Client Groups */}
       <div>
-        {sortedCategories.map(category => {
-          const categoryTasks = groupedTasks[category.id] || [];
-          if (categoryTasks.length === 0 && hideCompleted) return null;
-          return renderCategorySection(category, categoryTasks);
-        })}
-        
-        {uncategorized.length > 0 && renderCategorySection(null, uncategorized)}
+        {context === "general" ? (
+          // General context: Show client groups, then categories within each
+          Object.keys(groupedByClient).sort((a, b) => {
+            const clientA = clients.find(c => c.id === a);
+            const clientB = clients.find(c => c.id === b);
+            return (clientA?.name || "").localeCompare(clientB?.name || "");
+          }).map(clientKey => {
+            const clientTasks = groupedByClient[clientKey];
+            const clientInfo = clientTasks[0]?.client;
+            if (!clientInfo) return null;
+
+            const isClientCollapsed = collapsedClients.has(clientKey);
+            const clientTaskCount = clientTasks.filter(t => t.status !== "COMPLETED").length;
+            const completedCount = clientTasks.filter(t => t.status === "COMPLETED").length;
+
+            // Group this client's tasks by category
+            const clientGroupedTasks: Record<string, Task[]> = {};
+            const clientUncategorized: Task[] = [];
+            
+            clientTasks.forEach(task => {
+              if (task.category) {
+                if (!clientGroupedTasks[task.category.id]) {
+                  clientGroupedTasks[task.category.id] = [];
+                }
+                clientGroupedTasks[task.category.id].push(task);
+              } else {
+                clientUncategorized.push(task);
+              }
+            });
+
+            return (
+              <div key={clientKey} style={{ marginBottom: 24 }}>
+                {/* Client Header */}
+                <div
+                  onClick={() => toggleClient(clientKey)}
+                  style={{
+                    padding: "16px 20px",
+                    background: theme.gradients.primary,
+                    borderRadius: isClientCollapsed ? 12 : "12px 12px 0 0",
+                    cursor: "pointer",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    userSelect: "none",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{ 
+                      fontSize: 14, 
+                      color: "white",
+                      transform: isClientCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
+                      transition: "transform 0.2s",
+                    }}>
+                      ▼
+                    </span>
+                    <span style={{ fontWeight: 600, fontSize: 16, color: "white" }}>
+                      {clientInfo.nickname || clientInfo.name}
+                    </span>
+                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
+                      ({clientTaskCount} active{completedCount > 0 ? `, ${completedCount} done` : ""})
+                    </span>
+                  </div>
+                </div>
+
+                {/* Client's Categories */}
+                {!isClientCollapsed && (
+                  <div style={{ 
+                    background: theme.colors.bgSecondary,
+                    border: "1px solid " + theme.colors.borderLight,
+                    borderTop: "none",
+                    borderRadius: "0 0 12px 12px",
+                    padding: "16px",
+                  }}>
+                    {sortedCategories.map(category => {
+                      const categoryTasks = clientGroupedTasks[category.id] || [];
+                      if (categoryTasks.length === 0) return null;
+                      return renderCategorySection(category, categoryTasks);
+                    })}
+                    
+                    {clientUncategorized.length > 0 && renderCategorySection(null, clientUncategorized)}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        ) : (
+          // Client/Project context: Show categories directly
+          <>
+            {sortedCategories.map(category => {
+              const categoryTasks = groupedTasks[category.id] || [];
+              if (categoryTasks.length === 0 && hideCompleted) return null;
+              return renderCategorySection(category, categoryTasks);
+            })}
+            
+            {uncategorized.length > 0 && renderCategorySection(null, uncategorized)}
+          </>
+        )}
       </div>
 
       {/* Edit Side Panel */}
