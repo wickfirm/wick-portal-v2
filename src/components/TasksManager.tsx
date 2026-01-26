@@ -140,8 +140,13 @@ export default function TasksManager({
           setProjects(Array.isArray(results[4]) ? results[4] : []);
         } else if (context === "general") {
           const clientsData = results[3];
-          setClients(Array.isArray(clientsData) ? clientsData : clientsData.clients || []);
+          const clientsList = Array.isArray(clientsData) ? clientsData : clientsData.clients || [];
+          setClients(clientsList);
           setProjects(Array.isArray(results[4]) ? results[4] : []);
+          
+          // Collapse all clients by default in general context
+          const allClientIds = new Set(clientsList.map((c: any) => c.id));
+          setCollapsedClients(allClientIds);
         } else if (context === "project") {
           const projectData = results[3];
           setProjects(projectData ? [projectData] : []);
@@ -862,29 +867,28 @@ export default function TasksManager({
                   onClick={() => toggleClient(clientKey)}
                   style={{
                     padding: "16px 20px",
-                    background: theme.gradients.primary,
+                    background: theme.colors.bgTertiary,
                     borderRadius: isClientCollapsed ? 12 : "12px 12px 0 0",
                     cursor: "pointer",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     userSelect: "none",
-                    boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ 
                       fontSize: 14, 
-                      color: "white",
+                      color: theme.colors.textMuted,
                       transform: isClientCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
                       transition: "transform 0.2s",
                     }}>
                       ▼
                     </span>
-                    <span style={{ fontWeight: 600, fontSize: 16, color: "white" }}>
+                    <span style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>
                       {clientInfo.nickname || clientInfo.name}
                     </span>
-                    <span style={{ fontSize: 13, color: "rgba(255,255,255,0.8)" }}>
+                    <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                       ({clientTaskCount} active{completedCount > 0 ? `, ${completedCount} done` : ""})
                     </span>
                   </div>
