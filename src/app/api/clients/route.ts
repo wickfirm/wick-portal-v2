@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
@@ -83,6 +83,60 @@ export async function GET() {
     console.error("Error fetching clients:", error);
     return NextResponse.json(
       { error: "Failed to fetch clients" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const session = await getServerSession(authOptions);
+    
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const data = await req.json();
+
+    // Get current user's agency
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user?.email || "" },
+      select: { agencyId: true, role: true },
+    });
+
+    if (!currentUser?.agencyId) {
+      return NextResponse.json({ error: "User has no agency" }, { status: 400 });
+    }
+
+    // Create the client
+    const client = await prisma.client.create({
+      data: {
+        name: data.name,
+        nickname: data.nickname || null,
+        industry: data.industry || null,
+        website: data.website || null,
+        status: data.status || "LEAD",
+        email: data.primaryEmail || null,
+        phone: data.phone || null,
+        monthlyRetainer: data.monthlyRetainer || null,
+      },
+    });
+
+    // Link client to agency (using the agencyId from form or current user's agency)
+    const agencyIdToUse = data.agencyId || currentUser.agencyId;
+    
+    await prisma.clientAgency.create({
+      data: {
+        clientId: client.id,
+        agencyId: agencyIdToUse,
+      },
+    });
+
+    return NextResponse.json(client);
+  } catch (error) {
+    console.error("Error creating client:", error);
+    return NextResponse.json(
+      { error: "Failed to create client" },
       { status: 500 }
     );
   }
