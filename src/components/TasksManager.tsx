@@ -199,6 +199,12 @@ export default function TasksManager({
   async function quickAddTask(categoryId: string) {
     if (!quickAddName.trim()) return;
 
+    // Validate project is selected (except in project context where it's auto-set)
+    if (context !== "project" && !quickAddProject) {
+      alert("Please select a project for this task.");
+      return;
+    }
+
     const taskData: any = {
       name: quickAddName,
       categoryId: categoryId || null,
@@ -231,9 +237,13 @@ export default function TasksManager({
         setQuickAddClient("");
         setQuickAddCategory(null);
         await fetchTasks();
+      } else {
+        const error = await res.json();
+        alert(error.error || "Failed to create task");
       }
     } catch (error) {
       console.error("Error creating task:", error);
+      alert("Failed to create task");
     }
   }
 
@@ -637,6 +647,14 @@ export default function TasksManager({
             onClick={(e) => {
               e.stopPropagation();
               setQuickAddCategory(categoryId);
+              
+              // Auto-select default project if available (except in project context)
+              if (context !== "project" && !quickAddProject) {
+                const defaultProj = projects.find((p: any) => p.isDefault || p.name === "Admin/Operations");
+                if (defaultProj) {
+                  setQuickAddProject(defaultProj.id);
+                }
+              }
             }}
             style={{
               padding: "4px 12px",
@@ -693,10 +711,14 @@ export default function TasksManager({
                     value={quickAddProject}
                     onChange={(e) => setQuickAddProject(e.target.value)}
                     style={{ ...inputStyle, flex: "0 1 200px", cursor: "pointer" }}
+                    required
                   >
-                    <option value="">No Project</option>
+                    <option value="">Select Project...</option>
                     {projects.map((p: any) => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                        {p.isDefault && " (Default)"}
+                      </option>
                     ))}
                   </select>
                 )}
@@ -1034,10 +1056,22 @@ export default function TasksManager({
 
               {context !== "project" && (
                 <div>
-                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Project</label>
-                  <select value={editForm.projectId || ""} onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value })} style={inputStyle}>
-                    <option value="">None</option>
-                    {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                    Project <span style={{ color: theme.colors.error }}>*</span>
+                  </label>
+                  <select 
+                    value={editForm.projectId || ""} 
+                    onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value })} 
+                    style={inputStyle}
+                    required
+                  >
+                    <option value="">Select Project...</option>
+                    {projects.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                        {p.isDefault && " (Default)"}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
