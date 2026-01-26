@@ -596,7 +596,7 @@ export default function TasksManager({
 
   const renderCategorySection = (category: TaskCategory | null, categoryTasks: Task[]) => {
     const categoryId = category?.id || "uncategorized";
-    const categoryName = category?.name || "Other";
+    const categoryName = category?.name || "Uncategorized";
     const isCollapsed = collapsedCategories.has(categoryId);
     const completedCount = categoryTasks.filter(t => t.status === "COMPLETED").length;
     const pendingCount = categoryTasks.length - completedCount;
