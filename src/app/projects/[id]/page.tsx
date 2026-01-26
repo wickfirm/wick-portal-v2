@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import TasksManager from "@/components/TasksManager";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 type Project = {
@@ -360,60 +361,12 @@ export default function ProjectDetailPage() {
         )}
 
         {activeTab === "tasks" && (
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: "1px solid " + theme.colors.borderLight,
-            borderRadius: theme.borderRadius.lg,
-            padding: 24,
-          }}>
-            <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 20 }}>Project Tasks</h2>
-            
-            {project.tasks.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 48, color: theme.colors.textMuted }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📝</div>
-                <div>No tasks yet</div>
-              </div>
-            ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                {project.tasks.map(task => (
-                  <div
-                    key={task.id}
-                    style={{
-                      padding: 16,
-                      background: theme.colors.bgPrimary,
-                      borderRadius: theme.borderRadius.md,
-                      border: "1px solid " + theme.colors.borderLight,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 4 }}>
-                        {task.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
-                        {task.assignee?.name || "Unassigned"}
-                        {task.dueDate && ` • Due ${new Date(task.dueDate).toLocaleDateString()}`}
-                      </div>
-                    </div>
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                      <span style={{
-                        padding: "4px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 500,
-                        background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
-                        color: STATUS_STYLES[task.status]?.color || theme.colors.textMuted,
-                      }}>
-                        {task.status.replace("_", " ")}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <TasksManager
+            context="project"
+            projectId={projectId}
+            clientId={project.client.id}
+            showClientColumn={false}
+          />
         )}
 
         {activeTab === "resources" && (
