@@ -34,12 +34,20 @@ export default function HolidaysManager() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    date: string;
+    numberOfDays: number;
+    country: string;
+    status: "UNTOUCHABLE" | "COMPENSABLE" | "DISMISSIBLE";
+    description: string;
+    isRecurring: boolean;
+  }>({
     name: "",
     date: "",
     numberOfDays: 1,
     country: "AE",
-    status: "UNTOUCHABLE" as const,
+    status: "UNTOUCHABLE",
     description: "",
     isRecurring: true,
   });
