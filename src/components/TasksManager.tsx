@@ -145,7 +145,7 @@ export default function TasksManager({
           setProjects(Array.isArray(results[4]) ? results[4] : []);
           
           // Collapse all clients by default in general context
-          const allClientIds = new Set(clientsList.map((c: any) => c.id));
+          const allClientIds = new Set<string>(clientsList.map((c: any) => c.id));
           setCollapsedClients(allClientIds);
         } else if (context === "project") {
           const projectData = results[3];
