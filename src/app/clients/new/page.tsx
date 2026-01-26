@@ -18,19 +18,26 @@ export default function NewClientPage() {
   const [error, setError] = useState("");
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [defaultAgencyId, setDefaultAgencyId] = useState<string>("");
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [templates, setTemplates] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/partner-agencies")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setAgencies(data);
-          const defaultAgency = data.find((a: Agency) => a.isDefault);
-          if (defaultAgency) {
-            setDefaultAgencyId(defaultAgency.id);
-          }
+    Promise.all([
+      fetch("/api/partner-agencies").then(res => res.json()),
+      fetch("/api/onboarding-templates").then(res => res.json()),
+    ]).then(([agenciesData, templatesData]) => {
+      if (Array.isArray(agenciesData)) {
+        setAgencies(agenciesData);
+        const defaultAgency = agenciesData.find((a: Agency) => a.isDefault);
+        if (defaultAgency) {
+          setDefaultAgencyId(defaultAgency.id);
         }
-      });
+      }
+      if (Array.isArray(templatesData)) {
+        const activeTemplates = templatesData.filter((t: any) => t.isActive);
+        setTemplates(activeTemplates);
+      }
+    });
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -51,18 +58,36 @@ export default function NewClientPage() {
       agencyId: formData.get("agencyId") || null,
     };
 
-    const res = await fetch("/api/clients", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    try {
+      // Create client
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
 
-    if (res.ok) {
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.error || "Failed to create client");
+        setLoading(false);
+        return;
+      }
+
+      const newClient = await res.json();
+
+      // Initialize onboarding if services selected
+      if (selectedServices.length > 0) {
+        await fetch(`/api/clients/${newClient.id}/onboarding`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ serviceTypes: selectedServices }),
+        });
+      }
+
       router.push("/clients");
       router.refresh();
-    } else {
-      const err = await res.json();
-      setError(err.error || "Failed to create client");
+    } catch (err) {
+      setError("Failed to create client");
       setLoading(false);
     }
   }
@@ -170,6 +195,67 @@ export default function NewClientPage() {
               <label style={labelStyle}>Monthly Retainer (USD)</label>
               <input name="monthlyRetainer" type="number" step="0.01" style={inputStyle} placeholder="5000" />
             </div>
+
+            {/* Service Types Selection */}
+            {templates.length > 0 && (
+              <div style={{ marginBottom: 32 }}>
+                <label style={{ ...labelStyle, marginBottom: 12 }}>Services (Optional)</label>
+                <p style={{ fontSize: 13, color: theme.colors.textSecondary, marginBottom: 16 }}>
+                  Select the services you'll provide to automatically set up onboarding checklists
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12 }}>
+                  {Array.from(new Set(templates.map((t: any) => t.serviceType))).map((serviceType: any) => {
+                    const template = templates.find((t: any) => t.serviceType === serviceType);
+                    const isSelected = selectedServices.includes(serviceType);
+                    const SERVICE_ICONS: Record<string, string> = {
+                      SEO: "🔍", AEO: "🤖", PAID_MEDIA: "📢", WEB_DEVELOPMENT: "💻",
+                      SOCIAL_MEDIA: "📱", CONTENT: "✍️", BRANDING: "🎨", CONSULTING: "💼"
+                    };
+                    const SERVICE_LABELS: Record<string, string> = {
+                      SEO: "SEO", AEO: "AEO", PAID_MEDIA: "Paid Media", WEB_DEVELOPMENT: "Web Dev",
+                      SOCIAL_MEDIA: "Social Media", CONTENT: "Content", BRANDING: "Branding", CONSULTING: "Consulting"
+                    };
+                    
+                    if (serviceType === "GENERAL") return null;
+                    
+                    return (
+                      <div
+                        key={serviceType}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedServices(prev => prev.filter(s => s !== serviceType));
+                          } else {
+                            setSelectedServices(prev => [...prev, serviceType]);
+                          }
+                        }}
+                        style={{
+                          padding: 16,
+                          border: `2px solid ${isSelected ? theme.colors.primary : theme.colors.borderLight}`,
+                          borderRadius: theme.borderRadius.md,
+                          cursor: "pointer",
+                          background: isSelected ? theme.colors.primaryBg : theme.colors.bgPrimary,
+                          transition: "all 150ms ease",
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontSize: 20 }}>{SERVICE_ICONS[serviceType] || "📋"}</span>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{SERVICE_LABELS[serviceType] || serviceType}</span>
+                          {isSelected && <span style={{ marginLeft: "auto", color: theme.colors.primary }}>✓</span>}
+                        </div>
+                        <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
+                          {template?.items?.length || 0} items
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                {selectedServices.length > 0 && (
+                  <div style={{ marginTop: 12, fontSize: 13, color: theme.colors.textSecondary }}>
+                    {selectedServices.length} service{selectedServices.length !== 1 ? "s" : ""} selected
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={{ display: "flex", gap: 12 }}>
               <button type="submit" disabled={loading} style={{
