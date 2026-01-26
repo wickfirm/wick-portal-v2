@@ -18,6 +18,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where,
       include: { 
         category: true,
+        assignee: { select: { name: true, email: true } },
         client: { 
           select: { 
             nickname: true, 
@@ -42,6 +43,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
   try {
     const data = await req.json();
+    
+    // Get current user to auto-assign task
+    const currentUser = await prisma.user.findUnique({
+      where: { email: session.user?.email || "" },
+      select: { id: true },
+    });
 
     const lastTask = await prisma.clientTask.findFirst({
       where: { clientId: params.id, categoryId: data.categoryId },
@@ -64,9 +71,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         internalLink: data.internalLink || null,
         internalLinkLabel: data.internalLinkLabel || null,
         ownerType: data.ownerType || "AGENCY",
+        assigneeId: currentUser?.id || null, // Auto-assign to creator
         order: (lastTask?.order ?? 0) + 1,
       },
-      include: { category: true },
+      include: { category: true, assignee: { select: { name: true, email: true } } },
     });
 
     return NextResponse.json(task);
