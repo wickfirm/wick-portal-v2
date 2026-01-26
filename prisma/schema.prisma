@@ -861,6 +861,17 @@ model HRSettings {
   carryOverEnabled      Boolean  @default(false) @map("carry_over_enabled")
   maxCarryOverDays      Int      @default(5) @map("max_carry_over_days")
   
+  // Leave Request Policies
+  shortLeaveMinDays        Int     @default(14)  @map("short_leave_min_days")        // 1-2 days: 2 weeks notice
+  mediumLeaveMinDays       Int     @default(30)  @map("medium_leave_min_days")       // 3-5 days: 1 month notice  
+  longLeaveMinDays         Int     @default(30)  @map("long_leave_min_days")         // 7+ days: 1 month notice
+  
+  approvalEmail            String  @default("management@thewickfirm.com") @map("approval_email")
+  requireCoverageHandover  Boolean @default(true) @map("require_coverage_handover")
+  
+  // Policy Guidelines (customizable per agency)
+  leaveRequestGuidelines   String? @db.Text @map("leave_request_guidelines")
+  
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
   
