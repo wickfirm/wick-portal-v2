@@ -91,7 +91,11 @@ export default function TimerWidget() {
     if (showModal && clients.length === 0) {
       fetch("/api/clients")
         .then((res) => res.json())
-        .then((data) => setClients(Array.isArray(data) ? data : []))
+        .then((data) => {
+          // API returns { clients: [...], stats: {...} }
+          const clientsArray = data.clients || [];
+          setClients(Array.isArray(clientsArray) ? clientsArray : []);
+        })
         .catch((err) => {
           console.error("Error fetching clients:", err);
           setClients([]);
