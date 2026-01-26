@@ -79,7 +79,7 @@ export const authOptions: NextAuthOptions = {
           return {
             id: user.id,
             email: user.email,
-            name: user.name,
+            name: user.name || user.email, // Fallback to email if name is null
             role: user.role,
             agencyId: user.agencyId,
             agencySlug: user.agency?.slug || null,
