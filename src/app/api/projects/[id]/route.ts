@@ -9,7 +9,38 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const project = await prisma.project.findUnique({
     where: { id: params.id },
-    include: { client: true, stages: { orderBy: { order: "asc" } } },
+    include: { 
+      client: { select: { id: true, name: true } },
+      stages: { orderBy: { order: "asc" } },
+      tasks: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          priority: true,
+          dueDate: true,
+          assignee: { select: { name: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      },
+      resources: {
+        select: {
+          id: true,
+          name: true,
+          url: true,
+          type: true,
+        },
+        orderBy: { order: "asc" },
+      },
+      assignments: {
+        select: {
+          id: true,
+          role: true,
+          hoursAllocated: true,
+          user: { select: { id: true, name: true } },
+        },
+      },
+    },
   });
 
   if (!project) return NextResponse.json({ error: "Not found" }, { status: 404 });
