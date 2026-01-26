@@ -104,6 +104,7 @@ model Project {
   description String?
   status      ProjectStatus @default(DRAFT)
   serviceType ServiceType
+  isDefault   Boolean       @default(false)
   startDate   DateTime?
   endDate     DateTime?
   budget      Decimal?      @db.Decimal(10, 2)
@@ -1168,41 +1169,4 @@ enum MediaActivityAction {
 //   createdFolders  MediaFolder[]  @relation("FolderCreator")
 //   uploadedFiles   MediaFile[]    @relation("FileUploader")
 //   mediaActivities MediaActivity[] @relation("MediaActivityUser")
-
-
-// Add this field to the Project model in prisma/schema.prisma
-// After line 106 (after serviceType line)
-
-  isDefault   Boolean       @default(false)  // TRUE for auto-created "Admin/Operations" projects
-
-// Full updated Project model:
-model Project {
-  id          String        @id @default(cuid())
-  name        String
-  description String?
-  status      ProjectStatus @default(DRAFT)
-  serviceType ServiceType
-  isDefault   Boolean       @default(false)  // NEW FIELD
-  startDate   DateTime?
-  endDate     DateTime?
-  budget      Decimal?      @db.Decimal(10, 2)
-  clientId    String
-  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  stages      ProjectStage[]
-  tasks       ClientTask[]
-  resources   ProjectResource[]
-  timeEntries TimeEntry[]
-  assignments     ProjectAssignment[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  billRate    Decimal?  @db.Decimal(10, 2)
-  mediaFolders  MediaFolder[]
-
-  @@index([status])
-  @@index([clientId])
-  @@index([serviceType])
-  @@index([clientId, status])
-  @@index([createdAt])
-  @@map("projects")
-}
 
