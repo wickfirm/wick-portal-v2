@@ -5,11 +5,13 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
+import HolidaysManager from "./holidays-manager";
 import { theme } from "@/lib/theme";
 
 export default function HRSettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [activeTab, setActiveTab] = useState<"settings" | "holidays">("settings");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -213,10 +215,53 @@ export default function HRSettingsPage() {
             HR Settings
           </h1>
           <p style={{ color: theme.colors.textSecondary }}>
-            Configure leave policies and working hours for your agency
+            Configure leave policies, holidays, and working hours for your agency
           </p>
         </div>
 
+        {/* Tabs */}
+        <div style={{ borderBottom: `2px solid ${theme.colors.borderLight}`, marginBottom: 32 }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button
+              onClick={() => setActiveTab("settings")}
+              style={{
+                padding: "12px 24px",
+                background: "transparent",
+                color: activeTab === "settings" ? theme.colors.primary : theme.colors.textSecondary,
+                border: "none",
+                borderBottom: `3px solid ${activeTab === "settings" ? theme.colors.primary : "transparent"}`,
+                fontWeight: activeTab === "settings" ? 600 : 500,
+                fontSize: 15,
+                cursor: "pointer",
+                marginBottom: -2,
+              }}
+            >
+              Leave & Schedule
+            </button>
+            <button
+              onClick={() => setActiveTab("holidays")}
+              style={{
+                padding: "12px 24px",
+                background: "transparent",
+                color: activeTab === "holidays" ? theme.colors.primary : theme.colors.textSecondary,
+                border: "none",
+                borderBottom: `3px solid ${activeTab === "holidays" ? theme.colors.primary : "transparent"}`,
+                fontWeight: activeTab === "holidays" ? 600 : 500,
+                fontSize: 15,
+                cursor: "pointer",
+                marginBottom: -2,
+              }}
+            >
+              Public Holidays
+            </button>
+          </div>
+        </div>
+
+        {/* Tab Content */}
+        {activeTab === "holidays" ? (
+          <HolidaysManager />
+        ) : (
+          <>
         {/* Settings Form */}
         <div style={{ background: "white", padding: "2rem", borderRadius: "12px", border: "1px solid #E5E7EB" }}>
           
@@ -584,6 +629,8 @@ export default function HRSettingsPage() {
             </button>
           </div>
         </div>
+        </>
+        )}
       </main>
     </div>
   );
