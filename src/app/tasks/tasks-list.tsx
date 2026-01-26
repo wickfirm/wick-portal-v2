@@ -538,115 +538,197 @@ export default function TasksList({
                     key={task.id}
                     style={{
                       borderBottom: idx < filteredAndSortedTasks.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                      transition: "background 0.2s",
                     }}
                   >
-                    <td style={{ padding: "16px 24px" }}>
-                      <Link
-                        href={task.projectId ? `/projects/${task.projectId}?tab=tasks` : `/clients/${task.client.id}/tasks`}
-                        style={{
-                          color: theme.colors.textPrimary,
-                          textDecoration: "none",
-                          fontWeight: 500,
-                          fontSize: 14,
-                        }}
-                      >
+                    {/* Task Name */}
+                    <td style={{ padding: "12px 24px", minWidth: 180 }}>
+                      <div style={{ fontWeight: 500, color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary }}>
                         {task.name}
-                      </Link>
-                    </td>
-                    <td style={{ padding: "16px 24px" }}>
-                      <div style={{ fontSize: 13, color: theme.colors.textPrimary }}>
-                        {task.client.name}
-                      </div>
-                      <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>
-                        {taskProject?.name || "No project"}
                       </div>
                     </td>
-                    <td style={{ padding: "16px 24px" }}>
-                      <span style={{
-                        padding: "4px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 500,
-                        background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
-                        color: STATUS_STYLES[task.status]?.color || theme.colors.textMuted,
-                      }}>
-                        {task.status.replace("_", " ")}
-                      </span>
-                    </td>
-                    <td style={{ padding: "16px 24px" }}>
-                      <span style={{
-                        padding: "4px 10px",
-                        borderRadius: 20,
-                        fontSize: 11,
-                        fontWeight: 500,
-                        background: PRIORITY_STYLES[task.priority]?.bg || theme.colors.bgTertiary,
-                        color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textMuted,
-                      }}>
-                        {task.priority}
-                      </span>
-                    </td>
-                    {currentUserRole !== "MEMBER" && (
-                      <td style={{ padding: "16px 24px", fontSize: 13, color: theme.colors.textSecondary }}>
-                        {task.assignee?.name || "Unassigned"}
-                      </td>
-                    )}
-                    <td style={{ padding: "16px 24px" }}>
-                      {task.dueDate ? (
-                        <div style={{
-                          fontSize: 13,
-                          color: isOverdue ? theme.colors.error : theme.colors.textSecondary,
-                          fontWeight: isOverdue ? 500 : 400,
-                        }}>
-                          {new Date(task.dueDate).toLocaleDateString()}
-                          {isOverdue && (
-                            <span style={{ marginLeft: 6 }}>⚠️</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: 13, color: theme.colors.textMuted }}>—</span>
+
+                    {/* Client / Project */}
+                    <td style={{ padding: "12px 24px", fontSize: 13 }}>
+                      <div style={{ fontWeight: 500 }}>{task.client.name}</div>
+                      {taskProject && (
+                        <div style={{ fontSize: 11, color: theme.colors.textMuted }}>{taskProject.name}</div>
                       )}
                     </td>
+
+                    {/* Assignee (Inline Dropdown) */}
+                    <td style={{ padding: "12px 24px", minWidth: 140 }}>
+                      <select
+                        value={task.assigneeId || ""}
+                        onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "1px solid " + theme.colors.borderLight,
+                          fontSize: 13,
+                          background: "white",
+                          cursor: "pointer",
+                          width: "100%",
+                        }}
+                      >
+                        <option value="">Unassigned</option>
+                        {teamMembers.map(u => (
+                          <option key={u.id} value={u.id}>{u.name}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Owner (Inline Dropdown) */}
+                    <td style={{ padding: "12px 24px", width: 100 }}>
+                      <select
+                        value={task.ownerType}
+                        onChange={(e) => updateTaskField(task.id, "ownerType", e.target.value)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 6,
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          background: task.ownerType === "CLIENT" ? theme.colors.warningBg : theme.colors.infoBg,
+                          color: task.ownerType === "CLIENT" ? "#92400E" : theme.colors.info,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <option value="AGENCY">Agency</option>
+                        <option value="CLIENT">Client</option>
+                      </select>
+                    </td>
+
+                    {/* Due Date (Inline Date Picker) */}
+                    <td style={{ padding: "12px 24px", width: 130 }}>
+                      <input
+                        type="date"
+                        value={task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""}
+                        onChange={(e) => updateTaskField(task.id, "dueDate", e.target.value || null)}
+                        style={{
+                          padding: "6px 10px",
+                          border: "1px solid " + theme.colors.borderLight,
+                          borderRadius: 6,
+                          fontSize: 13,
+                          cursor: "pointer",
+                          color: isOverdue ? theme.colors.error : theme.colors.textSecondary,
+                        }}
+                      />
+                    </td>
+
+                    {/* Priority (Inline Dropdown) */}
+                    <td style={{ padding: "12px 24px", width: 100 }}>
+                      <select
+                        value={task.priority}
+                        onChange={(e) => updateTaskField(task.id, "priority", e.target.value)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 20,
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          background: PRIORITY_STYLES[task.priority]?.bg || theme.colors.bgTertiary,
+                          color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textSecondary,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {PRIORITY_OPTIONS.map(p => (
+                          <option key={p} value={p}>{p}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Status (Inline Dropdown) */}
+                    <td style={{ padding: "12px 24px", width: 130 }}>
+                      <select
+                        value={task.status}
+                        onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
+                        style={{
+                          padding: "6px 10px",
+                          borderRadius: 20,
+                          border: "none",
+                          fontSize: 11,
+                          fontWeight: 500,
+                          background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
+                          color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary,
+                          cursor: "pointer",
+                        }}
+                      >
+                        {STATUS_OPTIONS.map(s => (
+                          <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
+                        ))}
+                      </select>
+                    </td>
+
+                    {/* Notes (Inline Input) */}
+                    <td style={{ padding: "12px 24px", minWidth: 150 }}>
+                      <input
+                        type="text"
+                        value={task.notes || ""}
+                        onChange={(e) => updateTaskField(task.id, "notes", e.target.value)}
+                        placeholder="Add notes..."
+                        style={{
+                          padding: "6px 10px",
+                          border: "1px solid transparent",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          background: "transparent",
+                          width: "100%",
+                          color: theme.colors.textSecondary,
+                        }}
+                        onFocus={(e) => e.currentTarget.style.border = "1px solid " + theme.colors.borderMedium}
+                        onBlur={(e) => e.currentTarget.style.border = "1px solid transparent"}
+                      />
+                    </td>
+
+                    {/* Next Steps (Inline Input) */}
+                    <td style={{ padding: "12px 24px", minWidth: 150 }}>
+                      <input
+                        type="text"
+                        value={task.nextSteps || ""}
+                        onChange={(e) => updateTaskField(task.id, "nextSteps", e.target.value)}
+                        placeholder="Add next steps..."
+                        style={{
+                          padding: "6px 10px",
+                          border: "1px solid transparent",
+                          borderRadius: 6,
+                          fontSize: 12,
+                          background: "transparent",
+                          width: "100%",
+                          color: theme.colors.textSecondary,
+                        }}
+                        onFocus={(e) => e.currentTarget.style.border = "1px solid " + theme.colors.borderMedium}
+                        onBlur={(e) => e.currentTarget.style.border = "1px solid transparent"}
+                      />
+                    </td>
+
+                    {/* Internal Link Icon */}
+                    <td style={{ padding: "12px 24px", width: 60, textAlign: "center" }}>
+                      {task.internalLink && (
+                        <a href={task.internalLink} target="_blank" rel="noopener noreferrer" style={{ color: theme.colors.primary, fontSize: 16 }}>
+                          🔗
+                        </a>
+                      )}
+                    </td>
+
+                    {/* Actions (ADMIN/SUPER_ADMIN only) */}
                     {(currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") && (
-                      <td style={{ padding: "16px 24px", textAlign: "right" }}>
-                        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                          <Link
-                            href={task.projectId ? `/projects/${task.projectId}?tab=tasks` : `/clients/${task.client.id}/tasks`}
-                            style={{
-                              padding: "6px 12px",
-                              background: theme.colors.bgTertiary,
-                              color: theme.colors.textSecondary,
-                              border: "none",
-                              borderRadius: 6,
-                              fontSize: 12,
-                              fontWeight: 500,
-                              cursor: "pointer",
-                              textDecoration: "none",
-                              display: "inline-block",
-                            }}
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              deleteTask(task.id);
-                            }}
-                            disabled={deletingTaskId === task.id}
-                            style={{
-                              padding: "6px 12px",
-                              background: deletingTaskId === task.id ? theme.colors.bgTertiary : theme.colors.errorBg,
-                              color: deletingTaskId === task.id ? theme.colors.textMuted : theme.colors.error,
-                              border: "none",
-                              borderRadius: 6,
-                              fontSize: 12,
-                              fontWeight: 500,
-                              cursor: deletingTaskId === task.id ? "not-allowed" : "pointer",
-                            }}
-                          >
-                            {deletingTaskId === task.id ? "..." : "Delete"}
-                          </button>
-                        </div>
+                      <td style={{ padding: "12px 24px", textAlign: "right" }}>
+                        <button
+                          onClick={() => deleteTask(task.id)}
+                          disabled={deletingTaskId === task.id}
+                          style={{
+                            padding: "6px 12px",
+                            background: deletingTaskId === task.id ? theme.colors.bgTertiary : theme.colors.errorBg,
+                            color: deletingTaskId === task.id ? theme.colors.textMuted : theme.colors.error,
+                            border: "none",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: deletingTaskId === task.id ? "not-allowed" : "pointer",
+                          }}
+                        >
+                          {deletingTaskId === task.id ? "..." : "Delete"}
+                        </button>
                       </td>
                     )}
                   </tr>
