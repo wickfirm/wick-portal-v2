@@ -1,247 +1,209 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
-import StageManager from "./stage-manager";
-import ProjectTasks from "./project-tasks";
-import ProjectResources from "./project-resources";
-import ProjectTimeTracking from "./project-time-tracking";
-import { theme, STATUS_STYLES } from "@/lib/theme";
+import { theme } from "@/lib/theme";
 
-export const dynamic = "force-dynamic";
+export default function EditProjectPage() {
+  const router = useRouter();
+  const params = useParams();
+  const projectId = params.id as string;
 
-export default async function ProjectViewPage({ params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session) redirect("/login");
-  const user = session.user as any;
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [project, setProject] = useState<any>(null);
+  const [clients, setClients] = useState<any[]>([]);
 
-  // Get current user role
-  const currentUser = await prisma.user.findUnique({
-    where: { email: user.email },
-    select: { role: true },
-  });
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/projects/" + projectId).then(res => res.json()),
+      fetch("/api/clients").then(res => res.json()),
+    ]).then(([projectData, clientsData]) => {
+      setProject(projectData);
+      // Handle both response formats: { clients: [...] } or [...]
+      if (clientsData && clientsData.clients && Array.isArray(clientsData.clients)) {
+        setClients(clientsData.clients);
+      } else if (Array.isArray(clientsData)) {
+        setClients(clientsData);
+      } else {
+        setClients([]);
+      }
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to load data:", err);
+      setError("Failed to load project data");
+      setLoading(false);
+    });
+  }, [projectId]);
 
-  const isAdmin = currentUser?.role === "ADMIN" || currentUser?.role === "SUPER_ADMIN";
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
 
-  const project = await prisma.project.findUnique({
-    where: { id: params.id },
-    include: {
-      client: true,
-      stages: { orderBy: { order: "asc" } },
-      tasks: { 
-        include: { category: true },
-        orderBy: { createdAt: "desc" }
-      },
-      resources: { orderBy: { order: "asc" } },
-      timeEntries: {
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          task: { select: { id: true, name: true } },
-        },
-        orderBy: { date: "desc" },
-      },
-    },
-  });
+    const formData = new FormData(e.currentTarget);
+    const data = {
+      name: formData.get("name"),
+      description: formData.get("description") || null,
+      clientId: formData.get("clientId"),
+      serviceType: formData.get("serviceType"),
+      status: formData.get("status"),
+      startDate: formData.get("startDate") || null,
+      endDate: formData.get("endDate") || null,
+      budget: formData.get("budget") ? parseFloat(formData.get("budget") as string) : null,
+    };
 
-  if (!project) {
-    return <div style={{ padding: 48, textAlign: "center" }}>Project not found</div>;
+    const res = await fetch("/api/projects/" + projectId, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+
+    if (res.ok) {
+      router.push("/projects/" + projectId);
+      router.refresh();
+    } else {
+      const err = await res.json();
+      setError(err.error || "Failed to update project");
+      setSaving(false);
+    }
   }
 
-  const stagesForClient = project.stages.map(stage => ({
-    id: stage.id,
-    name: stage.name,
-    order: stage.order,
-    isCompleted: stage.isCompleted,
-    completedAt: stage.completedAt ? stage.completedAt.toISOString() : null,
-  }));
+  const inputStyle = {
+    width: "100%",
+    padding: "12px 16px",
+    border: "1px solid " + theme.colors.borderMedium,
+    borderRadius: theme.borderRadius.md,
+    fontSize: 14,
+    boxSizing: "border-box" as const,
+    outline: "none",
+  };
 
-  const tasksForProject = project.tasks.map(task => ({
-    id: task.id,
-    name: task.name,
-    status: task.status,
-    priority: task.priority,
-    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-    category: task.category ? { name: task.category.name } : null,
-  }));
+  const labelStyle = {
+    display: "block",
+    marginBottom: 8,
+    fontWeight: 500,
+    fontSize: 14,
+    color: theme.colors.textPrimary,
+  };
 
-  const resourcesForProject = project.resources.map(resource => ({
-    id: resource.id,
-    name: resource.name,
-    url: resource.url,
-    type: resource.type,
-    order: resource.order,
-  }));
-
-  // Serialize time entries
-  const timeEntriesForProject = project.timeEntries.map(entry => ({
-    id: entry.id,
-    duration: entry.duration,
-    date: entry.date.toISOString(),
-    description: entry.description,
-    user: entry.user,
-    task: entry.task,
-  }));
-
-  const totalProjectTime = project.timeEntries.reduce((sum, e) => sum + e.duration, 0);
-
-  const completed = project.stages.filter(s => s.isCompleted).length;
-  const total = project.stages.length;
-  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+  if (loading) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Loading...</div>;
+  if (!project) return <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>Project not found</div>;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
-      <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Breadcrumb */}
+      <main style={{ maxWidth: 640, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <Link href="/projects" style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
-            ← Back to Projects
+          <Link href={"/projects/" + projectId} style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
+            ← Back to {project.name}
           </Link>
         </div>
 
-        {/* Project Header */}
-        <div style={{
-          background: theme.colors.bgSecondary,
-          padding: 32,
-          borderRadius: theme.borderRadius.lg,
-          border: "1px solid " + theme.colors.borderLight,
-          marginBottom: 24
-        }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>{project.name}</h1>
-                <span style={{
-                  padding: "4px 12px",
-                  borderRadius: 20,
-                  fontSize: 12,
-                  fontWeight: 500,
-                  background: STATUS_STYLES[project.status]?.bg || theme.colors.bgTertiary,
-                  color: STATUS_STYLES[project.status]?.color || theme.colors.textSecondary
-                }}>
-                  {project.status.replace("_", " ")}
-                </span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, color: theme.colors.textSecondary, fontSize: 14 }}>
-                <Link href={"/clients/" + project.client.id} style={{ color: theme.colors.primary, textDecoration: "none" }}>
-                  {project.client.name}
-                </Link>
-                <span>•</span>
-                <span>{project.serviceType.replace("_", " ")}</span>
-              </div>
-            </div>
-            {isAdmin && (
-              <Link href={"/projects/" + project.id + "/edit"} style={{
-                padding: "10px 20px",
-                borderRadius: theme.borderRadius.md,
-                background: theme.colors.bgTertiary,
-                color: theme.colors.textSecondary,
-                textDecoration: "none",
-                fontWeight: 500,
-                fontSize: 13
-              }}>
-                Edit Project
-              </Link>
-            )}
-          </div>
+        <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary, marginTop: 0, marginBottom: 8 }}>Edit Project</h1>
+          <p style={{ color: theme.colors.textSecondary, marginBottom: 32, fontSize: 14 }}>Update project details</p>
 
-          {/* Progress Bar - Only show for ADMINs */}
-          {isAdmin && (
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>Progress</span>
-                <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{completed}/{total} stages ({pct}%)</span>
-              </div>
-              <div style={{ height: 10, background: theme.colors.bgTertiary, borderRadius: 5 }}>
-                <div style={{
-                  height: "100%",
-                  width: pct + "%",
-                  background: pct === 100 ? theme.colors.success : theme.gradients.progress,
-                  borderRadius: 5,
-                  transition: "width 300ms ease"
-                }} />
-              </div>
+          {error && (
+            <div style={{ background: theme.colors.errorBg, color: theme.colors.error, padding: "12px 16px", borderRadius: theme.borderRadius.md, marginBottom: 24, fontSize: 14 }}>
+              {error}
             </div>
           )}
-        </div>
 
-        {/* Content Grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 24 }}>
-          {/* Main Content */}
-          <div>
-            {/* Stages - Only show for ADMINs */}
-            {isAdmin && (
-              <StageManager
-                projectId={project.id}
-                initialStages={stagesForClient}
-              />
-            )}
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Project Name *</label>
+              <input name="name" required defaultValue={project.name} style={inputStyle} />
+            </div>
 
-            {/* Tasks */}
-            <ProjectTasks
-              projectId={project.id}
-              clientId={project.clientId}
-              initialTasks={tasksForProject}
-            />
-          </div>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Client *</label>
+              <select name="clientId" required defaultValue={project.clientId} style={{ ...inputStyle, cursor: "pointer" }}>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
 
-          {/* Sidebar */}
-          <div>
-            {/* Time Tracking */}
-            <ProjectTimeTracking
-              projectId={project.id}
-              totalTime={totalProjectTime}
-              entries={timeEntriesForProject}
-            />
-
-            {/* Resources */}
-            <ProjectResources
-              projectId={project.id}
-              initialResources={resourcesForProject}
-            />
-
-            {/* Project Details */}
-            <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 20 }}>
-                Project Details
-              </h3>
-              <div style={{ display: "grid", gap: 16 }}>
-                <div>
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Start Date</div>
-                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                    {project.startDate ? new Date(project.startDate).toLocaleDateString() : "-"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>End Date</div>
-                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                    {project.endDate ? new Date(project.endDate).toLocaleDateString() : "-"}
-                  </div>
-                </div>
-                <div>
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 4 }}>Budget</div>
-                  <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>
-                    {project.budget ? "$" + Number(project.budget).toLocaleString() : "-"}
-                  </div>
-                </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Service Type *</label>
+                <select name="serviceType" required defaultValue={project.serviceType} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="SEO">SEO</option>
+                  <option value="AEO">AEO</option>
+                  <option value="WEB_DEVELOPMENT">Web Development</option>
+                  <option value="PAID_MEDIA">Paid Media</option>
+                  <option value="SOCIAL_MEDIA">Social Media</option>
+                  <option value="CONTENT">Content</option>
+                  <option value="BRANDING">Branding</option>
+                  <option value="CONSULTING">Consulting</option>
+                </select>
+              </div>
+              <div>
+                <label style={labelStyle}>Status</label>
+                <select name="status" defaultValue={project.status} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <option value="DRAFT">Draft</option>
+                  <option value="PENDING_APPROVAL">Pending Approval</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="ON_HOLD">On Hold</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="CANCELLED">Cancelled</option>
+                </select>
               </div>
             </div>
 
-            {/* Description */}
-            {project.description && (
-              <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-                <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px", marginTop: 0, marginBottom: 12 }}>
-                  Description
-                </h3>
-                <p style={{ color: theme.colors.textPrimary, fontSize: 14, lineHeight: 1.6, margin: 0, whiteSpace: "pre-wrap" }}>
-                  {project.description}
-                </p>
+            <div style={{ marginBottom: 20 }}>
+              <label style={labelStyle}>Description</label>
+              <textarea name="description" rows={3} defaultValue={project.description || ""} style={{ ...inputStyle, resize: "vertical" }} />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+              <div>
+                <label style={labelStyle}>Start Date</label>
+                <input name="startDate" type="date" defaultValue={project.startDate?.split("T")[0] || ""} style={inputStyle} />
               </div>
-            )}
-          </div>
+              <div>
+                <label style={labelStyle}>End Date</label>
+                <input name="endDate" type="date" defaultValue={project.endDate?.split("T")[0] || ""} style={inputStyle} />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 32 }}>
+              <label style={labelStyle}>Budget (USD)</label>
+              <input name="budget" type="number" step="0.01" defaultValue={project.budget || ""} style={inputStyle} />
+            </div>
+
+            <div style={{ display: "flex", gap: 12 }}>
+              <button type="submit" disabled={saving} style={{
+                flex: 1,
+                padding: 14,
+                background: saving ? theme.colors.bgTertiary : theme.gradients.primary,
+                color: saving ? theme.colors.textMuted : "white",
+                border: "none",
+                borderRadius: theme.borderRadius.md,
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: saving ? "not-allowed" : "pointer",
+              }}>
+                {saving ? "Saving..." : "Save Changes"}
+              </button>
+              <Link href={"/projects/" + projectId} style={{
+                padding: "14px 24px",
+                border: "1px solid " + theme.colors.borderMedium,
+                borderRadius: theme.borderRadius.md,
+                textDecoration: "none",
+                color: theme.colors.textSecondary,
+                fontWeight: 500,
+                fontSize: 14,
+                display: "flex",
+                alignItems: "center",
+              }}>
+                Cancel
+              </Link>
+            </div>
+          </form>
         </div>
       </main>
     </div>
