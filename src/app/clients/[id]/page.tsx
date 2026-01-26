@@ -8,6 +8,7 @@ import OnboardingManager from "./onboarding-manager";
 import ClientResources from "./client-resources";
 import TeamManager from "./team-manager";
 import AgenciesManager from "./agencies-manager";
+import DeleteClientButton from "./delete-client-button";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 export const dynamic = "force-dynamic";
@@ -196,6 +197,9 @@ export default async function ClientViewPage({ params }: { params: { id: string 
               }}>
                 Edit
               </Link>
+              {user.role === "SUPER_ADMIN" && (
+                <DeleteClientButton clientId={client.id} clientName={client.name} />
+              )}
             </div>
           </div>
         </div>
