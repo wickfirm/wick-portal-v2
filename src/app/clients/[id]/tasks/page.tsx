@@ -23,6 +23,8 @@ type Task = {
   categoryId?: string | null;
   projectId: string | null;
   ownerType: string;
+  assigneeId: string | null;
+  assignee: { name: string; email: string } | null;
   client?: {
     nickname: string | null;
     name: string;
@@ -49,6 +51,7 @@ export default function ClientTasksPage() {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [categories, setCategories] = useState<TaskCategory[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   
@@ -72,10 +75,12 @@ export default function ClientTasksPage() {
       fetch("/api/clients/" + clientId).then(res => res.json()),
       fetch("/api/clients/" + clientId + "/tasks").then(res => res.json()),
       fetch("/api/task-categories").then(res => res.json()),
-    ]).then(([clientData, tasksData, categoriesData]) => {
+      fetch("/api/users").then(res => res.json()),
+    ]).then(([clientData, tasksData, categoriesData, usersData]) => {
       setClient(clientData);
       setTasks(Array.isArray(tasksData) ? tasksData : []);
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+      setUsers(Array.isArray(usersData) ? usersData : []);
       setLoading(false);
     }).catch(err => {
       console.error("Failed to load data:", err);
@@ -242,6 +247,32 @@ export default function ClientTasksPage() {
         >
           {task.name}
         </div>
+      </td>
+
+      {/* Assignee */}
+      <td style={{ padding: "10px 12px", minWidth: 140 }}>
+        <select
+          value={task.assigneeId || ""}
+          onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
+          style={{
+            padding: "4px 8px",
+            borderRadius: 6,
+            border: "1px solid " + theme.colors.borderLight,
+            fontSize: 12,
+            background: "white",
+            color: task.assigneeId ? theme.colors.textPrimary : theme.colors.textMuted,
+            cursor: "pointer",
+            outline: "none",
+            maxWidth: "100%",
+          }}
+        >
+          <option value="">Unassigned</option>
+          {users.map(u => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+        </select>
       </td>
 
       {/* Owner */}
@@ -516,6 +547,7 @@ export default function ClientTasksPage() {
                   <thead>
                     <tr style={{ background: theme.colors.bgPrimary }}>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Task</th>
+                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Assignee</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Owner</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Due Date</th>
                       <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Priority</th>
