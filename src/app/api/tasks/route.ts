@@ -35,6 +35,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "clientId and name are required" }, { status: 400 });
     }
 
+    if (!data.projectId) {
+      return NextResponse.json({ error: "projectId is required. All tasks must belong to a project." }, { status: 400 });
+    }
+
     // Get current user to auto-assign task
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user?.email || "" },
@@ -50,7 +54,7 @@ export async function POST(req: NextRequest) {
       data: {
         name: data.name,
         clientId: data.clientId,
-        projectId: data.projectId || null,
+        projectId: data.projectId,
         categoryId: data.categoryId || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
@@ -61,6 +65,7 @@ export async function POST(req: NextRequest) {
         externalLinkLabel: data.externalLinkLabel || null,
         internalLink: data.internalLink || null,
         internalLinkLabel: data.internalLinkLabel || null,
+        ownerType: data.ownerType || "AGENCY",
         assigneeId: currentUser?.id || null, // Auto-assign to creator
         order: (lastTask?.order ?? 0) + 1,
       },
