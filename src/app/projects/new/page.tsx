@@ -16,7 +16,21 @@ export default function NewProjectPage() {
   const [clients, setClients] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch("/api/clients").then(res => res.json()).then(setClients);
+    fetch("/api/clients")
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.clients && Array.isArray(data.clients)) {
+          setClients(data.clients);
+        } else if (Array.isArray(data)) {
+          setClients(data);
+        } else {
+          setClients([]);
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load clients:", err);
+        setClients([]);
+      });
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
