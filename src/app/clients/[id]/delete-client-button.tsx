@@ -89,7 +89,7 @@ export default function DeleteClientButton({ clientId, clientName }: DeleteClien
               padding: 32,
               maxWidth: 500,
               width: "90%",
-              boxShadow: theme.shadows.xl,
+              boxShadow: theme.shadows.lg,
             }}
             onClick={(e) => e.stopPropagation()}
           >
