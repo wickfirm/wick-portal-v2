@@ -89,9 +89,7 @@ export async function GET() {
         }
       },
       orderBy: [
-        { status: "asc" },
-        { priority: "desc" },
-        { dueDate: "asc" },
+        { createdAt: "desc" },
       ],
     });
 
