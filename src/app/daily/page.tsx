@@ -170,14 +170,25 @@ export default function DailyPage() {
 
   async function loadAllTasks() {
     try {
+      // Get current user from session
+      const sessionRes = await fetch("/api/auth/session");
+      const session = await sessionRes.json();
+      const userId = session?.user?.id;
+
       const res = await fetch("/api/tasks");
       const data = await res.json();
       const tasks = Array.isArray(data) ? data : data.tasks || [];
       
-      // Filter incomplete tasks not already in daily plan
+      // Filter to only show:
+      // 1. Tasks assigned to current user
+      // 2. Unassigned tasks (assigneeId is null)
+      // 3. Incomplete tasks
+      // 4. Tasks not already in daily plan
       const existingIds = dailyTasks.map(dt => dt.task.id);
       const availableTasks = tasks.filter((t: any) => 
-        t.status !== "COMPLETED" && !existingIds.includes(t.id)
+        t.status !== "COMPLETED" && 
+        !existingIds.includes(t.id) &&
+        (t.assigneeId === userId || t.assigneeId === null)
       );
       
       setAllTasks(availableTasks);
