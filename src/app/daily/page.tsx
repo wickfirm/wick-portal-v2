@@ -60,8 +60,6 @@ export default function DailyPage() {
   const [showStartModal, setShowStartModal] = useState(false);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [allTasks, setAllTasks] = useState<any[]>([]);
-  const [showAllTasks, setShowAllTasks] = useState(false);
-  const [allMyTasks, setAllMyTasks] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -201,41 +199,6 @@ export default function DailyPage() {
       
       // Remove from available list
       setAllTasks(prev => prev.filter(t => t.id !== taskId));
-    } catch (error) {
-      console.error("Failed to add task:", error);
-    }
-  }
-
-  async function loadAllMyTasks() {
-    try {
-      const res = await fetch("/api/tasks");
-      const data = await res.json();
-      const tasks = Array.isArray(data) ? data : data.tasks || [];
-      
-      // Filter to only show incomplete tasks
-      const incompleteTasks = tasks.filter((t: any) => t.status !== "COMPLETED");
-      setAllMyTasks(incompleteTasks);
-      setShowAllTasks(true);
-    } catch (error) {
-      console.error("Failed to load all tasks:", error);
-    }
-  }
-
-  async function addTaskToToday(taskId: string) {
-    try {
-      await fetch("/api/daily/tasks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          taskId, 
-          date: today, 
-          source: "manual" 
-        }),
-      });
-      
-      // Remove from all tasks list and reload daily tasks
-      setAllMyTasks(prev => prev.filter(t => t.id !== taskId));
-      loadData();
     } catch (error) {
       console.error("Failed to add task:", error);
     }
