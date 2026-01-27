@@ -20,7 +20,7 @@ type Task = {
   projectId: string | null;
   ownerType: string;
   assigneeId: string | null;
-  assignee: { name: string; email: string } | null;
+  assignee: { id: string; name: string; email: string } | null;
   client?: {
     id: string;
     nickname: string | null;
