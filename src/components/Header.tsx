@@ -28,6 +28,7 @@ export default function Header() {
   const userRole = user?.role || "";
   const userAgencyId = user?.agencyId;
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
   
   // Get tenant config from context (passed from server, no flash!)
   const tenantConfig = useTenant();
@@ -58,8 +59,24 @@ export default function Header() {
     { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/settings", label: "Settings" },
+  ] : isSuperAdmin ? [
+    // SUPER_ADMINs see full navigation including Finance
+    { href: "/dashboard", label: "Dashboard" },
+    { href: "/daily", label: "Daily" },
+    { href: "/dashboard/hr", label: "HR" },
+    { href: "/lead-qualifier", label: "Lead Qualifier" },
+    { href: "/clients", label: "Clients" },
+    { href: "/projects", label: "Projects" },
+    { href: "/tasks", label: "Tasks" },
+    { href: "/finance", label: "Finance" },
+    { href: "/media", label: "Media Hub" },
+    { href: "/timesheet", label: "Timesheet" },
+    { href: "/team", label: "Team" },
+    { href: "/agencies", label: "Agencies" },
+    { href: "/analytics", label: "Analytics" },
+    { href: "/settings", label: "Settings" },
   ] : [
-    // ADMINs and SUPER_ADMINs see full navigation
+    // ADMINs see full navigation WITHOUT Finance
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
