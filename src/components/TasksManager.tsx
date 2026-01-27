@@ -708,7 +708,10 @@ export default function TasksManager({
                 {context === "general" && (
                   <select
                     value={quickAddClient}
-                    onChange={(e) => setQuickAddClient(e.target.value)}
+                    onChange={(e) => {
+                      setQuickAddClient(e.target.value);
+                      setQuickAddProject(""); // Clear project when client changes
+                    }}
                     style={{ ...inputStyle, flex: "0 1 180px", cursor: "pointer" }}
                   >
                     <option value="">Select Client...</option>
@@ -725,12 +728,14 @@ export default function TasksManager({
                     required
                   >
                     <option value="">Select Project...</option>
-                    {projects.map((p: any) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                        {p.isDefault && " (Default)"}
-                      </option>
-                    ))}
+                    {projects
+                      .filter((p: any) => !quickAddClient || p.clientId === quickAddClient)
+                      .map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                          {p.isDefault && " (Default)"}
+                        </option>
+                      ))}
                   </select>
                 )}
                 <button onClick={() => quickAddTask(category?.id || "")} style={{ padding: "10px 20px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 8, fontWeight: 500, cursor: "pointer" }}>Add</button>
