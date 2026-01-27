@@ -134,8 +134,65 @@ export default function FinancePage() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
-            Loading...
+          {/* Loading Skeleton */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ width: 300, height: 32, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
+            <div style={{ width: 400, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+          </div>
+
+          {/* Filters Skeleton */}
+          <div style={{
+            background: theme.colors.bgSecondary,
+            border: `1px solid ${theme.colors.borderLight}`,
+            borderRadius: theme.borderRadius.lg,
+            padding: 20,
+            marginBottom: 24,
+          }}>
+            <div style={{ display: "flex", gap: 16 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} style={{ width: 150, height: 36, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+              ))}
+            </div>
+          </div>
+
+          {/* Overview Cards Skeleton */}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
+            gap: 24, 
+            marginBottom: 32 
+          }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{
+                background: theme.colors.bgSecondary,
+                border: `1px solid ${theme.colors.borderLight}`,
+                borderRadius: theme.borderRadius.lg,
+                padding: 24,
+                height: 120,
+              }}>
+                <div style={{ width: 100, height: 16, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 12 }} />
+                <div style={{ width: 140, height: 32, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Table Skeleton */}
+          <div style={{
+            background: theme.colors.bgSecondary,
+            border: `1px solid ${theme.colors.borderLight}`,
+            borderRadius: theme.borderRadius.lg,
+            overflow: "hidden",
+          }}>
+            <div style={{ padding: 24, borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+              <div style={{ width: 200, height: 24, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+            </div>
+            <div style={{ padding: 24 }}>
+              {[1, 2, 3].map((i) => (
+                <div key={i} style={{ marginBottom: 16 }}>
+                  <div style={{ width: "100%", height: 48, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                </div>
+              ))}
+            </div>
           </div>
         </main>
       </div>
@@ -411,25 +468,49 @@ export default function FinancePage() {
               >
                 {/* Client Header */}
                 <div
-                  onClick={() => toggleClientCollapse(clientId)}
                   style={{
                     padding: 24,
                     borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.borderLight}`,
-                    cursor: "pointer",
-                    userSelect: "none",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "space-between",
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 20, color: theme.colors.textSecondary }}>
+                    <span 
+                      onClick={() => toggleClientCollapse(clientId)}
+                      style={{ 
+                        fontSize: 20, 
+                        color: theme.colors.textSecondary,
+                        cursor: "pointer",
+                        userSelect: "none",
+                      }}
+                    >
                       {isCollapsed ? "▶" : "▼"}
                     </span>
                     <div>
-                      <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
-                        {client.nickname || client.name}
-                      </h2>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                          {client.nickname || client.name}
+                        </h2>
+                        <Link
+                          href={`/finance/clients/${clientId}`}
+                          style={{
+                            padding: "4px 10px",
+                            fontSize: 11,
+                            background: theme.colors.primary,
+                            color: "white",
+                            border: "none",
+                            borderRadius: 4,
+                            cursor: "pointer",
+                            textDecoration: "none",
+                            display: "inline-block",
+                            fontWeight: 500,
+                          }}
+                        >
+                          Client Details
+                        </Link>
+                      </div>
                       <div style={{ fontSize: 13, color: theme.colors.textMuted, marginTop: 4 }}>
                         {clientProjects.length} project{clientProjects.length > 1 ? "s" : ""}
                       </div>
