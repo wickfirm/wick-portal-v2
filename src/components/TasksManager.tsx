@@ -66,6 +66,7 @@ export default function TasksManager({
   const [filterStatus, setFilterStatus] = useState<string>("ALL");
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [filterOwner, setFilterOwner] = useState<string>("ALL");
+  const [filterAssignee, setFilterAssignee] = useState<string>("ALL");
   const [hideCompleted, setHideCompleted] = useState(true);
   
   // Side panel state
@@ -320,6 +321,7 @@ export default function TasksManager({
     if (filterStatus !== "ALL" && task.status !== filterStatus) return false;
     if (filterPriority !== "ALL" && task.priority !== filterPriority) return false;
     if (filterOwner !== "ALL" && task.ownerType !== filterOwner) return false;
+    if (filterAssignee !== "ALL" && task.assignee?.id !== filterAssignee) return false;
     return true;
   });
 
@@ -360,6 +362,7 @@ export default function TasksManager({
     filterStatus !== "ALL",
     filterPriority !== "ALL",
     filterOwner !== "ALL",
+    filterAssignee !== "ALL",
     !hideCompleted,
   ].filter(Boolean).length;
 
@@ -826,6 +829,26 @@ export default function TasksManager({
               <option value="ALL">All</option>
               <option value="AGENCY">Agency</option>
               <option value="CLIENT">Client</option>
+            </select>
+          </div>
+
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Assignee:</label>
+            <select
+              value={filterAssignee}
+              onChange={(e) => setFilterAssignee(e.target.value)}
+              style={{
+                padding: "6px 12px",
+                borderRadius: 6,
+                border: "1px solid " + theme.colors.borderLight,
+                fontSize: 13,
+                cursor: "pointer",
+              }}
+            >
+              <option value="ALL">All</option>
+              {users.map(user => (
+                <option key={user.id} value={user.id}>{user.name || user.email}</option>
+              ))}
             </select>
           </div>
 
