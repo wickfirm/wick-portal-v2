@@ -11,7 +11,6 @@ type ProjectProfitability = {
   project: {
     id: string;
     name: string;
-    budget: number;
     pricingModel: string;
     fixedFeeAmount: number | null;
     client: {
@@ -19,6 +18,14 @@ type ProjectProfitability = {
       name: string;
       nickname: string | null;
     };
+  };
+  client: {
+    id: string;
+    name: string;
+    nickname: string | null;
+    revenueModel: string;
+    pricingModel: string;
+    monthlyRevenue: number | null;
   };
   hours: {
     total: number;
@@ -31,7 +38,6 @@ type ProjectProfitability = {
   revenue: {
     labor: number;
     expenses: number;
-    fixedFee: number;
     total: number;
   };
   profit: {
@@ -52,7 +58,7 @@ export default function FinancePage() {
   // Filter state
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterPricingModel, setFilterPricingModel] = useState<string>("ALL");
-  const [filterProfitability, setFilterProfitability] = useState<string>("ALL"); // ALL, PROFITABLE, LOSS
+  const [filterProfitability, setFilterProfitability] = useState<string>("ALL");
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -69,22 +75,18 @@ export default function FinancePage() {
   async function loadData() {
     setLoading(true);
     try {
-      // Load all projects
       const projectsRes = await fetch("/api/projects");
       const projectsData = await projectsRes.json();
       setProjects(projectsData);
 
-      // Extract unique clients
       const uniqueClients = Array.from(
         new Map(projectsData.map((p: any) => [p.client.id, p.client])).values()
       );
       setClients(uniqueClients as any[]);
 
-      // Collapse all clients by default
       const allClientIds = new Set<string>(uniqueClients.map((c: any) => c.id));
       setCollapsedClients(allClientIds);
 
-      // Load profitability for each project
       const profitabilityPromises = projectsData.map(async (project: any) => {
         const res = await fetch(`/api/finance/project-profitability/${project.id}`);
         const data = await res.json();
@@ -128,13 +130,11 @@ export default function FinancePage() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          {/* Loading Skeleton */}
           <div style={{ marginBottom: 32 }}>
             <div style={{ width: 300, height: 32, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
             <div style={{ width: 400, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />
           </div>
 
-          {/* Filters Skeleton */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -149,7 +149,6 @@ export default function FinancePage() {
             </div>
           </div>
 
-          {/* Overview Cards Skeleton */}
           <div style={{ 
             display: "grid", 
             gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
@@ -170,7 +169,6 @@ export default function FinancePage() {
             ))}
           </div>
 
-          {/* Table Skeleton */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -189,60 +187,89 @@ export default function FinancePage() {
     );
   }
 
-  // Calculate totals
-  const totals = Object.values(profitability).reduce(
-    (acc, data) => ({
-      revenue: acc.revenue + data.revenue.total,
-      cost: acc.cost + data.costs.total,
-      profit: acc.profit + data.profit.amount,
-      hours: acc.hours + data.hours.total,
-    }),
-    { revenue: 0, cost: 0, profit: 0, hours: 0 }
-  );
-
-  // Apply filters
   const filteredProjects = projects.filter((project) => {
     const data = profitability[project.id];
     if (!data) return false;
 
-    // Client filter
     if (filterClient !== "ALL" && project.client.id !== filterClient) return false;
-
-    // Pricing model filter
     if (filterPricingModel !== "ALL" && data.project.pricingModel !== filterPricingModel) return false;
-
-    // Profitability filter
-    if (filterProfitability === "PROFITABLE" && data.profit.amount < 0) return false;
+    if (filterProfitability === "PROFITABLE" && data.profit.amount <= 0) return false;
     if (filterProfitability === "LOSS" && data.profit.amount >= 0) return false;
 
     return true;
   });
 
-  // Group by client
-  const projectsByClient: Record<string, any[]> = {};
-  filteredProjects.forEach((project) => {
+  const projectsByClient = filteredProjects.reduce((acc: Record<string, any[]>, project) => {
     const clientId = project.client.id;
-    if (!projectsByClient[clientId]) {
-      projectsByClient[clientId] = [];
+    if (!acc[clientId]) {
+      acc[clientId] = [];
     }
-    projectsByClient[clientId].push(project);
+    acc[clientId].push(project);
+    return acc;
+  }, {});
+
+  // Calculate totals - CLIENT-AWARE LOGIC
+  const clientTotals: Record<string, { revenue: number; cost: number; hours: number; counted: boolean }> = {};
+  
+  filteredProjects.forEach((project) => {
+    const data = profitability[project.id];
+    if (!data) return;
+    
+    const clientId = project.client.id;
+    if (!clientTotals[clientId]) {
+      clientTotals[clientId] = { revenue: 0, cost: 0, hours: 0, counted: false };
+    }
+    
+    // Always sum costs and hours
+    clientTotals[clientId].cost += data.costs.total;
+    clientTotals[clientId].hours += data.hours.total;
+    
+    // Revenue logic depends on client's revenue model
+    if (data.client && data.client.revenueModel === "CLIENT_LEVEL") {
+      // For CLIENT_LEVEL: use monthly revenue once per client
+      if (!clientTotals[clientId].counted && data.client.monthlyRevenue) {
+        clientTotals[clientId].revenue = data.client.monthlyRevenue;
+        clientTotals[clientId].counted = true;
+      }
+    } else {
+      // For PROJECT_BASED: sum each project's revenue
+      clientTotals[clientId].revenue += data.revenue.total;
+    }
   });
+  
+  // Calculate final totals
+  const totals = Object.values(clientTotals).reduce(
+    (acc, client) => ({
+      revenue: acc.revenue + client.revenue,
+      cost: acc.cost + client.cost,
+      hours: acc.hours + client.hours,
+    }),
+    { revenue: 0, cost: 0, hours: 0 }
+  );
+  
+  const totalProfit = totals.revenue - totals.cost;
+  const overallMargin = totals.revenue > 0 ? (totalProfit / totals.revenue) * 100 : 0;
+
+  const activeFilterCount = [
+    filterClient !== "ALL",
+    filterPricingModel !== "ALL",
+    filterProfitability !== "ALL",
+  ].filter(Boolean).length;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
+
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 8 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
             Finance Dashboard
           </h1>
-          <p style={{ fontSize: 16, color: theme.colors.textSecondary, margin: 0 }}>
-            Monitor profitability, costs, and budget utilization
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
+            Monitor profitability, costs, and financial performance
           </p>
         </div>
 
-        {/* Filters */}
         <div style={{
           background: theme.colors.bgSecondary,
           border: `1px solid ${theme.colors.borderLight}`,
@@ -251,7 +278,6 @@ export default function FinancePage() {
           marginBottom: 24,
         }}>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-            {/* Client Filter */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
                 Client
@@ -279,7 +305,6 @@ export default function FinancePage() {
               </select>
             </div>
 
-            {/* Pricing Model Filter */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
                 Pricing Model
@@ -304,7 +329,6 @@ export default function FinancePage() {
               </select>
             </div>
 
-            {/* Profitability Filter */}
             <div>
               <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
                 Status
@@ -329,8 +353,7 @@ export default function FinancePage() {
               </select>
             </div>
 
-            {/* Clear Filters */}
-            {(filterClient !== "ALL" || filterPricingModel !== "ALL" || filterProfitability !== "ALL") && (
+            {activeFilterCount > 0 && (
               <button
                 onClick={clearFilters}
                 style={{
@@ -351,14 +374,12 @@ export default function FinancePage() {
           </div>
         </div>
 
-        {/* Overview Cards */}
         <div style={{ 
           display: "grid", 
           gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
           gap: 24, 
           marginBottom: 32 
         }}>
-          {/* Total Revenue */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -373,7 +394,6 @@ export default function FinancePage() {
             </div>
           </div>
 
-          {/* Total Costs */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -388,7 +408,6 @@ export default function FinancePage() {
             </div>
           </div>
 
-          {/* Total Profit */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -401,13 +420,12 @@ export default function FinancePage() {
             <div style={{ 
               fontSize: 32, 
               fontWeight: 700, 
-              color: totals.profit >= 0 ? theme.colors.success : theme.colors.error 
+              color: totalProfit >= 0 ? theme.colors.success : theme.colors.error 
             }}>
-              ${totals.profit.toLocaleString()}
+              ${totalProfit.toLocaleString()}
             </div>
           </div>
 
-          {/* Profit Margin */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -420,16 +438,15 @@ export default function FinancePage() {
             <div style={{ 
               fontSize: 32, 
               fontWeight: 700, 
-              color: totals.revenue > 0 && ((totals.profit / totals.revenue) * 100) >= 20 
+              color: overallMargin >= 20 
                 ? theme.colors.success 
                 : theme.colors.warning 
             }}>
-              {totals.revenue > 0 ? ((totals.profit / totals.revenue) * 100).toFixed(1) : "0.0"}%
+              {overallMargin.toFixed(1)}%
             </div>
           </div>
         </div>
 
-        {/* Projects by Client */}
         {Object.keys(projectsByClient).length === 0 ? (
           <div style={{
             background: theme.colors.bgSecondary,
@@ -449,18 +466,28 @@ export default function FinancePage() {
 
             const isCollapsed = collapsedClients.has(clientId);
 
-            // Calculate client totals
             const clientTotals = clientProjects.reduce(
               (acc, project) => {
                 const data = profitability[project.id];
                 if (!data) return acc;
-                return {
-                  revenue: acc.revenue + data.revenue.total,
-                  cost: acc.cost + data.costs.total,
-                  profit: acc.profit + data.profit.amount,
-                };
+                
+                // Check if this client uses CLIENT_LEVEL revenue
+                if (data.client && data.client.revenueModel === "CLIENT_LEVEL") {
+                  // For CLIENT_LEVEL: use monthly revenue once
+                  if (!acc.revenueSet && data.client.monthlyRevenue) {
+                    acc.revenue = data.client.monthlyRevenue;
+                    acc.revenueSet = true;
+                  }
+                } else {
+                  // For PROJECT_BASED: sum revenues
+                  acc.revenue += data.revenue.total;
+                }
+                
+                acc.cost += data.costs.total;
+                acc.profit = acc.revenue - acc.cost;
+                return acc;
               },
-              { revenue: 0, cost: 0, profit: 0 }
+              { revenue: 0, cost: 0, profit: 0, revenueSet: false }
             );
 
             return (
@@ -474,7 +501,6 @@ export default function FinancePage() {
                   overflow: "hidden",
                 }}
               >
-                {/* Client Header */}
                 <div style={{
                   padding: "20px 24px",
                   borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.borderLight}`,
@@ -549,7 +575,6 @@ export default function FinancePage() {
                   </div>
                 </div>
 
-                {/* Projects Table */}
                 {!isCollapsed && (
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
