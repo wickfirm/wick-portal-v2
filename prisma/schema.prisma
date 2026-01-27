@@ -85,6 +85,7 @@ model Client {
   lead                   Lead?
   mediaFolders  MediaFolder[]
   mediaFiles    MediaFile[]
+expenses        ProjectExpense[]
 
   @@index([status])        // For filtering by status
   @@index([createdAt])     // For ordering by creation date
@@ -127,6 +128,7 @@ model Project {
   updatedAt   DateTime      @updatedAt
   billRate    Decimal?  @db.Decimal(10, 2)
   mediaFolders  MediaFolder[]
+  expenses        ProjectExpense[]
 
   @@index([status])              // For filtering by status
   @@index([clientId])            // For filtering by client
@@ -1308,4 +1310,40 @@ model DailyTimestamp {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("daily_timestamps")
+}
+
+enum ExpenseCategory {
+  OUTSOURCING
+  SOFTWARE
+  LICENSES
+  HOSTING
+  SUPPLIER
+  MARKETING
+  TRAVEL
+  OTHER
+}
+
+model ProjectExpense {
+  id                String          @id @default(cuid())
+  projectId         String          @map("project_id")
+  project           Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientId          String          @map("client_id")
+  client            Client          @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  category          ExpenseCategory
+  description       String
+  amount            Decimal         @db.Decimal(10, 2)
+  date              DateTime        @db.Date
+  vendor            String?
+  isBillable        Boolean         @default(false) @map("is_billable")
+  markupPercentage  Decimal?        @db.Decimal(5, 2) @map("markup_percentage")
+  invoiceNumber     String?         @map("invoice_number")
+  notes             String?
+  createdAt         DateTime        @default(now()) @map("created_at")
+  updatedAt         DateTime        @updatedAt @map("updated_at")
+
+  @@index([projectId])
+  @@index([clientId])
+  @@index([category])
+  @@index([date])
+  @@map("project_expenses")
 }
