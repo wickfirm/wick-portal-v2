@@ -50,6 +50,7 @@ export default function Header() {
   ] : userRole === "MEMBER" ? [
     // MEMBERs see limited navigation
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
@@ -60,6 +61,7 @@ export default function Header() {
   ] : [
     // ADMINs and SUPER_ADMINs see full navigation
     { href: "/dashboard", label: "Dashboard" },
+    { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
     { href: "/lead-qualifier", label: "Lead Qualifier" },
     { href: "/clients", label: "Clients" },
