@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     // 2. Get tasks due on target date
     const dueTasks = await prisma.clientTask.findMany({
       where: {
-        assignedToId: userId,
+        assigneeId: userId,
         dueDate: {
           gte: targetDate,
           lt: new Date(targetDate.getTime() + 24 * 60 * 60 * 1000),
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
     // 3. Get high priority tasks from active projects
     const highPriorityTasks = await prisma.clientTask.findMany({
       where: {
-        assignedToId: userId,
+        assigneeId: userId,
         priority: "HIGH",
         status: { in: ["TODO", "IN_PROGRESS"] },
         id: { notIn: [...existingTaskIds, ...dueTasks.map(t => t.id)] },
@@ -96,7 +96,7 @@ export async function GET(req: NextRequest) {
     // 4. Get next tasks from active projects (project sequence)
     const projectTasks = await prisma.clientTask.findMany({
       where: {
-        assignedToId: userId,
+        assigneeId: userId,
         status: { in: ["TODO", "IN_PROGRESS"] },
         id: { 
           notIn: [
