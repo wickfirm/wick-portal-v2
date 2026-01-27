@@ -11,6 +11,7 @@ type Task = {
   priority: string;
   dueDate: Date | null;
   projectId: string | null;
+  categoryId: string | null;
   notes: string | null;
   nextSteps: string | null;
   ownerType: string;
@@ -22,6 +23,10 @@ type Task = {
     id: string;
     name: string;
   };
+  category: {
+    id: string;
+    name: string;
+  } | null;
   assignee: {
     id: string;
     name: string | null;
@@ -402,32 +407,30 @@ export default function TasksList({
             </select>
           </div>
 
-          {/* Assignee Filter (only for ADMIN/SUPER_ADMIN) */}
-          {currentUserRole !== "MEMBER" && (
-            <div>
-              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 6 }}>
-                Assignee
-              </label>
-              <select
-                value={selectedAssignee}
-                onChange={(e) => setSelectedAssignee(e.target.value)}
-                style={{
-                  width: "100%",
-                  padding: "8px 12px",
-                  border: "1px solid " + theme.colors.borderLight,
-                  borderRadius: theme.borderRadius.md,
-                  background: theme.colors.bgPrimary,
-                  color: theme.colors.textPrimary,
-                  fontSize: 14,
-                }}
-              >
-                <option value="">All Assignees</option>
-                {teamMembers.map(member => (
-                  <option key={member.id} value={member.id}>{member.name || "Unnamed"}</option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Assignee Filter */}
+          <div>
+            <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 6 }}>
+              Assignee
+            </label>
+            <select
+              value={selectedAssignee}
+              onChange={(e) => setSelectedAssignee(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                border: "1px solid " + theme.colors.borderLight,
+                borderRadius: theme.borderRadius.md,
+                background: theme.colors.bgPrimary,
+                color: theme.colors.textPrimary,
+                fontSize: 14,
+              }}
+            >
+              <option value="">All Assignees</option>
+              {teamMembers.map(member => (
+                <option key={member.id} value={member.id}>{member.name || "Unnamed"}</option>
+              ))}
+            </select>
+          </div>
 
           {/* Clear Filters */}
           {hasActiveFilters && (
