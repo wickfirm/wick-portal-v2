@@ -169,6 +169,11 @@ export async function DELETE(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { 
+        id: true, 
+        hourlyRate: true,
+        billRate: true
+      },
     });
 
     if (!user) {
@@ -215,6 +220,8 @@ export async function DELETE(request: Request) {
           description,
           billable: true,
           source: "TIMER",
+          hourlyRateAtTime: user.hourlyRate,
+          billRateAtTime: user.billRate,
         },
         include: {
           client: { select: { id: true, name: true, nickname: true } },
