@@ -67,6 +67,10 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.budget !== undefined) updateData.budget = data.budget;
     if (data.billRate !== undefined) updateData.billRate = data.billRate !== null ? parseFloat(data.billRate) : null;
 
+    // Finance Module fields
+    if (data.pricingModel !== undefined) updateData.pricingModel = data.pricingModel;
+    if (data.fixedFeeAmount !== undefined) updateData.fixedFeeAmount = data.fixedFeeAmount ? parseFloat(data.fixedFeeAmount) : null;
+
     const project = await prisma.project.update({
       where: { id: params.id },
       data: updateData,
