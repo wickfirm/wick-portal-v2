@@ -337,6 +337,7 @@ export default function DailyPage() {
                   borderRadius: theme.borderRadius.lg,
                   border: "1px solid " + theme.colors.borderLight,
                   padding: 24,
+                  marginBottom: 24,
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
@@ -432,6 +433,104 @@ export default function DailyPage() {
                     </div>
                   )}
                 </div>
+
+                {/* Available Suggestions */}
+                {(() => {
+                  const existingIds = dailyTasks.map(dt => dt.task.id);
+                  const availableSuggestions = suggestions.filter(s => !existingIds.includes(s.task.id));
+                  
+                  if (availableSuggestions.length > 0) {
+                    return (
+                      <div style={{
+                        background: theme.colors.bgSecondary,
+                        borderRadius: theme.borderRadius.lg,
+                        border: "1px solid " + theme.colors.borderLight,
+                        padding: 24,
+                      }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: theme.colors.textPrimary }}>
+                          💡 Suggested Tasks ({availableSuggestions.length})
+                        </h3>
+                        <div style={{ display: "grid", gap: 12 }}>
+                          {availableSuggestions.map(suggestion => (
+                            <div
+                              key={suggestion.task.id}
+                              style={{
+                                padding: 16,
+                                background: theme.colors.bgPrimary,
+                                borderRadius: theme.borderRadius.md,
+                                border: "1px solid " + theme.colors.borderLight,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 16,
+                                cursor: "pointer",
+                              }}
+                              onClick={async () => {
+                                await fetch("/api/daily/tasks", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ 
+                                    taskId: suggestion.task.id, 
+                                    date: today, 
+                                    source: suggestion.source 
+                                  }),
+                                });
+                                loadData();
+                              }}
+                            >
+                              <div style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: "50%",
+                                border: `2px solid ${theme.colors.primary}`,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                color: theme.colors.primary,
+                                flexShrink: 0,
+                              }}>
+                                +
+                              </div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 4 }}>
+                                  {suggestion.task.name}
+                                </div>
+                                <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
+                                  {suggestion.reason} • {suggestion.task.client.name} • {suggestion.task.project.name}
+                                </div>
+                              </div>
+                              {suggestion.task.priority === "HIGH" && (
+                                <span style={{
+                                  padding: "4px 8px",
+                                  background: theme.colors.errorBg,
+                                  color: theme.colors.error,
+                                  borderRadius: theme.borderRadius.sm,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                }}>
+                                  HIGH
+                                </span>
+                              )}
+                              {suggestion.task.dueDate && (
+                                <span style={{
+                                  padding: "4px 8px",
+                                  background: theme.colors.warningBg,
+                                  color: theme.colors.warning,
+                                  borderRadius: theme.borderRadius.sm,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                }}>
+                                  📅 {new Date(suggestion.task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
             )}
           </div>
