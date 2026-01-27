@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-// GET /api/finance/client-profitability/[id] - Calculate client profitability
+// GET /api/finance/project-profitability/[id] - Calculate project profitability
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -12,25 +12,32 @@ export async function GET(
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
-    const clientId = params.id;
+    const projectId = params.id;
 
-    // Get client with revenue model
-    const client = await prisma.client.findUnique({
-      where: { id: clientId },
+    // Get project with client info
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            nickname: true,
+            revenueModel: true,
+            pricingModel: true,
+            monthlyRevenue: true,
+          },
+        },
+      },
     });
 
-    if (!client) {
-      return NextResponse.json({ error: "Client not found" }, { status: 404 });
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
-    // Get all projects for this client
-    const projects = await prisma.project.findMany({
-      where: { clientId },
-    });
-
-    // Get all time entries for this client
+    // Get all time entries for this project
     const timeEntries = await prisma.timeEntry.findMany({
-      where: { clientId },
+      where: { projectId },
       include: {
         user: {
           select: {
@@ -40,18 +47,12 @@ export async function GET(
             billRate: true,
           },
         },
-        project: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
       },
     });
 
-    // Get all expenses for this client
+    // Get all expenses for this project
     const expenses = await prisma.projectExpense.findMany({
-      where: { clientId },
+      where: { projectId },
     });
 
     // Calculate time costs
@@ -59,41 +60,40 @@ export async function GET(
     let totalLaborCost = 0;
     let totalLaborRevenue = 0;
 
-    // Group by project for breakdown
-    const projectBreakdown: Record<string, any> = {};
+    // Group by user for breakdown
+    const userBreakdown: Record<string, any> = {};
 
     timeEntries.forEach((entry) => {
       const hours = entry.duration / 3600;
       totalHours += hours;
 
-      // Cost
+      // Cost - Use rate snapshot if available, fallback to current rate
       const hourlyRate = Number(entry.hourlyRateAtTime) || Number(entry.user.hourlyRate) || 0;
       const cost = hours * hourlyRate;
       totalLaborCost += cost;
 
-      // Revenue (only for T&M at project level)
+      // Revenue (only for billable entries)
       if (entry.billable) {
         const billRate = Number(entry.billRateAtTime) || Number(entry.user.billRate) || 0;
         const revenue = hours * billRate;
         totalLaborRevenue += revenue;
       }
 
-      // Track per-project
-      if (!projectBreakdown[entry.projectId]) {
-        projectBreakdown[entry.projectId] = {
-          projectId: entry.projectId,
-          projectName: entry.project.name,
+      // Track per-user
+      if (!userBreakdown[entry.userId]) {
+        userBreakdown[entry.userId] = {
+          userId: entry.userId,
+          userName: entry.user.name,
           hours: 0,
-          laborCost: 0,
-          laborRevenue: 0,
-          expenses: 0,
+          cost: 0,
+          revenue: 0,
         };
       }
-      projectBreakdown[entry.projectId].hours += hours;
-      projectBreakdown[entry.projectId].laborCost += cost;
+      userBreakdown[entry.userId].hours += hours;
+      userBreakdown[entry.userId].cost += cost;
       if (entry.billable) {
         const billRate = Number(entry.billRateAtTime) || Number(entry.user.billRate) || 0;
-        projectBreakdown[entry.projectId].laborRevenue += hours * billRate;
+        userBreakdown[entry.userId].revenue += hours * billRate;
       }
     });
 
@@ -109,34 +109,24 @@ export async function GET(
         const markup = Number(expense.markupPercentage) || 0;
         totalExpenseRevenue += amount * (1 + markup / 100);
       }
-
-      // Track per-project
-      if (projectBreakdown[expense.projectId]) {
-        projectBreakdown[expense.projectId].expenses += amount;
-      }
     });
 
-    // Determine final revenue based on client's revenue model
+    // Determine final revenue based on pricing model
     let finalRevenue = 0;
     
-    if (client.revenueModel === "CLIENT_LEVEL") {
-      // Client-level: Use monthly revenue or fixed fee
-      if (client.pricingModel === "FIXED_FEE" && client.monthlyRevenue) {
-        finalRevenue = Number(client.monthlyRevenue);
+    // Check if client uses CLIENT_LEVEL revenue model
+    if (project.client.revenueModel === "CLIENT_LEVEL") {
+      // For client-level, we can't determine this project's share
+      // We'll just show T&M calculated revenue for now
+      finalRevenue = totalLaborRevenue + totalExpenseRevenue;
+    } else {
+      // Project-based revenue
+      if (project.pricingModel === "FIXED_FEE" && project.fixedFeeAmount) {
+        finalRevenue = Number(project.fixedFeeAmount);
       } else {
-        // T&M at client level still uses calculated revenue
+        // TIME_AND_MATERIALS
         finalRevenue = totalLaborRevenue + totalExpenseRevenue;
       }
-    } else {
-      // Project-based: Sum up project revenues
-      // Need to check each project's pricing model
-      for (const project of projects) {
-        if (project.pricingModel === "FIXED_FEE" && project.fixedFeeAmount) {
-          finalRevenue += Number(project.fixedFeeAmount);
-        }
-      }
-      // Add T&M revenue from time entries
-      finalRevenue += totalLaborRevenue + totalExpenseRevenue;
     }
 
     // Total calculations
@@ -145,13 +135,17 @@ export async function GET(
     const profitMargin = finalRevenue > 0 ? (profitAmount / finalRevenue) * 100 : 0;
 
     return NextResponse.json({
+      project: {
+        id: project.id,
+        name: project.name,
+        pricingModel: project.pricingModel,
+        fixedFeeAmount: project.fixedFeeAmount ? Number(project.fixedFeeAmount) : null,
+      },
       client: {
-        id: client.id,
-        name: client.name,
-        nickname: client.nickname,
-        revenueModel: client.revenueModel,
-        pricingModel: client.pricingModel,
-        monthlyRevenue: client.monthlyRevenue ? Number(client.monthlyRevenue) : null,
+        id: project.client.id,
+        name: project.client.name,
+        nickname: project.client.nickname,
+        revenueModel: project.client.revenueModel,
       },
       hours: {
         total: Math.round(totalHours * 100) / 100,
@@ -164,23 +158,32 @@ export async function GET(
       revenue: {
         labor: Math.round(totalLaborRevenue * 100) / 100,
         expenses: Math.round(totalExpenseRevenue * 100) / 100,
-        clientLevel: client.revenueModel === "CLIENT_LEVEL" && client.monthlyRevenue ? Number(client.monthlyRevenue) : 0,
         total: Math.round(finalRevenue * 100) / 100,
       },
       profit: {
         amount: Math.round(profitAmount * 100) / 100,
         margin: Math.round(profitMargin * 100) / 100,
       },
-      projectBreakdown: Object.values(projectBreakdown).map((p: any) => ({
-        ...p,
-        hours: Math.round(p.hours * 100) / 100,
-        laborCost: Math.round(p.laborCost * 100) / 100,
-        laborRevenue: Math.round(p.laborRevenue * 100) / 100,
-        expenses: Math.round(p.expenses * 100) / 100,
+      userBreakdown: Object.values(userBreakdown).map((u: any) => ({
+        ...u,
+        hours: Math.round(u.hours * 100) / 100,
+        cost: Math.round(u.cost * 100) / 100,
+        revenue: Math.round(u.revenue * 100) / 100,
+      })),
+      expenses: expenses.map((e) => ({
+        id: e.id,
+        category: e.category,
+        description: e.description,
+        amount: Number(e.amount),
+        isBillable: e.isBillable,
+        markupPercentage: e.markupPercentage ? Number(e.markupPercentage) : null,
+        billedAmount: e.isBillable 
+          ? Number(e.amount) * (1 + (Number(e.markupPercentage) || 0) / 100)
+          : Number(e.amount),
       })),
     });
   } catch (error) {
-    console.error("Failed to calculate client profitability:", error);
-    return NextResponse.json({ error: "Failed to calculate client profitability" }, { status: 500 });
+    console.error("Failed to calculate project profitability:", error);
+    return NextResponse.json({ error: "Failed to calculate project profitability" }, { status: 500 });
   }
 }
