@@ -67,6 +67,7 @@ export default function TasksManager({
   const [filterPriority, setFilterPriority] = useState<string>("ALL");
   const [filterOwner, setFilterOwner] = useState<string>("ALL");
   const [filterAssignee, setFilterAssignee] = useState<string>("ALL");
+  const [filterClient, setFilterClient] = useState<string>("ALL");
   const [hideCompleted, setHideCompleted] = useState(true);
   
   // Side panel state
@@ -197,54 +198,48 @@ export default function TasksManager({
     }
   }
 
-  async function quickAddTask(categoryId: string) {
+  async function addQuickTask(categoryId: string | null) {
     if (!quickAddName.trim()) return;
 
-    // Validate project is selected (except in project context where it's auto-set)
-    if (context !== "project" && !quickAddProject) {
-      alert("Please select a project for this task.");
+    // Validate required fields based on context
+    if (context === "general" && !quickAddClient) {
+      alert("Please select a client");
       return;
     }
 
-    const taskData: any = {
-      name: quickAddName,
-      categoryId: categoryId || null,
-      projectId: quickAddProject || null,
-      status: "PENDING",
-      priority: "MEDIUM",
-      ownerType: "AGENCY",
-    };
-
-    // Add clientId based on context
-    if (context === "client" && clientId) {
-      taskData.clientId = clientId;
-    } else if (context === "general" && quickAddClient) {
-      taskData.clientId = quickAddClient;
-    } else if (context === "project" && client) {
-      taskData.clientId = client.id;
-      taskData.projectId = projectId;
+    if (!quickAddProject) {
+      alert("Please select a project");
+      return;
     }
 
     try {
+      const taskData: any = {
+        name: quickAddName.trim(),
+        categoryId: categoryId || null,
+        projectId: quickAddProject,
+        status: "PENDING",
+        priority: "MEDIUM",
+        ownerType: "AGENCY",
+      };
+
+      // Add clientId for general context
+      if (context === "general") {
+        taskData.clientId = quickAddClient;
+      }
+
       const res = await fetch(getCreateTaskEndpoint(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(taskData),
       });
-      
+
       if (res.ok) {
         setQuickAddName("");
-        setQuickAddProject("");
-        setQuickAddClient("");
         setQuickAddCategory(null);
         await fetchTasks();
-      } else {
-        const error = await res.json();
-        alert(error.error || "Failed to create task");
       }
     } catch (error) {
       console.error("Error creating task:", error);
-      alert("Failed to create task");
     }
   }
 
@@ -252,15 +247,15 @@ export default function TasksManager({
     setSelectedTask(task);
     setEditForm({
       name: task.name,
-      notes: task.notes || "",
-      nextSteps: task.nextSteps || "",
       status: task.status,
       priority: task.priority,
-      dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
-      categoryId: task.category?.id || "",
-      projectId: task.projectId || "",
       ownerType: task.ownerType,
+      dueDate: task.dueDate ? task.dueDate.split("T")[0] : "",
       assigneeId: task.assigneeId || "",
+      categoryId: task.categoryId || "",
+      projectId: task.projectId || "",
+      notes: task.notes || "",
+      nextSteps: task.nextSteps || "",
       externalLink: task.externalLink || "",
       externalLinkLabel: task.externalLinkLabel || "",
       internalLink: task.internalLink || "",
@@ -276,91 +271,69 @@ export default function TasksManager({
   async function saveTask() {
     if (!selectedTask) return;
     setSaving(true);
-
     try {
-      // Prepare form data, converting empty strings to null for optional fields
-      const formData = {
-        ...editForm,
-        categoryId: editForm.categoryId || null,
-        assigneeId: editForm.assigneeId || null,
-        dueDate: editForm.dueDate || null,
-      };
-
       const res = await fetch(`/api/tasks/${selectedTask.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(editForm),
       });
-
       if (res.ok) {
         await fetchTasks();
         closeTaskPanel();
       }
     } catch (error) {
       console.error("Error saving task:", error);
-    } finally {
-      setSaving(false);
     }
+    setSaving(false);
   }
 
-  function toggleCategory(categoryId: string) {
-    const newCollapsed = new Set(collapsedCategories);
-    if (newCollapsed.has(categoryId)) {
-      newCollapsed.delete(categoryId);
-    } else {
-      newCollapsed.add(categoryId);
-    }
-    setCollapsedCategories(newCollapsed);
+  function toggleCategoryCollapse(categoryId: string) {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
   }
 
-  function toggleClient(clientId: string) {
-    const newCollapsed = new Set(collapsedClients);
-    if (newCollapsed.has(clientId)) {
-      newCollapsed.delete(clientId);
-    } else {
-      newCollapsed.add(clientId);
-    }
-    setCollapsedClients(newCollapsed);
+  function toggleClientCollapse(clientId: string) {
+    setCollapsedClients(prev => {
+      const next = new Set(prev);
+      if (next.has(clientId)) {
+        next.delete(clientId);
+      } else {
+        next.add(clientId);
+      }
+      return next;
+    });
   }
 
-  // Apply filters
-  const filteredTasks = tasks.filter(task => {
+  const matchesFilters = (task: Task) => {
     if (hideCompleted && task.status === "COMPLETED") return false;
     if (filterStatus !== "ALL" && task.status !== filterStatus) return false;
     if (filterPriority !== "ALL" && task.priority !== filterPriority) return false;
     if (filterOwner !== "ALL" && task.ownerType !== filterOwner) return false;
     if (filterAssignee !== "ALL" && task.assignee?.id !== filterAssignee) return false;
+    if (filterClient !== "ALL" && task.client?.id !== filterClient) return false;
     return true;
-  });
+  };
 
-  // Group tasks - in general context, group by client first, then by category
-  // In client/project context, just group by category
-  const groupedByClient: Record<string, Task[]> = {};
-  const groupedTasks: Record<string, Task[]> = {};
-  const uncategorized: Task[] = [];
-  
-  if (context === "general") {
-    // Group by client first
-    filteredTasks.forEach(task => {
-      const clientKey = task.client?.id || "unknown";
-      if (!groupedByClient[clientKey]) {
-        groupedByClient[clientKey] = [];
-      }
-      groupedByClient[clientKey].push(task);
-    });
-  } else {
-    // Group by category directly
-    filteredTasks.forEach(task => {
-      if (task.category) {
-        if (!groupedTasks[task.category.id]) {
-          groupedTasks[task.category.id] = [];
-        }
-        groupedTasks[task.category.id].push(task);
-      } else {
-        uncategorized.push(task);
-      }
-    });
-  }
+  const getClientDisplayName = (task: Task) => {
+    if (!task.client) return "No Client";
+    return task.client.nickname || task.client.name;
+  };
+
+  const getAgencyName = (task: Task) => {
+    if (!task.client?.agencies || task.client.agencies.length === 0) return "No Agency";
+    return task.client.agencies[0]?.agency?.name || "No Agency";
+  };
+
+  // For context-specific display names
+  const clientDisplayName = client?.nickname || client?.name || "Client";
+  const agencyDisplayName = client?.agencies?.[0]?.agency?.name || "Agency";
 
   // Sort categories by order
   const sortedCategories = [...categories].sort((a, b) => a.order - b.order);
@@ -371,8 +344,19 @@ export default function TasksManager({
     filterPriority !== "ALL",
     filterOwner !== "ALL",
     filterAssignee !== "ALL",
+    filterClient !== "ALL",
     !hideCompleted,
   ].filter(Boolean).length;
+
+  // Clear all filters
+  const clearFilters = () => {
+    setFilterStatus("ALL");
+    setFilterPriority("ALL");
+    setFilterOwner("ALL");
+    setFilterAssignee("ALL");
+    setFilterClient("ALL");
+    setHideCompleted(true);
+  };
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -380,21 +364,9 @@ export default function TasksManager({
     border: "1px solid " + theme.colors.borderMedium,
     borderRadius: 8,
     fontSize: 14,
-    boxSizing: "border-box",
-    outline: "none",
+    background: theme.colors.bgPrimary,
+    color: theme.colors.textPrimary,
   };
-
-  // Owner display names for dropdown
-  const clientDisplayName = client?.nickname || client?.name || "Client";
-  const agencyDisplayName = client?.agencies?.[0]?.agency?.name || "Agency";
-
-  if (loading) {
-    return (
-      <div style={{ padding: 48, textAlign: "center", color: theme.colors.textSecondary }}>
-        Loading tasks...
-      </div>
-    );
-  }
 
   const renderTaskRow = (task: Task) => (
     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
@@ -519,269 +491,409 @@ export default function TasksManager({
             color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary,
             cursor: "pointer",
             outline: "none",
+            width: "100%",
           }}
         >
-          {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+          {STATUS_OPTIONS.map(s => (
+            <option key={s} value={s}>
+              {s.replace(/_/g, " ")}
+            </option>
+          ))}
         </select>
       </td>
 
-      {/* Notes Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 150 }}>
-        <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {task.notes || "-"}
-        </div>
+      {/* Category */}
+      <td style={{ padding: "10px 12px", width: 140 }}>
+        <select
+          value={task.categoryId || ""}
+          onChange={(e) => updateTaskField(task.id, "categoryId", e.target.value || null)}
+          style={{
+            padding: "4px 8px",
+            borderRadius: 6,
+            border: "1px solid " + theme.colors.borderLight,
+            fontSize: 12,
+            background: "white",
+            color: task.categoryId ? theme.colors.textPrimary : theme.colors.textMuted,
+            cursor: "pointer",
+            outline: "none",
+            maxWidth: "100%",
+          }}
+        >
+          <option value="">None</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>
+              {cat.name}
+            </option>
+          ))}
+        </select>
       </td>
 
-      {/* Next Steps Preview */}
-      <td style={{ padding: "10px 12px", maxWidth: 120 }}>
-        <div style={{ fontSize: 12, color: theme.colors.textMuted, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-          {task.nextSteps || "-"}
-        </div>
-      </td>
-
-      {/* Client Column (conditional) */}
+      {/* Client (only in general context) */}
       {showClientColumn && (
-        <td style={{ padding: "10px 12px", width: 120 }}>
-          {task.client ? (
-            <div style={{
-              fontSize: 11,
-              fontWeight: 500,
-              color: theme.colors.textPrimary,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}>
-              {task.client.nickname || task.client.name}
-            </div>
-          ) : (
-            <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>-</span>
-          )}
+        <td style={{ padding: "10px 12px", minWidth: 150 }}>
+          <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+            {getClientDisplayName(task)}
+          </div>
         </td>
       )}
 
-      {/* Internal Link */}
-      <td style={{ padding: "10px 12px", width: 70 }}>
-        {task.internalLink ? (
-          <a href={task.internalLink} target="_blank" rel="noopener noreferrer" style={{
-            padding: "4px 8px",
-            background: theme.colors.infoBg,
-            color: theme.colors.info,
-            borderRadius: 4,
-            fontSize: 10,
-            textDecoration: "none",
-            fontWeight: 500,
-          }}>
-            {task.internalLinkLabel || "Internal"}
-          </a>
-        ) : (
-          <span style={{ color: theme.colors.textMuted, fontSize: 12 }}>-</span>
-        )}
-      </td>
-
       {/* Actions */}
-      <td style={{ padding: "10px 12px", width: 100, textAlign: "right" }}>
-        <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
-          <button
-            onClick={() => openTaskPanel(task)}
-            style={{
-              padding: "4px 10px",
-              background: theme.colors.infoBg,
-              color: theme.colors.info,
-              border: "none",
-              borderRadius: 4,
-              fontSize: 11,
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => deleteTask(task.id)}
-            style={{
-              padding: "4px 8px",
-              background: theme.colors.errorBg,
-              color: theme.colors.error,
-              border: "none",
-              borderRadius: 4,
-              fontSize: 11,
-              cursor: "pointer",
-            }}
-          >
-            ✕
-          </button>
-        </div>
+      <td style={{ padding: "10px 12px", width: 80, textAlign: "center" }}>
+        <button
+          onClick={() => deleteTask(task.id)}
+          style={{
+            padding: "4px 8px",
+            fontSize: 11,
+            background: "transparent",
+            color: theme.colors.error,
+            border: "1px solid " + theme.colors.borderLight,
+            borderRadius: 4,
+            cursor: "pointer",
+          }}
+        >
+          Delete
+        </button>
       </td>
     </tr>
   );
 
-  const renderCategorySection = (category: TaskCategory | null, categoryTasks: Task[]) => {
-    const categoryId = category?.id || "uncategorized";
-    const categoryName = category?.name || "Uncategorized";
-    const isCollapsed = collapsedCategories.has(categoryId);
-    const completedCount = categoryTasks.filter(t => t.status === "COMPLETED").length;
-    const pendingCount = categoryTasks.length - completedCount;
+  const renderCategorySection = (categoryId: string | null, categoryName: string) => {
+    const categoryTasks = tasks.filter(t => {
+      const matchesCategory = categoryId ? t.categoryId === categoryId : !t.categoryId;
+      return matchesCategory && matchesFilters(t);
+    });
+
+    if (categoryTasks.length === 0) return null;
+
+    const isCollapsed = collapsedCategories.has(categoryId || "uncategorized");
 
     return (
-      <div key={categoryId} style={{ marginBottom: 16 }}>
-        {/* Category Header */}
+      <div key={categoryId || "uncategorized"} style={{ marginBottom: 32 }}>
         <div
-          onClick={() => toggleCategory(categoryId)}
+          onClick={() => toggleCategoryCollapse(categoryId || "uncategorized")}
           style={{
-            padding: "12px 16px",
-            background: theme.colors.bgTertiary,
-            borderRadius: isCollapsed ? 8 : "8px 8px 0 0",
-            cursor: "pointer",
             display: "flex",
-            justifyContent: "space-between",
             alignItems: "center",
+            gap: 8,
+            marginBottom: 16,
+            cursor: "pointer",
             userSelect: "none",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ 
-              fontSize: 12, 
-              color: theme.colors.textMuted,
-              transform: isCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-            }}>
-              ▼
-            </span>
-            <span style={{ fontWeight: 600, fontSize: 14, color: theme.colors.textPrimary }}>
-              {categoryName}
-            </span>
-            <span style={{ fontSize: 12, color: theme.colors.textMuted }}>
-              ({pendingCount} active{completedCount > 0 ? `, ${completedCount} done` : ""})
-            </span>
+          <div style={{
+            fontSize: 20,
+            fontWeight: 600,
+            color: theme.colors.textPrimary,
+          }}>
+            {isCollapsed ? "▶" : "▼"} {categoryName} ({categoryTasks.length})
           </div>
           <button
             onClick={(e) => {
               e.stopPropagation();
               setQuickAddCategory(categoryId);
-              
-              // Auto-select default project if available (except in project context)
-              if (context !== "project" && !quickAddProject) {
-                const defaultProj = projects.find((p: any) => p.isDefault || p.name === "Admin/Operations");
-                if (defaultProj) {
-                  setQuickAddProject(defaultProj.id);
-                }
-              }
             }}
             style={{
               padding: "4px 12px",
+              fontSize: 12,
               background: theme.colors.primary,
               color: "white",
               border: "none",
-              borderRadius: 4,
-              fontSize: 12,
-              fontWeight: 500,
+              borderRadius: 6,
               cursor: "pointer",
+              fontWeight: 500,
             }}
           >
-            + Add
+            + Add Task
           </button>
         </div>
 
-        {/* Tasks Table */}
         {!isCollapsed && (
-          <div style={{ 
-            background: theme.colors.bgSecondary, 
-            border: "1px solid " + theme.colors.borderLight,
-            borderTop: "none",
-            borderRadius: "0 0 8px 8px",
-            overflow: "hidden",
-          }}>
-            {/* Quick Add Row */}
+          <>
             {quickAddCategory === categoryId && (
-              <div style={{ padding: "12px 16px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input
-                  value={quickAddName}
-                  onChange={(e) => setQuickAddName(e.target.value)}
-                  placeholder="Task name..."
-                  autoFocus
-                  style={{ ...inputStyle, flex: "1 1 250px" }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") quickAddTask(category?.id || "");
-                    if (e.key === "Escape") { setQuickAddCategory(null); setQuickAddName(""); setQuickAddProject(""); setQuickAddClient(""); }
-                  }}
-                />
-                {context === "general" && (
-                  <select
-                    value={quickAddClient}
-                    onChange={(e) => {
-                      setQuickAddClient(e.target.value);
-                      setQuickAddProject(""); // Clear project when client changes
+              <div style={{
+                background: theme.colors.bgSecondary,
+                border: "1px solid " + theme.colors.borderLight,
+                borderRadius: 8,
+                padding: 16,
+                marginBottom: 16,
+              }}>
+                <div style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                      Task Name
+                    </label>
+                    <input
+                      type="text"
+                      value={quickAddName}
+                      onChange={(e) => setQuickAddName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addQuickTask(categoryId);
+                        if (e.key === "Escape") {
+                          setQuickAddCategory(null);
+                          setQuickAddName("");
+                        }
+                      }}
+                      placeholder="Enter task name..."
+                      autoFocus
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: 6,
+                        fontSize: 14,
+                      }}
+                    />
+                  </div>
+
+                  {context === "general" && (
+                    <div style={{ minWidth: 200 }}>
+                      <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                        Client
+                      </label>
+                      <select
+                        value={quickAddClient}
+                        onChange={(e) => {
+                          setQuickAddClient(e.target.value);
+                          setQuickAddProject(""); // Reset project when client changes
+                        }}
+                        style={{
+                          width: "100%",
+                          padding: "8px 12px",
+                          border: "1px solid " + theme.colors.borderMedium,
+                          borderRadius: 6,
+                          fontSize: 14,
+                        }}
+                      >
+                        <option value="">Select Client...</option>
+                        {clients.map(c => (
+                          <option key={c.id} value={c.id}>
+                            {c.nickname || c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                  <div style={{ minWidth: 200 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                      Project
+                    </label>
+                    <select
+                      value={quickAddProject}
+                      onChange={(e) => setQuickAddProject(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: 6,
+                        fontSize: 14,
+                      }}
+                    >
+                      <option value="">Select Project...</option>
+                      {projects
+                        .filter(p => !quickAddClient || p.clientId === quickAddClient)
+                        .map(p => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                            {p.isDefault && " (Default)"}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <button
+                    onClick={() => addQuickTask(categoryId)}
+                    style={{
+                      padding: "8px 16px",
+                      background: theme.colors.primary,
+                      color: "white",
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontWeight: 500,
+                      whiteSpace: "nowrap",
                     }}
-                    style={{ ...inputStyle, flex: "0 1 180px", cursor: "pointer" }}
                   >
-                    <option value="">Select Client...</option>
-                    {clients.map((c: any) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
-                )}
-                {context !== "project" && (
-                  <select
-                    value={quickAddProject}
-                    onChange={(e) => setQuickAddProject(e.target.value)}
-                    style={{ ...inputStyle, flex: "0 1 200px", cursor: "pointer" }}
-                    required
+                    Add
+                  </button>
+                  <button
+                    onClick={() => {
+                      setQuickAddCategory(null);
+                      setQuickAddName("");
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      background: theme.colors.bgTertiary,
+                      color: theme.colors.textSecondary,
+                      border: "none",
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      fontWeight: 500,
+                    }}
                   >
-                    <option value="">Select Project...</option>
-                    {projects
-                      .filter((p: any) => !quickAddClient || p.clientId === quickAddClient)
-                      .map((p: any) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                          {p.isDefault && " (Default)"}
-                        </option>
-                      ))}
-                  </select>
-                )}
-                <button onClick={() => quickAddTask(category?.id || "")} style={{ padding: "10px 20px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 8, fontWeight: 500, cursor: "pointer" }}>Add</button>
-                <button onClick={() => { setQuickAddCategory(null); setQuickAddName(""); setQuickAddProject(""); setQuickAddClient(""); }} style={{ padding: "10px 16px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, cursor: "pointer" }}>Cancel</button>
+                    Cancel
+                  </button>
+                </div>
               </div>
             )}
 
-            {categoryTasks.length === 0 ? (
-              <div style={{ padding: 24, textAlign: "center", color: theme.colors.textMuted, fontSize: 13 }}>
-                No tasks in this category
-              </div>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 1000 }}>
-                  <thead>
-                    <tr style={{ background: theme.colors.bgPrimary }}>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Task</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Assignee</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Owner</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Due Date</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Priority</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Status</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Notes</th>
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Next Steps</th>
-                      {showClientColumn && (
-                        <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Client</th>
-                      )}
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontWeight: 600, fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase" }}>Internal</th>
-                      <th style={{ padding: "10px 12px" }}></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {categoryTasks.map(renderTaskRow)}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+            <div style={{
+              background: theme.colors.bgSecondary,
+              border: "1px solid " + theme.colors.borderLight,
+              borderRadius: theme.borderRadius.lg,
+              overflow: "hidden",
+            }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Task
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Assignee
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Owner
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Due Date
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Priority
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Status
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Category
+                    </th>
+                    {showClientColumn && (
+                      <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                        Client
+                      </th>
+                    )}
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {categoryTasks.map(renderTaskRow)}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     );
   };
 
+  const renderByClient = () => {
+    const clientGroups = new Map<string, Task[]>();
+    
+    tasks.forEach(task => {
+      if (!matchesFilters(task)) return;
+      
+      const clientId = task.client?.id || "no-client";
+      if (!clientGroups.has(clientId)) {
+        clientGroups.set(clientId, []);
+      }
+      clientGroups.get(clientId)!.push(task);
+    });
+
+    if (clientGroups.size === 0) {
+      return (
+        <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
+          No tasks match the current filters
+        </div>
+      );
+    }
+
+    return Array.from(clientGroups.entries()).map(([clientId, clientTasks]) => {
+      const clientData = clients.find(c => c.id === clientId);
+      const clientName = clientData?.nickname || clientData?.name || "No Client";
+      const isCollapsed = collapsedClients.has(clientId);
+
+      return (
+        <div key={clientId} style={{ marginBottom: 32 }}>
+          <div
+            onClick={() => toggleClientCollapse(clientId)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              marginBottom: 16,
+              cursor: "pointer",
+              userSelect: "none",
+            }}
+          >
+            <div style={{
+              fontSize: 24,
+              fontWeight: 600,
+              color: theme.colors.textPrimary,
+            }}>
+              {isCollapsed ? "▶" : "▼"} {clientName} ({clientTasks.length})
+            </div>
+          </div>
+
+          {!isCollapsed && (
+            <div style={{
+              background: theme.colors.bgSecondary,
+              border: "1px solid " + theme.colors.borderLight,
+              borderRadius: theme.borderRadius.lg,
+              overflow: "hidden",
+            }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Task
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Assignee
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Owner
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Due Date
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Priority
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Status
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Category
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {clientTasks.map(renderTaskRow)}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      );
+    });
+  };
+
+  if (loading) {
+    return (
+      <div style={{ padding: 40, textAlign: "center", color: theme.colors.textMuted }}>
+        Loading tasks...
+      </div>
+    );
+  }
+
   return (
     <>
-      {/* Filter Bar */}
+      {/* Filters */}
       <div style={{
         background: theme.colors.bgSecondary,
         border: "1px solid " + theme.colors.borderLight,
@@ -865,6 +977,30 @@ export default function TasksManager({
             </select>
           </div>
 
+          {context === "general" && (
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Client:</label>
+              <select
+                value={filterClient}
+                onChange={(e) => setFilterClient(e.target.value)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  border: "1px solid " + theme.colors.borderLight,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <option value="ALL">All</option>
+                {clients.map(client => (
+                  <option key={client.id} value={client.id}>
+                    {client.nickname || client.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <input
               type="checkbox"
@@ -879,115 +1015,41 @@ export default function TasksManager({
           </div>
 
           {activeFilterCount > 0 && (
-            <div style={{ marginLeft: "auto", fontSize: 13, color: theme.colors.textMuted }}>
-              {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
-            </div>
+            <>
+              <div style={{ marginLeft: "auto", fontSize: 13, color: theme.colors.textMuted }}>
+                {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+              </div>
+              <button
+                onClick={clearFilters}
+                style={{
+                  padding: "6px 16px",
+                  borderRadius: 6,
+                  border: "1px solid " + theme.colors.borderMedium,
+                  background: theme.colors.bgPrimary,
+                  color: theme.colors.primary,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                Clear Filters
+              </button>
+            </>
           )}
         </div>
       </div>
 
-      {/* Categories or Client Groups */}
-      <div>
-        {context === "general" ? (
-          // General context: Show client groups, then categories within each
-          Object.keys(groupedByClient).sort((a, b) => {
-            const clientA = clients.find(c => c.id === a);
-            const clientB = clients.find(c => c.id === b);
-            return (clientA?.name || "").localeCompare(clientB?.name || "");
-          }).map(clientKey => {
-            const clientTasks = groupedByClient[clientKey];
-            const clientInfo = clientTasks[0]?.client;
-            if (!clientInfo) return null;
+      {/* Tasks Display */}
+      {context === "general" ? (
+        renderByClient()
+      ) : (
+        <>
+          {sortedCategories.map(cat => renderCategorySection(cat.id, cat.name))}
+          {renderCategorySection(null, "Uncategorized")}
+        </>
+      )}
 
-            const isClientCollapsed = collapsedClients.has(clientKey);
-            const clientTaskCount = clientTasks.filter(t => t.status !== "COMPLETED").length;
-            const completedCount = clientTasks.filter(t => t.status === "COMPLETED").length;
-
-            // Group this client's tasks by category
-            const clientGroupedTasks: Record<string, Task[]> = {};
-            const clientUncategorized: Task[] = [];
-            
-            clientTasks.forEach(task => {
-              if (task.category) {
-                if (!clientGroupedTasks[task.category.id]) {
-                  clientGroupedTasks[task.category.id] = [];
-                }
-                clientGroupedTasks[task.category.id].push(task);
-              } else {
-                clientUncategorized.push(task);
-              }
-            });
-
-            return (
-              <div key={clientKey} style={{ marginBottom: 24 }}>
-                {/* Client Header */}
-                <div
-                  onClick={() => toggleClient(clientKey)}
-                  style={{
-                    padding: "16px 20px",
-                    background: theme.colors.bgTertiary,
-                    borderRadius: isClientCollapsed ? 12 : "12px 12px 0 0",
-                    cursor: "pointer",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    userSelect: "none",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ 
-                      fontSize: 14, 
-                      color: theme.colors.textMuted,
-                      transform: isClientCollapsed ? "rotate(-90deg)" : "rotate(0deg)",
-                      transition: "transform 0.2s",
-                    }}>
-                      ▼
-                    </span>
-                    <span style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>
-                      {clientInfo.nickname || clientInfo.name}
-                    </span>
-                    <span style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-                      ({clientTaskCount} active{completedCount > 0 ? `, ${completedCount} done` : ""})
-                    </span>
-                  </div>
-                </div>
-
-                {/* Client's Categories */}
-                {!isClientCollapsed && (
-                  <div style={{ 
-                    background: theme.colors.bgSecondary,
-                    border: "1px solid " + theme.colors.borderLight,
-                    borderTop: "none",
-                    borderRadius: "0 0 12px 12px",
-                    padding: "16px",
-                  }}>
-                    {sortedCategories.map(category => {
-                      const categoryTasks = clientGroupedTasks[category.id] || [];
-                      if (categoryTasks.length === 0) return null;
-                      return renderCategorySection(category, categoryTasks);
-                    })}
-                    
-                    {clientUncategorized.length > 0 && renderCategorySection(null, clientUncategorized)}
-                  </div>
-                )}
-              </div>
-            );
-          })
-        ) : (
-          // Client/Project context: Show categories directly
-          <>
-            {sortedCategories.map(category => {
-              const categoryTasks = groupedTasks[category.id] || [];
-              if (categoryTasks.length === 0 && hideCompleted) return null;
-              return renderCategorySection(category, categoryTasks);
-            })}
-            
-            {uncategorized.length > 0 && renderCategorySection(null, uncategorized)}
-          </>
-        )}
-      </div>
-
-      {/* Edit Side Panel */}
+      {/* Edit Task Side Panel */}
       {selectedTask && (
         <>
           <div
@@ -1007,9 +1069,9 @@ export default function TasksManager({
             top: 0,
             right: 0,
             bottom: 0,
-            width: "min(500px, 90vw)",
-            background: theme.colors.bgSecondary,
-            boxShadow: "-2px 0 8px rgba(0,0,0,0.1)",
+            width: "min(600px, 90vw)",
+            background: theme.colors.bgPrimary,
+            boxShadow: "-4px 0 24px rgba(0,0,0,0.1)",
             zIndex: 1000,
             overflowY: "auto",
             padding: 32,
