@@ -44,6 +44,14 @@ model User {
   uploadedFiles   MediaFile[]    @relation("FileUploader")
   mediaActivities MediaActivity[] @relation("MediaActivityUser")
 
+  dailySummaries      DailySummary[]
+  dailyTasks          DailyTask[]
+  dailyPreferences    UserDailyPreference?
+  teamActivities      TeamActivity[]
+  activityReactions   ActivityReaction[]
+  taskModifications   TaskModification[]
+  dailyTimestamps     DailyTimestamp[]
+
   @@map("users")
 }
 
@@ -258,6 +266,8 @@ model ClientTask {
   projectId         String?
   project           Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   timeEntries       TimeEntry[]
+  dailyTasks          DailyTask[]
+  modifications       TaskModification[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
