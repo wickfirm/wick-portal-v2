@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
           include: {
             project: { select: { id: true, name: true, isDefault: true } },
             client: { select: { id: true, name: true } },
-            category: { select: { id: true, name: true, color: true } },
+            category: { select: { id: true, name: true} },
           },
         },
       },
@@ -69,7 +69,7 @@ export async function GET(req: NextRequest) {
       include: {
         project: { select: { id: true, name: true, isDefault: true } },
         client: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true, color: true } },
+        category: { select: { id: true, name: true} },
       },
       take: 5,
     });
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
       include: {
         project: { select: { id: true, name: true, isDefault: true } },
         client: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true, color: true } },
+        category: { select: { id: true, name: true} },
       },
       take: 3,
     });
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
       include: {
         project: { select: { id: true, name: true, isDefault: true } },
         client: { select: { id: true, name: true } },
-        category: { select: { id: true, name: true, color: true } },
+        category: { select: { id: true, name: true} },
       },
       orderBy: [
         { priority: "desc" },
