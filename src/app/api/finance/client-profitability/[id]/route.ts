@@ -124,7 +124,6 @@ export async function GET(
         cost: Math.round(cost * 100) / 100,
         revenue: entry.billable ? Math.round((hours * billRate) * 100) / 100 : 0,
         billable: entry.billable,
-        notes: entry.notes,
       });
     });
 
@@ -209,9 +208,9 @@ export async function GET(
         laborRevenue: Math.round(p.laborRevenue * 100) / 100,
         expenses: Math.round(p.expenses * 100) / 100,
       })),
-      // NEW: Time entries grouped by project
+      // Time entries grouped by project
       timeEntriesByProject,
-      // NEW: All time entries combined
+      // All time entries combined
       allTimeEntries: Object.values(timeEntriesByProject).flat(),
     });
   } catch (error) {
