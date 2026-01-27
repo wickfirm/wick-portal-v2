@@ -11,7 +11,6 @@ type ProjectProfitability = {
   project: {
     id: string;
     name: string;
-    budget: number;
     client: {
       id: string;
       name: string;
@@ -34,12 +33,6 @@ type ProjectProfitability = {
   profit: {
     amount: number;
     margin: number;
-  };
-  budget: {
-    allocated: number;
-    used: number;
-    utilization: number;
-    remaining: number;
   };
 };
 
@@ -348,23 +341,6 @@ export default function ProjectFinancePage() {
             </div>
             <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary }}>
               {profitability.hours.total.toFixed(1)}h
-            </div>
-          </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 20,
-          }}>
-            <div style={{ fontSize: 12, color: theme.colors.textMuted, marginBottom: 6 }}>
-              Budget
-            </div>
-            <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary }}>
-              ${profitability.budget.allocated.toLocaleString()}
-            </div>
-            <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>
-              Used: {profitability.budget.utilization.toFixed(0)}%
             </div>
           </div>
         </div>
