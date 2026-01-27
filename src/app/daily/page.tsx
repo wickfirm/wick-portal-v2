@@ -58,6 +58,10 @@ export default function DailyPage() {
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);
   const [mainFocus, setMainFocus] = useState("");
   const [showStartModal, setShowStartModal] = useState(false);
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [allTasks, setAllTasks] = useState<any[]>([]);
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const [allMyTasks, setAllMyTasks] = useState<any[]>([]);
 
   useEffect(() => {
     loadData();
@@ -163,6 +167,77 @@ export default function DailyPage() {
       loadData();
     } catch (error) {
       console.error("Failed to end day:", error);
+    }
+  }
+
+  async function loadAllTasks() {
+    try {
+      const res = await fetch("/api/tasks");
+      const data = await res.json();
+      const tasks = Array.isArray(data) ? data : data.tasks || [];
+      
+      // Filter incomplete tasks not already in daily plan
+      const existingIds = dailyTasks.map(dt => dt.task.id);
+      const availableTasks = tasks.filter((t: any) => 
+        t.status !== "COMPLETED" && !existingIds.includes(t.id)
+      );
+      
+      setAllTasks(availableTasks);
+      setShowAllTasks(true);
+    } catch (error) {
+      console.error("Failed to load all tasks:", error);
+    }
+  }
+
+  async function addTaskToToday(taskId: string) {
+    try {
+      await fetch("/api/daily/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId, date: today, source: "manual" }),
+      });
+      
+      loadData();
+      
+      // Remove from available list
+      setAllTasks(prev => prev.filter(t => t.id !== taskId));
+    } catch (error) {
+      console.error("Failed to add task:", error);
+    }
+  }
+
+  async function loadAllMyTasks() {
+    try {
+      const res = await fetch("/api/tasks");
+      const data = await res.json();
+      const tasks = Array.isArray(data) ? data : data.tasks || [];
+      
+      // Filter to only show incomplete tasks
+      const incompleteTasks = tasks.filter((t: any) => t.status !== "COMPLETED");
+      setAllMyTasks(incompleteTasks);
+      setShowAllTasks(true);
+    } catch (error) {
+      console.error("Failed to load all tasks:", error);
+    }
+  }
+
+  async function addTaskToToday(taskId: string) {
+    try {
+      await fetch("/api/daily/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          taskId, 
+          date: today, 
+          source: "manual" 
+        }),
+      });
+      
+      // Remove from all tasks list and reload daily tasks
+      setAllMyTasks(prev => prev.filter(t => t.id !== taskId));
+      loadData();
+    } catch (error) {
+      console.error("Failed to add task:", error);
     }
   }
 
@@ -447,9 +522,26 @@ export default function DailyPage() {
                         border: "1px solid " + theme.colors.borderLight,
                         padding: 24,
                       }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: theme.colors.textPrimary }}>
-                          💡 Suggested Tasks ({availableSuggestions.length})
-                        </h3>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                          <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                            💡 Suggested Tasks ({availableSuggestions.length})
+                          </h3>
+                          <button
+                            onClick={loadAllTasks}
+                            style={{
+                              padding: "8px 16px",
+                              background: "transparent",
+                              border: `1px solid ${theme.colors.primary}`,
+                              borderRadius: theme.borderRadius.md,
+                              color: theme.colors.primary,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            📋 Browse All Tasks
+                          </button>
+                        </div>
                         <div style={{ display: "grid", gap: 12 }}>
                           {availableSuggestions.map(suggestion => (
                             <div
@@ -732,6 +824,124 @@ export default function DailyPage() {
                   Later
                 </button>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* All Tasks Browser Modal */}
+        {showAllTasks && (
+          <div style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}>
+            <div style={{
+              background: theme.colors.bgPrimary,
+              borderRadius: theme.borderRadius.lg,
+              padding: 32,
+              maxWidth: 800,
+              width: "90%",
+              maxHeight: "80vh",
+              overflow: "auto",
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                  📋 All Your Tasks ({allTasks.length})
+                </h2>
+                <button
+                  onClick={() => setShowAllTasks(false)}
+                  style={{
+                    padding: "8px 16px",
+                    background: "transparent",
+                    border: `1px solid ${theme.colors.borderMedium}`,
+                    borderRadius: theme.borderRadius.md,
+                    color: theme.colors.textSecondary,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  Close
+                </button>
+              </div>
+
+              {allTasks.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: theme.colors.textMuted }}>
+                  All your tasks are already planned for today! 🎉
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {allTasks.map((task) => (
+                    <div
+                      key={task.id}
+                      style={{
+                        padding: 16,
+                        background: theme.colors.bgSecondary,
+                        borderRadius: theme.borderRadius.md,
+                        border: "1px solid " + theme.colors.borderLight,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 16,
+                      }}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 4 }}>
+                          {task.name}
+                        </div>
+                        <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
+                          {task.client?.name || "No client"} • {task.project?.name || "No project"}
+                          {task.dueDate && ` • Due ${new Date(task.dueDate).toLocaleDateString()}`}
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        {task.priority === "HIGH" && (
+                          <span style={{
+                            padding: "4px 8px",
+                            background: theme.colors.errorBg,
+                            color: theme.colors.error,
+                            borderRadius: theme.borderRadius.sm,
+                            fontSize: 11,
+                            fontWeight: 600,
+                          }}>
+                            HIGH
+                          </span>
+                        )}
+                        <span style={{
+                          padding: "4px 8px",
+                          background: theme.colors.bgTertiary,
+                          color: theme.colors.textMuted,
+                          borderRadius: theme.borderRadius.sm,
+                          fontSize: 11,
+                          fontWeight: 500,
+                        }}>
+                          {task.status}
+                        </span>
+                        <button
+                          onClick={() => addTaskToToday(task.id)}
+                          style={{
+                            padding: "8px 16px",
+                            background: theme.colors.primary,
+                            border: "none",
+                            borderRadius: theme.borderRadius.md,
+                            color: "white",
+                            fontSize: 13,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                          }}
+                        >
+                          + Add to Today
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
