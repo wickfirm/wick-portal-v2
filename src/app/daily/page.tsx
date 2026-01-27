@@ -340,38 +340,42 @@ export default function DailyPage() {
                 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                     <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
-                      Your Tasks Today
+                      Your Tasks Today ({dailyTasks.length})
                     </h3>
-                    <button
-                      onClick={() => {
-                        // Add today's due tasks that aren't already planned
-                        const dueTaskIds = suggestions.filter(s => s.source === 'due_date').map(s => s.task.id);
-                        const existingIds = dailyTasks.map(dt => dt.task.id);
-                        const newTaskIds = dueTaskIds.filter(id => !existingIds.includes(id));
-                        
-                        if (newTaskIds.length > 0) {
-                          Promise.all(newTaskIds.map(taskId => 
-                            fetch("/api/daily/tasks", {
-                              method: "POST",
-                              headers: { "Content-Type": "application/json" },
-                              body: JSON.stringify({ taskId, date: today, source: "due_date" }),
-                            })
-                          )).then(() => loadData());
-                        }
-                      }}
-                      style={{
-                        padding: "8px 16px",
-                        background: theme.colors.primary,
-                        border: "none",
-                        borderRadius: theme.borderRadius.md,
-                        color: "white",
-                        fontSize: 13,
-                        fontWeight: 500,
-                        cursor: "pointer",
-                      }}
-                    >
-                      + Add Due Tasks
-                    </button>
+                    {(() => {
+                      const dueTaskIds = suggestions.filter(s => s.source === 'due_date').map(s => s.task.id);
+                      const existingIds = dailyTasks.map(dt => dt.task.id);
+                      const newTaskIds = dueTaskIds.filter(id => !existingIds.includes(id));
+                      
+                      if (newTaskIds.length > 0) {
+                        return (
+                          <button
+                            onClick={() => {
+                              Promise.all(newTaskIds.map(taskId => 
+                                fetch("/api/daily/tasks", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({ taskId, date: today, source: "due_date" }),
+                                })
+                              )).then(() => loadData());
+                            }}
+                            style={{
+                              padding: "8px 16px",
+                              background: theme.colors.warning,
+                              border: "none",
+                              borderRadius: theme.borderRadius.md,
+                              color: "white",
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            ⚠️ Add {newTaskIds.length} Task{newTaskIds.length > 1 ? 's' : ''} Due Today
+                          </button>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
                   {dailyTasks.length === 0 ? (
                     <div style={{ textAlign: "center", padding: 40, color: theme.colors.textMuted }}>
