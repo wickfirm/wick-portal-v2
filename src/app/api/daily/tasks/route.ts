@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
               select: { id: true, name: true },
             },
             category: {
-              select: { id: true, name: true, color: true },
+              select: { id: true, name: true },
             },
             assignee: {
               select: { id: true, name: true },
