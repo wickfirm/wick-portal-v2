@@ -38,12 +38,6 @@ type ProjectProfitability = {
     amount: number;
     margin: number;
   };
-  budget: {
-    allocated: number;
-    used: number;
-    utilization: number;
-    remaining: number;
-  };
 };
 
 export default function FinancePage() {
@@ -183,23 +177,28 @@ export default function FinancePage() {
             borderRadius: theme.borderRadius.lg,
             overflow: "hidden",
           }}>
-            <div style={{ padding: 24, borderBottom: `1px solid ${theme.colors.borderLight}` }}>
-              <div style={{ width: 200, height: 24, background: theme.colors.bgTertiary, borderRadius: 4 }} />
-            </div>
-            <div style={{ padding: 24 }}>
-              {[1, 2, 3].map((i) => (
-                <div key={i} style={{ marginBottom: 16 }}>
-                  <div style={{ width: "100%", height: 48, background: theme.colors.bgTertiary, borderRadius: 4 }} />
-                </div>
-              ))}
-            </div>
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ padding: 24, borderBottom: i < 3 ? `1px solid ${theme.colors.borderLight}` : "none" }}>
+                <div style={{ width: 200, height: 20, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 16 }} />
+                <div style={{ width: "100%", height: 100, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
           </div>
         </main>
       </div>
     );
   }
 
-  if (!session) return null;
+  // Calculate totals
+  const totals = Object.values(profitability).reduce(
+    (acc, data) => ({
+      revenue: acc.revenue + data.revenue.total,
+      cost: acc.cost + data.costs.total,
+      profit: acc.profit + data.profit.amount,
+      hours: acc.hours + data.hours.total,
+    }),
+    { revenue: 0, cost: 0, profit: 0, hours: 0 }
+  );
 
   // Apply filters
   const filteredProjects = projects.filter((project) => {
@@ -213,53 +212,32 @@ export default function FinancePage() {
     if (filterPricingModel !== "ALL" && data.project.pricingModel !== filterPricingModel) return false;
 
     // Profitability filter
-    if (filterProfitability === "PROFITABLE" && data.profit.amount <= 0) return false;
+    if (filterProfitability === "PROFITABLE" && data.profit.amount < 0) return false;
     if (filterProfitability === "LOSS" && data.profit.amount >= 0) return false;
 
     return true;
   });
 
-  // Group projects by client
-  const projectsByClient = filteredProjects.reduce((acc: Record<string, any[]>, project) => {
+  // Group by client
+  const projectsByClient: Record<string, any[]> = {};
+  filteredProjects.forEach((project) => {
     const clientId = project.client.id;
-    if (!acc[clientId]) {
-      acc[clientId] = [];
+    if (!projectsByClient[clientId]) {
+      projectsByClient[clientId] = [];
     }
-    acc[clientId].push(project);
-    return acc;
-  }, {});
-
-  // Calculate totals
-  const totals = Object.values(profitability)
-    .filter((p) => filteredProjects.some((proj) => proj.id === p.project.id))
-    .reduce(
-      (acc, p) => ({
-        revenue: acc.revenue + p.revenue.total,
-        cost: acc.cost + p.costs.total,
-        profit: acc.profit + p.profit.amount,
-        hours: acc.hours + p.hours.total,
-      }),
-      { revenue: 0, cost: 0, profit: 0, hours: 0 }
-    );
-
-  const overallMargin = totals.revenue > 0 ? (totals.profit / totals.revenue) * 100 : 0;
-
-  const activeFilterCount = [
-    filterClient !== "ALL",
-    filterPricingModel !== "ALL",
-    filterProfitability !== "ALL",
-  ].filter(Boolean).length;
+    projectsByClient[clientId].push(project);
+  });
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
+        {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+          <h1 style={{ fontSize: 32, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 8 }}>
             Finance Dashboard
           </h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
+          <p style={{ fontSize: 16, color: theme.colors.textSecondary, margin: 0 }}>
             Monitor profitability, costs, and budget utilization
           </p>
         </div>
@@ -273,21 +251,27 @@ export default function FinancePage() {
           marginBottom: 24,
         }}>
           <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Client:</label>
+            {/* Client Filter */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
+                Client
+              </label>
               <select
                 value={filterClient}
                 onChange={(e) => setFilterClient(e.target.value)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
+                  padding: "8px 12px",
                   border: `1px solid ${theme.colors.borderLight}`,
-                  fontSize: 13,
+                  borderRadius: 6,
+                  background: theme.colors.bgPrimary,
+                  color: theme.colors.textPrimary,
+                  fontSize: 14,
                   cursor: "pointer",
+                  minWidth: 150,
                 }}
               >
                 <option value="ALL">All Clients</option>
-                {clients.map((client: any) => (
+                {clients.map((client) => (
                   <option key={client.id} value={client.id}>
                     {client.nickname || client.name}
                   </option>
@@ -295,17 +279,23 @@ export default function FinancePage() {
               </select>
             </div>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Pricing:</label>
+            {/* Pricing Model Filter */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
+                Pricing Model
+              </label>
               <select
                 value={filterPricingModel}
                 onChange={(e) => setFilterPricingModel(e.target.value)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
+                  padding: "8px 12px",
                   border: `1px solid ${theme.colors.borderLight}`,
-                  fontSize: 13,
+                  borderRadius: 6,
+                  background: theme.colors.bgPrimary,
+                  color: theme.colors.textPrimary,
+                  fontSize: 14,
                   cursor: "pointer",
+                  minWidth: 150,
                 }}
               >
                 <option value="ALL">All Models</option>
@@ -314,17 +304,23 @@ export default function FinancePage() {
               </select>
             </div>
 
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Status:</label>
+            {/* Profitability Filter */}
+            <div>
+              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
+                Status
+              </label>
               <select
                 value={filterProfitability}
                 onChange={(e) => setFilterProfitability(e.target.value)}
                 style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
+                  padding: "8px 12px",
                   border: `1px solid ${theme.colors.borderLight}`,
-                  fontSize: 13,
+                  borderRadius: 6,
+                  background: theme.colors.bgPrimary,
+                  color: theme.colors.textPrimary,
+                  fontSize: 14,
                   cursor: "pointer",
+                  minWidth: 150,
                 }}
               >
                 <option value="ALL">All Projects</option>
@@ -333,27 +329,24 @@ export default function FinancePage() {
               </select>
             </div>
 
-            {activeFilterCount > 0 && (
-              <>
-                <div style={{ marginLeft: "auto", fontSize: 13, color: theme.colors.textMuted }}>
-                  {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
-                </div>
-                <button
-                  onClick={clearFilters}
-                  style={{
-                    padding: "6px 16px",
-                    borderRadius: 6,
-                    border: `1px solid ${theme.colors.borderMedium}`,
-                    background: theme.colors.bgPrimary,
-                    color: theme.colors.primary,
-                    fontSize: 13,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Clear Filters
-                </button>
-              </>
+            {/* Clear Filters */}
+            {(filterClient !== "ALL" || filterPricingModel !== "ALL" || filterProfitability !== "ALL") && (
+              <button
+                onClick={clearFilters}
+                style={{
+                  padding: "8px 16px",
+                  marginTop: 20,
+                  background: "transparent",
+                  border: `1px solid ${theme.colors.borderLight}`,
+                  borderRadius: 6,
+                  color: theme.colors.textSecondary,
+                  fontSize: 14,
+                  cursor: "pointer",
+                  fontWeight: 500,
+                }}
+              >
+                Clear Filters
+              </button>
             )}
           </div>
         </div>
@@ -365,74 +358,89 @@ export default function FinancePage() {
           gap: 24, 
           marginBottom: 32 
         }}>
+          {/* Total Revenue */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: theme.borderRadius.lg,
             padding: 24,
           }}>
-            <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
               Total Revenue
             </div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: theme.colors.success }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.success }}>
               ${totals.revenue.toLocaleString()}
             </div>
           </div>
 
+          {/* Total Costs */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: theme.borderRadius.lg,
             padding: 24,
           }}>
-            <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
               Total Costs
             </div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: theme.colors.error }}>
+            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.error }}>
               ${totals.cost.toLocaleString()}
             </div>
           </div>
 
+          {/* Total Profit */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: theme.borderRadius.lg,
             padding: 24,
           }}>
-            <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>
-              Net Profit
+            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
+              Total Profit
             </div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: totals.profit >= 0 ? theme.colors.success : theme.colors.error }}>
+            <div style={{ 
+              fontSize: 32, 
+              fontWeight: 700, 
+              color: totals.profit >= 0 ? theme.colors.success : theme.colors.error 
+            }}>
               ${totals.profit.toLocaleString()}
             </div>
           </div>
 
+          {/* Profit Margin */}
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: theme.borderRadius.lg,
             padding: 24,
           }}>
-            <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
               Profit Margin
             </div>
-            <div style={{ fontSize: 32, fontWeight: 600, color: overallMargin >= 20 ? theme.colors.success : theme.colors.warning }}>
-              {overallMargin.toFixed(1)}%
+            <div style={{ 
+              fontSize: 32, 
+              fontWeight: 700, 
+              color: totals.revenue > 0 && ((totals.profit / totals.revenue) * 100) >= 20 
+                ? theme.colors.success 
+                : theme.colors.warning 
+            }}>
+              {totals.revenue > 0 ? ((totals.profit / totals.revenue) * 100).toFixed(1) : "0.0"}%
             </div>
           </div>
         </div>
 
-        {/* Projects Grouped by Client */}
-        {Object.entries(projectsByClient).length === 0 ? (
+        {/* Projects by Client */}
+        {Object.keys(projectsByClient).length === 0 ? (
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
             borderRadius: theme.borderRadius.lg,
-            padding: 64,
+            padding: 48,
             textAlign: "center",
-            color: theme.colors.textMuted,
           }}>
-            No projects match the current filters
+            <p style={{ fontSize: 16, color: theme.colors.textSecondary, margin: 0 }}>
+              No projects found matching the current filters.
+            </p>
           </div>
         ) : (
           Object.entries(projectsByClient).map(([clientId, clientProjects]) => {
@@ -462,21 +470,19 @@ export default function FinancePage() {
                   background: theme.colors.bgSecondary,
                   border: `1px solid ${theme.colors.borderLight}`,
                   borderRadius: theme.borderRadius.lg,
-                  overflow: "hidden",
                   marginBottom: 24,
+                  overflow: "hidden",
                 }}
               >
                 {/* Client Header */}
-                <div
-                  style={{
-                    padding: 24,
-                    borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.borderLight}`,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{
+                  padding: "20px 24px",
+                  borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.borderLight}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
                     <span 
                       onClick={() => toggleClientCollapse(clientId)}
                       style={{ 
@@ -570,9 +576,6 @@ export default function FinancePage() {
                           <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
                             Margin
                           </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Budget Used
-                          </th>
                           <th style={{ padding: "12px 16px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
                             Actions
                           </th>
@@ -625,9 +628,6 @@ export default function FinancePage() {
                                 color: data.profit.margin >= 20 ? theme.colors.success : data.profit.margin >= 10 ? theme.colors.warning : theme.colors.error
                               }}>
                                 {data.profit.margin.toFixed(1)}%
-                              </td>
-                              <td style={{ padding: "12px 16px", fontSize: 14, color: theme.colors.textSecondary, textAlign: "right" }}>
-                                {data.budget.utilization.toFixed(0)}%
                               </td>
                               <td style={{ padding: "12px 16px", textAlign: "center" }}>
                                 <Link
