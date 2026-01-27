@@ -82,7 +82,7 @@ export async function GET(req: NextRequest) {
         status: { in: ["TODO", "IN_PROGRESS"] },
         id: { notIn: [...existingTaskIds, ...dueTasks.map(t => t.id)] },
         project: {
-          status: { in: ["IN_PROGRESS", "ACTIVE"] },
+          status: { in: ["IN_PROGRESS"] },
         },
       },
       include: {
@@ -106,7 +106,7 @@ export async function GET(req: NextRequest) {
           ] 
         },
         project: {
-          status: { in: ["IN_PROGRESS", "ACTIVE"] },
+          status: { in: ["IN_PROGRESS"] },
         },
       },
       include: {
