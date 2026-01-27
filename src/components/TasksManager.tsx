@@ -278,10 +278,18 @@ export default function TasksManager({
     setSaving(true);
 
     try {
+      // Prepare form data, converting empty strings to null for optional fields
+      const formData = {
+        ...editForm,
+        categoryId: editForm.categoryId || null,
+        assigneeId: editForm.assigneeId || null,
+        dueDate: editForm.dueDate || null,
+      };
+
       const res = await fetch(`/api/tasks/${selectedTask.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editForm),
+        body: JSON.stringify(formData),
       });
 
       if (res.ok) {
