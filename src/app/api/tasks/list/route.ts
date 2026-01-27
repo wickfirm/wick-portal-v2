@@ -75,6 +75,7 @@ export async function GET() {
         priority: true,
         dueDate: true,
         projectId: true,
+        categoryId: true,
         notes: true,
         nextSteps: true,
         ownerType: true,
@@ -83,6 +84,12 @@ export async function GET() {
         internalLink: true,
         internalLinkLabel: true,
         assigneeId: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          }
+        },
         client: {
           select: {
             id: true,
