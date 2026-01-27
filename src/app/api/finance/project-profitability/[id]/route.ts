@@ -140,6 +140,11 @@ export async function GET(
         name: project.name,
         pricingModel: project.pricingModel,
         fixedFeeAmount: project.fixedFeeAmount ? Number(project.fixedFeeAmount) : null,
+        client: {
+          id: project.client.id,
+          name: project.client.name,
+          nickname: project.client.nickname,
+        },
       },
       client: {
         id: project.client.id,
@@ -180,6 +185,10 @@ export async function GET(
         billedAmount: e.isBillable 
           ? Number(e.amount) * (1 + (Number(e.markupPercentage) || 0) / 100)
           : Number(e.amount),
+        date: e.date,
+        vendor: e.vendor,
+        invoiceNumber: e.invoiceNumber,
+        notes: e.notes,
       })),
     });
   } catch (error) {
