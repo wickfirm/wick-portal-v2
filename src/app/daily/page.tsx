@@ -472,6 +472,35 @@ export default function DailyPage() {
                   )}
                 </div>
 
+                {/* Browse All Tasks Button - Always Visible */}
+                <div style={{
+                  background: theme.colors.bgSecondary,
+                  borderRadius: theme.borderRadius.lg,
+                  border: "1px solid " + theme.colors.borderLight,
+                  padding: 20,
+                  marginBottom: 16,
+                  textAlign: "center",
+                }}>
+                  <button
+                    onClick={loadAllTasks}
+                    style={{
+                      padding: "12px 24px",
+                      background: theme.colors.primary,
+                      border: "none",
+                      borderRadius: theme.borderRadius.md,
+                      color: "white",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    📋 Browse All My Tasks
+                  </button>
+                  <div style={{ fontSize: 13, color: theme.colors.textMuted, marginTop: 8 }}>
+                    Add any task to your daily plan
+                  </div>
+                </div>
+
                 {/* Available Suggestions */}
                 {(() => {
                   const existingIds = dailyTasks.map(dt => dt.task.id);
@@ -485,26 +514,9 @@ export default function DailyPage() {
                         border: "1px solid " + theme.colors.borderLight,
                         padding: 24,
                       }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                          <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
-                            💡 Suggested Tasks ({availableSuggestions.length})
-                          </h3>
-                          <button
-                            onClick={loadAllTasks}
-                            style={{
-                              padding: "8px 16px",
-                              background: "transparent",
-                              border: `1px solid ${theme.colors.primary}`,
-                              borderRadius: theme.borderRadius.md,
-                              color: theme.colors.primary,
-                              fontSize: 13,
-                              fontWeight: 500,
-                              cursor: "pointer",
-                            }}
-                          >
-                            📋 Browse All Tasks
-                          </button>
-                        </div>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: theme.colors.textPrimary }}>
+                          💡 Suggested Tasks ({availableSuggestions.length})
+                        </h3>
                         <div style={{ display: "grid", gap: 12 }}>
                           {availableSuggestions.map(suggestion => (
                             <div
