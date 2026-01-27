@@ -14,7 +14,7 @@ export async function GET(
   try {
     const projectId = params.id;
 
-    // Get project with budget
+    // Get project with budget and pricing model
     const project = await prisma.project.findUnique({
       where: { id: projectId },
       include: {
@@ -62,13 +62,20 @@ export async function GET(
       const hours = entry.duration / 3600; // Convert seconds to hours
       totalHours += hours;
 
-      // Cost = hours × user's hourly rate (what we pay them)
-      const userCost = hours * (Number(entry.user.hourlyRate) || 0);
+      // Cost = hours × hourly rate at time of logging (or current if not set)
+      const hourlyRate = Number(entry.hourlyRateAtTime) || Number(entry.user.hourlyRate) || 0;
+      const userCost = hours * hourlyRate;
       totalCost += userCost;
 
-      // Revenue = hours × bill rate (what we charge client)
+      // Revenue = hours × bill rate (only if billable)
       if (entry.billable) {
-        const billRate = Number(entry.user.billRate) || Number(project.billRate) || Number(project.client.billRate) || 0;
+        // Use snapshot rate first, then fallback to current rates
+        const billRate = 
+          Number(entry.billRateAtTime) || 
+          Number(entry.user.billRate) || 
+          Number(project.billRate) || 
+          Number(project.client.billRate) || 
+          0;
         totalRevenue += hours * billRate;
       }
     });
@@ -89,21 +96,30 @@ export async function GET(
       }
     });
 
+    // Handle Fixed Fee vs Time & Materials pricing
+    let finalRevenue = totalRevenue + totalExpenseRevenue;
+    
+    if (project.pricingModel === "FIXED_FEE" && project.fixedFeeAmount) {
+      // For fixed fee, revenue is the fixed amount
+      finalRevenue = Number(project.fixedFeeAmount);
+    }
+
     // Total calculations
     const totalProjectCost = totalCost + totalExpenseCost;
-    const totalProjectRevenue = totalRevenue + totalExpenseRevenue;
-    const profitAmount = totalProjectRevenue - totalProjectCost;
-    const profitMargin = totalProjectRevenue > 0 ? (profitAmount / totalProjectRevenue) * 100 : 0;
+    const profitAmount = finalRevenue - totalProjectCost;
+    const profitMargin = finalRevenue > 0 ? (profitAmount / finalRevenue) * 100 : 0;
 
     // Budget utilization
     const budget = Number(project.budget) || 0;
-    const budgetUtilization = budget > 0 ? (totalProjectRevenue / budget) * 100 : 0;
+    const budgetUtilization = budget > 0 ? (finalRevenue / budget) * 100 : 0;
 
     return NextResponse.json({
       project: {
         id: project.id,
         name: project.name,
         budget,
+        pricingModel: project.pricingModel,
+        fixedFeeAmount: project.fixedFeeAmount ? Number(project.fixedFeeAmount) : null,
         client: project.client,
       },
       hours: {
@@ -115,9 +131,10 @@ export async function GET(
         total: Math.round(totalProjectCost * 100) / 100,
       },
       revenue: {
-        labor: Math.round(totalRevenue * 100) / 100,
+        labor: project.pricingModel === "FIXED_FEE" ? 0 : Math.round(totalRevenue * 100) / 100,
         expenses: Math.round(totalExpenseRevenue * 100) / 100,
-        total: Math.round(totalProjectRevenue * 100) / 100,
+        fixedFee: project.pricingModel === "FIXED_FEE" && project.fixedFeeAmount ? Number(project.fixedFeeAmount) : 0,
+        total: Math.round(finalRevenue * 100) / 100,
       },
       profit: {
         amount: Math.round(profitAmount * 100) / 100,
@@ -125,9 +142,9 @@ export async function GET(
       },
       budget: {
         allocated: budget,
-        used: Math.round(totalProjectRevenue * 100) / 100,
+        used: Math.round(finalRevenue * 100) / 100,
         utilization: Math.round(budgetUtilization * 100) / 100,
-        remaining: Math.round((budget - totalProjectRevenue) * 100) / 100,
+        remaining: Math.round((budget - finalRevenue) * 100) / 100,
       },
     });
   } catch (error) {
