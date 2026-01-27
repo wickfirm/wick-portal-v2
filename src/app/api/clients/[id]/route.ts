@@ -83,6 +83,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.showTimeInPortal !== undefined) updateData.showTimeInPortal = Boolean(data.showTimeInPortal);
     if (data.billRate !== undefined) updateData.billRate = data.billRate !== null ? parseFloat(data.billRate) : null;
 
+    // Finance Module fields (SUPER_ADMIN only)
+    if (user.role === "SUPER_ADMIN") {
+      if (data.revenueModel !== undefined) updateData.revenueModel = data.revenueModel;
+      if (data.pricingModel !== undefined) updateData.pricingModel = data.pricingModel;
+      if (data.monthlyRevenue !== undefined) updateData.monthlyRevenue = data.monthlyRevenue ? parseFloat(data.monthlyRevenue) : null;
+    }
+
     const client = await prisma.client.update({
       where: { id: clientId },
       data: updateData,
