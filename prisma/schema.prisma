@@ -70,6 +70,9 @@ model Client {
   primaryEmail    String?
   nickname        String?
   showTimeInPortal Boolean          @default(false)
+  revenueModel    String            @default("PROJECT_BASED") @map("revenue_model")  // NEW: 'CLIENT_LEVEL' or 'PROJECT_BASED'
+  pricingModel    PricingModel      @default(TIME_AND_MATERIALS) @map("pricing_model")  // NEW
+  monthlyRevenue  Decimal?          @db.Decimal(10, 2) @map("monthly_revenue")  // NEW
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   projects        Project[]
@@ -81,15 +84,16 @@ model Client {
   teamMembers     ClientTeamMember[]
   agencies        ClientAgency[]
   timeEntries     TimeEntry[]
-  billRate    Decimal?  @db.Decimal(10, 2)
-  lead                   Lead?
-  mediaFolders  MediaFolder[]
-  mediaFiles    MediaFile[]
-expenses        ProjectExpense[]
+  billRate        Decimal?          @db.Decimal(10, 2)
+  lead            Lead?
+  mediaFolders    MediaFolder[]
+  mediaFiles      MediaFile[]
+  expenses        ProjectExpense[]
 
-  @@index([status])        // For filtering by status
-  @@index([createdAt])     // For ordering by creation date
-  @@index([name])          // For searching by name
+  @@index([status])
+  @@index([createdAt])
+  @@index([name])
+  @@index([revenueModel])  // NEW
   @@map("clients")
 }
 
