@@ -1151,22 +1151,151 @@ enum MediaActivityAction {
   @@map("media_activity_action")
 }
 
-// Add these relations to existing models:
+// ============================================================================
+// SOD/EOD AUTOMATION MODELS
+// Add these models to your prisma/schema.prisma file
+// ============================================================================
 
-// In model Agency, add:
-//   mediaFolders  MediaFolder[]
-//   mediaFiles    MediaFile[]
-//   mediaActivity MediaActivity[]
+// Add these relations to the User model:
+// dailySummaries      DailySummary[]
+// dailyTasks          DailyTask[]
+// dailyPreferences    UserDailyPreference?
+// teamActivities      TeamActivity[]
+// activityReactions   ActivityReaction[]
+// taskModifications   TaskModification[]
+// dailyTimestamps     DailyTimestamp[]
 
-// In model Client, add:
-//   mediaFolders  MediaFolder[]
-//   mediaFiles    MediaFile[]
+// Add these relations to the ClientTask model:
+// dailyTasks          DailyTask[]
+// modifications       TaskModification[]
 
-// In model Project, add:
-//   mediaFolders  MediaFolder[]
+// ============================================================================
 
-// In model User, add:
-//   createdFolders  MediaFolder[]  @relation("FolderCreator")
-//   uploadedFiles   MediaFile[]    @relation("FileUploader")
-//   mediaActivities MediaActivity[] @relation("MediaActivityUser")
+model DailySummary {
+  id                String    @id @default(cuid())
+  userId            String    @map("user_id")
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date              DateTime  @db.Date
+  totalTasks        Int       @default(0) @map("total_tasks")
+  completedTasks    Int       @default(0) @map("completed_tasks")
+  inProgressTasks   Int       @default(0) @map("in_progress_tasks")
+  notStartedTasks   Int       @default(0) @map("not_started_tasks")
+  completionRate    Decimal   @default(0) @db.Decimal(5, 2) @map("completion_rate")
+  mainFocus         String?   @map("main_focus")
+  status            String    @default("available") // 'available', 'busy', 'blocked', 'away'
+  notes             String?
+  sodCompletedAt    DateTime? @map("sod_completed_at")
+  eodCompletedAt    DateTime? @map("eod_completed_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([date])
+  @@map("daily_summaries")
+}
+
+model DailyTask {
+  id            String    @id @default(cuid())
+  taskId        String    @map("task_id")
+  task          ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId        String    @map("user_id")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date          DateTime  @db.Date
+  suggested     Boolean   @default(false)
+  accepted      Boolean   @default(true)
+  source        String?   // 'rollover', 'due_date', 'manual', 'manager', 'project_sequence'
+  suggestedBy   String?   @map("suggested_by") // 'system' or user_id
+  completedAt   DateTime? @map("completed_at")
+  deferredTo    DateTime? @db.Date @map("deferred_to")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([userId, date])
+  @@index([taskId])
+  @@map("daily_tasks")
+}
+
+model UserDailyPreference {
+  userId          String   @id @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sodTime         DateTime @default(dbgenerated("'08:00:00'::time")) @db.Time @map("sod_time")
+  eodTime         DateTime @default(dbgenerated("'18:00:00'::time")) @db.Time @map("eod_time")
+  timezone        String   @default("Asia/Dubai")
+  notifyBrowser   Boolean  @default(true) @map("notify_browser")
+  notifyEmail     Boolean  @default(false) @map("notify_email")
+  notifySlack     Boolean  @default(false) @map("notify_slack")
+  autoPublishSod  Boolean  @default(false) @map("auto_publish_sod")
+  autoPublishEod  Boolean  @default(false) @map("auto_publish_eod")
+  shareWithTeam   Boolean  @default(true) @map("share_with_team")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@map("user_daily_preferences")
+}
+
+model TeamActivity {
+  id           String              @id @default(cuid())
+  userId       String              @map("user_id")
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activityType String              @map("activity_type") // 'sod', 'eod', 'task_complete', 'focus_change'
+  content      String?
+  metadata     Json?
+  visibleTo    String              @default("everyone") @map("visible_to") // 'everyone', 'team', 'managers'
+  createdAt    DateTime            @default(now()) @map("created_at")
+  reactions    ActivityReaction[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([activityType])
+  @@map("team_activities")
+}
+
+model ActivityReaction {
+  id         String       @id @default(cuid())
+  activityId String       @map("activity_id")
+  activity   TeamActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  userId     String       @map("user_id")
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reaction   String       // '👍', '🎉', '💪', '❤️', etc.
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  @@unique([activityId, userId, reaction])
+  @@index([activityId])
+  @@index([userId])
+  @@map("activity_reactions")
+}
+
+model TaskModification {
+  id          String     @id @default(cuid())
+  taskId      String     @map("task_id")
+  task        ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  modifiedBy  String     @map("modified_by")
+  user        User       @relation(fields: [modifiedBy], references: [id], onDelete: Cascade)
+  modifiedAt  DateTime   @default(now()) @map("modified_at")
+  changeType  String     @map("change_type") // 'created', 'completed', 'deferred', 'reassigned', 'priority_changed', 'manager_override'
+  oldValue    String?    @map("old_value")
+  newValue    String?    @map("new_value")
+  notes       String?
+
+  @@index([taskId])
+  @@index([modifiedBy])
+  @@index([changeType])
+  @@map("task_modifications")
+}
+
+model DailyTimestamp {
+  id                  String    @id @default(cuid())
+  userId              String    @map("user_id")
+  user                User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  date                DateTime  @db.Date
+  sodTime             DateTime? @map("sod_time")
+  eodTime             DateTime? @map("eod_time")
+  workDurationMinutes Int?      @map("work_duration_minutes")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@map("daily_timestamps")
+}
