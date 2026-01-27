@@ -125,13 +125,22 @@ export default function DailyPage() {
     }
   }
 
-  async function handleCompleteTask(dailyTaskId: string, taskId: string) {
+  async function handleCompleteTask(dailyTaskId: string, taskId: string, currentStatus: string) {
     try {
-      // Mark task as completed
+      const isCompleting = currentStatus !== "COMPLETED";
+      
+      // Update the task status
       await fetch(`/api/tasks/${taskId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "COMPLETED" }),
+        body: JSON.stringify({ status: isCompleting ? "COMPLETED" : "TODO" }),
+      });
+
+      // Update the daily task completed_at timestamp
+      await fetch(`/api/daily/tasks/${dailyTaskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: isCompleting }),
       });
 
       loadData();
@@ -329,9 +338,41 @@ export default function DailyPage() {
                   border: "1px solid " + theme.colors.borderLight,
                   padding: 24,
                 }}>
-                  <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16, color: theme.colors.textPrimary }}>
-                    Your Tasks Today
-                  </h3>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                      Your Tasks Today
+                    </h3>
+                    <button
+                      onClick={() => {
+                        // Add today's due tasks that aren't already planned
+                        const dueTaskIds = suggestions.filter(s => s.source === 'due_date').map(s => s.task.id);
+                        const existingIds = dailyTasks.map(dt => dt.task.id);
+                        const newTaskIds = dueTaskIds.filter(id => !existingIds.includes(id));
+                        
+                        if (newTaskIds.length > 0) {
+                          Promise.all(newTaskIds.map(taskId => 
+                            fetch("/api/daily/tasks", {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ taskId, date: today, source: "due_date" }),
+                            })
+                          )).then(() => loadData());
+                        }
+                      }}
+                      style={{
+                        padding: "8px 16px",
+                        background: theme.colors.primary,
+                        border: "none",
+                        borderRadius: theme.borderRadius.md,
+                        color: "white",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      + Add Due Tasks
+                    </button>
+                  </div>
                   {dailyTasks.length === 0 ? (
                     <div style={{ textAlign: "center", padding: 40, color: theme.colors.textMuted }}>
                       No tasks planned for today
@@ -354,7 +395,7 @@ export default function DailyPage() {
                           <input
                             type="checkbox"
                             checked={dt.task.status === "COMPLETED"}
-                            onChange={() => handleCompleteTask(dt.id, dt.task.id)}
+                            onChange={() => handleCompleteTask(dt.id, dt.task.id, dt.task.status)}
                             style={{ width: 20, height: 20, cursor: "pointer" }}
                           />
                           <div style={{ flex: 1 }}>
