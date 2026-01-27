@@ -46,7 +46,14 @@ export async function GET(
             name: true,
           },
         },
+        task: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
+      orderBy: { date: 'desc' },
     });
 
     // Get all expenses for this client
@@ -62,11 +69,14 @@ export async function GET(
     // Group by project for breakdown
     const projectBreakdown: Record<string, any> = {};
 
+    // Store detailed time entries grouped by project
+    const timeEntriesByProject: Record<string, any[]> = {};
+
     timeEntries.forEach((entry) => {
       const hours = entry.duration / 3600;
       totalHours += hours;
 
-      // Cost - Use rate snapshot if available, fallback to current rate
+      // Cost - Use rate snapshot if available
       const hourlyRate = Number(entry.hourlyRateAtTime) || Number(entry.user.hourlyRate) || 0;
       const cost = hours * hourlyRate;
       totalLaborCost += cost;
@@ -95,6 +105,27 @@ export async function GET(
         const billRate = Number(entry.billRateAtTime) || Number(entry.user.billRate) || 0;
         projectBreakdown[entry.projectId].laborRevenue += hours * billRate;
       }
+
+      // Store detailed entry
+      if (!timeEntriesByProject[entry.projectId]) {
+        timeEntriesByProject[entry.projectId] = [];
+      }
+      
+      const billRate = Number(entry.billRateAtTime) || Number(entry.user.billRate) || 0;
+      timeEntriesByProject[entry.projectId].push({
+        id: entry.id,
+        date: entry.date,
+        userName: entry.user.name,
+        userId: entry.user.id,
+        taskName: entry.task?.name || null,
+        hours: Math.round(hours * 100) / 100,
+        hourlyRate: Math.round(hourlyRate * 100) / 100,
+        billRate: Math.round(billRate * 100) / 100,
+        cost: Math.round(cost * 100) / 100,
+        revenue: entry.billable ? Math.round((hours * billRate) * 100) / 100 : 0,
+        billable: entry.billable,
+        notes: entry.notes,
+      });
     });
 
     // Calculate expense costs
@@ -178,6 +209,10 @@ export async function GET(
         laborRevenue: Math.round(p.laborRevenue * 100) / 100,
         expenses: Math.round(p.expenses * 100) / 100,
       })),
+      // NEW: Time entries grouped by project
+      timeEntriesByProject,
+      // NEW: All time entries combined
+      allTimeEntries: Object.values(timeEntriesByProject).flat(),
     });
   } catch (error) {
     console.error("Failed to calculate client profitability:", error);
