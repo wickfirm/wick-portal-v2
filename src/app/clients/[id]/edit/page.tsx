@@ -24,6 +24,8 @@ export default function EditClientPage() {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [userRole, setUserRole] = useState<string>("");
   const [userName, setUserName] = useState<string>("");
+  const [revenueModel, setRevenueModel] = useState<string>("PROJECT_BASED");
+  const [pricingModel, setPricingModel] = useState<string>("TIME_AND_MATERIALS");
 
   useEffect(() => {
     Promise.all([
@@ -35,6 +37,8 @@ export default function EditClientPage() {
       setAgencies(Array.isArray(agenciesData) ? agenciesData : []);
       setUserRole(sessionData?.user?.role || "");
       setUserName(sessionData?.user?.name || "");
+      setRevenueModel(clientData.revenueModel || "PROJECT_BASED");
+      setPricingModel(clientData.pricingModel || "TIME_AND_MATERIALS");
       setLoading(false);
     });
   }, [clientId]);
@@ -57,9 +61,12 @@ export default function EditClientPage() {
       showTimeInPortal: formData.get("showTimeInPortal") === "on",
     };
 
-    // Only include monthlyRetainer for SUPER_ADMIN
+    // Only include finance fields for SUPER_ADMIN
     if (userRole === "SUPER_ADMIN") {
       data.monthlyRetainer = formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null;
+      data.revenueModel = formData.get("revenueModel");
+      data.pricingModel = formData.get("pricingModel");
+      data.monthlyRevenue = formData.get("monthlyRevenue") ? parseFloat(formData.get("monthlyRevenue") as string) : null;
     }
 
     const res = await fetch(`/api/clients/${clientId}`, {
@@ -181,10 +188,77 @@ export default function EditClientPage() {
             </div>
 
             {userRole === "SUPER_ADMIN" && (
-              <div style={{ marginBottom: 20 }}>
-                <label style={labelStyle}>Monthly Retainer (USD)</label>
-                <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={inputStyle} />
-              </div>
+              <>
+                {/* Financial Settings */}
+                <div style={{ 
+                  marginBottom: 32, 
+                  padding: 20, 
+                  background: theme.colors.bgTertiary, 
+                  borderRadius: theme.borderRadius.md,
+                }}>
+                  <h3 style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textSecondary, margin: "0 0 16px 0", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                    Financial Settings
+                  </h3>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                    <div>
+                      <label style={labelStyle}>Revenue Model</label>
+                      <select 
+                        name="revenueModel" 
+                        value={revenueModel}
+                        onChange={(e) => setRevenueModel(e.target.value)}
+                        style={{ ...inputStyle, cursor: "pointer" }}
+                      >
+                        <option value="PROJECT_BASED">Project-Based</option>
+                        <option value="CLIENT_LEVEL">Client-Level</option>
+                      </select>
+                      <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>
+                        {revenueModel === "CLIENT_LEVEL" ? "Single revenue for all projects" : "Each project has own revenue"}
+                      </div>
+                    </div>
+
+                    {revenueModel === "CLIENT_LEVEL" && (
+                      <div>
+                        <label style={labelStyle}>Pricing Model</label>
+                        <select 
+                          name="pricingModel"
+                          value={pricingModel}
+                          onChange={(e) => setPricingModel(e.target.value)}
+                          style={{ ...inputStyle, cursor: "pointer" }}
+                        >
+                          <option value="TIME_AND_MATERIALS">Time & Materials</option>
+                          <option value="FIXED_FEE">Fixed Fee</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {revenueModel === "CLIENT_LEVEL" && pricingModel === "FIXED_FEE" && (
+                    <div style={{ marginBottom: 16 }}>
+                      <label style={labelStyle}>Monthly Revenue (USD)</label>
+                      <input 
+                        name="monthlyRevenue" 
+                        type="number" 
+                        step="0.01" 
+                        defaultValue={client.monthlyRevenue || ""} 
+                        placeholder="e.g., 10000"
+                        style={inputStyle} 
+                      />
+                      <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>
+                        Total monthly revenue for this client
+                      </div>
+                    </div>
+                  )}
+
+                  <div>
+                    <label style={labelStyle}>Monthly Retainer (USD)</label>
+                    <input name="monthlyRetainer" type="number" step="0.01" defaultValue={client.monthlyRetainer || ""} style={inputStyle} />
+                    <div style={{ fontSize: 11, color: theme.colors.textMuted, marginTop: 4 }}>
+                      Legacy field - use "Monthly Revenue" above for new setups
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Portal Settings */}
