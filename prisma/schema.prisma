@@ -117,6 +117,8 @@ model Project {
   startDate   DateTime?
   endDate     DateTime?
   budget      Decimal?      @db.Decimal(10, 2)
+  pricingModel      PricingModel  @default(TIME_AND_MATERIALS) @map("pricing_model")  // NEW
+  fixedFeeAmount    Decimal?      @db.Decimal(10, 2) @map("fixed_fee_amount")        // NEW
   clientId    String
   client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
   stages      ProjectStage[]
@@ -128,13 +130,14 @@ model Project {
   updatedAt   DateTime      @updatedAt
   billRate    Decimal?  @db.Decimal(10, 2)
   mediaFolders  MediaFolder[]
-  expenses        ProjectExpense[]
+  expenses      ProjectExpense[]
 
   @@index([status])              // For filtering by status
   @@index([clientId])            // For filtering by client
   @@index([serviceType])         // For groupBy queries
   @@index([clientId, status])    // Compound for common queries
   @@index([createdAt])           // For ordering by creation date
+  @@index([pricingModel])        // NEW
   @@map("projects")
 }
 
@@ -483,6 +486,8 @@ model TimeEntry {
   description String?
   billable    Boolean    @default(true)
   source      String     @default("MANUAL")  // "MANUAL" or "TIMER"
+  hourlyRateAtTime  Decimal?  @db.Decimal(10, 2) @map("hourly_rate_at_time")  // NEW
+  billRateAtTime    Decimal?  @db.Decimal(10, 2) @map("bill_rate_at_time")    // NEW
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 
@@ -1310,6 +1315,13 @@ model DailyTimestamp {
   @@unique([userId, date])
   @@index([userId, date])
   @@map("daily_timestamps")
+}
+
+enum PricingModel {
+  FIXED_FEE
+  TIME_AND_MATERIALS
+
+  @@map("pricing_model")
 }
 
 enum ExpenseCategory {
