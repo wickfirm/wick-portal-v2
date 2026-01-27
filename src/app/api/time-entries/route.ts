@@ -102,6 +102,11 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
+      select: { 
+        id: true, 
+        hourlyRate: true,  // Get current rates
+        billRate: true     // Get current rates
+      },
     });
 
     if (!user) {
@@ -159,6 +164,8 @@ export async function POST(request: Request) {
         duration: Math.round(duration), // Duration in seconds
         description: description || null,
         billable: billable !== false,
+        hourlyRateAtTime: user.hourlyRate,  // NEW: Capture rate at time of logging
+        billRateAtTime: user.billRate,      // NEW: Capture rate at time of logging
       },
       include: {
         user: { select: { id: true, name: true, email: true } },
