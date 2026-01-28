@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
+import TasksLoadingSkeleton from "./TasksLoadingSkeleton";
 
 type Task = {
   id: string;
@@ -910,11 +911,7 @@ export default function TasksManager({
   };
 
   if (loading) {
-    return (
-      <div style={{ padding: 40, textAlign: "center", color: theme.colors.textMuted }}>
-        Loading tasks...
-      </div>
-    );
+    return <TasksLoadingSkeleton />;
   }
 
   return (
