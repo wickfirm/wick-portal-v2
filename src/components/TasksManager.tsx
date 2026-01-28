@@ -194,6 +194,7 @@ export default function TasksManager({
             setClient(projectData.client);
             setQuickAddClient(projectData.client.id);
           }
+          setQuickAddProject(projectId); // Pre-set project for quick add
           requests.push(Promise.resolve(projectData));
         }
 
@@ -209,6 +210,7 @@ export default function TasksManager({
 
         if (context === "client") {
           setClient(results[3]);
+          setQuickAddClient(clientId || ""); // Pre-set client for quick add
           setProjects(Array.isArray(results[4]) ? results[4] : []);
         } else if (context === "general") {
           const clientsData = results[3];
@@ -272,6 +274,8 @@ export default function TasksManager({
   }
 
   async function addQuickTask(categoryId: string | null) {
+    console.log('addQuickTask called:', { categoryId, quickAddName, quickAddProject, quickAddClient, context });
+    
     if (!quickAddName.trim()) return;
 
     // Validate required fields based on context
@@ -300,6 +304,9 @@ export default function TasksManager({
         taskData.clientId = quickAddClient;
       }
 
+      console.log('Creating task with data:', taskData);
+      console.log('Using endpoint:', getCreateTaskEndpoint());
+
       const res = await fetch(getCreateTaskEndpoint(), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -307,12 +314,18 @@ export default function TasksManager({
       });
 
       if (res.ok) {
+        console.log('Task created successfully');
         setQuickAddName("");
         setQuickAddCategory(null);
         await fetchTasks();
+      } else {
+        const errorText = await res.text();
+        console.error('Failed to create task:', res.status, errorText);
+        alert('Failed to create task: ' + errorText);
       }
     } catch (error) {
       console.error("Error creating task:", error);
+      alert('Error creating task: ' + error);
     }
   }
 
