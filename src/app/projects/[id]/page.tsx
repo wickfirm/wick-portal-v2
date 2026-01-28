@@ -66,6 +66,7 @@ export default function ProjectDetailPage() {
   const [project, setProject] = useState<Project | null>(null);
   const [error, setError] = useState("");
   const [userRole, setUserRole] = useState<string>("");
+  const [userId, setUserId] = useState<string>("");
 
   useEffect(() => {
     Promise.all([
@@ -78,6 +79,7 @@ export default function ProjectDetailPage() {
       .then(([projectData, sessionData]) => {
         setProject(projectData);
         setUserRole(sessionData?.user?.role || "");
+        setUserId(sessionData?.user?.id || "");
         setLoading(false);
       })
       .catch(err => {
@@ -392,6 +394,8 @@ export default function ProjectDetailPage() {
             context="project"
             projectId={projectId}
             clientId={project.client.id}
+            currentUserId={userId}
+            currentUserRole={userRole}
           />
         )}
 
