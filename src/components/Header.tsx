@@ -115,28 +115,15 @@ export default function Header() {
       boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
-          <div style={{
-            width: 32,
-            height: 32,
-            background: brandGradient,
-            borderRadius: theme.borderRadius.md,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            fontWeight: "bold",
-            fontSize: 14
-          }}>
-            {brandLogo}
-          </div>
-          <span style={{ 
-            fontWeight: 600, 
-            fontSize: 18, 
-            color: brandColor
-          }}>
-            {brandName}
-          </span>
+        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
+          <img 
+            src="/Wick-logo-black.png" 
+            alt="Wick"
+            style={{
+              height: 28,
+              width: "auto"
+            }}
+          />
         </Link>
         
         <nav style={{ display: "flex", gap: 4 }}>
