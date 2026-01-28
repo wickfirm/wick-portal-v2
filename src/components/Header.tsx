@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { theme } from "@/lib/theme";
 import { useTenant } from "@/providers/tenant-provider";
+import NotificationBell from "./NotificationBell";
 
 // Lazy load TimerWidget so it doesn't block page load
 const TimerWidget = dynamic(() => import("./TimerWidget"), {
@@ -167,6 +168,7 @@ export default function Header() {
       
       <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
         <TimerWidget />
+        <NotificationBell />
         
         {userName && (
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
