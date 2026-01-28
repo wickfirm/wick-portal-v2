@@ -579,12 +579,6 @@ export default function TasksManager({
           onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
           disabled={!canEdit}
           style={{
-            padding: "10px 12px", width: 130 }}>
-        <select
-          value={task.status}
-          onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
-          disabled={!canEdit}
-          style={{
             padding: "4px 8px",
             borderRadius: 6,
             border: "none",
