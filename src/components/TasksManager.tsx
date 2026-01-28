@@ -998,29 +998,163 @@ export default function TasksManager({
 
   return (
     <>
-      {/* Global Create Task Button */}
+      {/* Global Create Task Button & Quick Add */}
       {canCreate && (
-        <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
-          <button
-            onClick={() => {
-              // Open quick add for first available category
-              const firstCategory = categories.length > 0 ? categories[0].id : null;
-              setQuickAddCategory(firstCategory);
-            }}
-            style={{
-              padding: "10px 20px",
-              fontSize: 14,
-              background: theme.colors.primary,
-              color: "white",
-              border: "none",
+        <div style={{ marginBottom: 24 }}>
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
+            <button
+              onClick={() => {
+                // Toggle the global quick add form
+                setQuickAddCategory(quickAddCategory === "GLOBAL" ? null : "GLOBAL");
+                setQuickAddName("");
+              }}
+              style={{
+                padding: "10px 20px",
+                fontSize: 14,
+                background: theme.colors.primary,
+                color: "white",
+                border: "none",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontWeight: 500,
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              {quickAddCategory === "GLOBAL" ? "✕ Cancel" : "+ Create Task"}
+            </button>
+          </div>
+
+          {/* Global Quick Add Form */}
+          {quickAddCategory === "GLOBAL" && (
+            <div style={{
+              background: theme.colors.bgSecondary,
+              border: "1px solid " + theme.colors.borderLight,
               borderRadius: 8,
-              cursor: "pointer",
-              fontWeight: 500,
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
-            }}
-          >
-            + Create Task
-          </button>
+              padding: 16,
+              marginBottom: 8,
+            }}>
+              <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+                <div style={{ flex: 1, minWidth: 200 }}>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                    Task Name <span style={{ color: theme.colors.error }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={quickAddName}
+                    onChange={(e) => setQuickAddName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && quickAddName.trim()) {
+                        addQuickTask(null); // null = uncategorized
+                      }
+                      if (e.key === "Escape") {
+                        setQuickAddCategory(null);
+                        setQuickAddName("");
+                      }
+                    }}
+                    placeholder="Enter task name..."
+                    autoFocus
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid " + theme.colors.borderMedium,
+                      borderRadius: 6,
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+
+                {context === "general" && (
+                  <div style={{ minWidth: 200 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                      Client <span style={{ color: theme.colors.error }}>*</span>
+                    </label>
+                    <select
+                      value={quickAddClient}
+                      onChange={(e) => {
+                        setQuickAddClient(e.target.value);
+                        setQuickAddProject(""); // Reset project when client changes
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "8px 12px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: 6,
+                        fontSize: 14,
+                      }}
+                    >
+                      <option value="">Select Client...</option>
+                      {clients.map(c => (
+                        <option key={c.id} value={c.id}>
+                          {c.nickname || c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div style={{ minWidth: 200 }}>
+                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                    Project <span style={{ color: theme.colors.error }}>*</span>
+                  </label>
+                  <select
+                    value={quickAddProject}
+                    onChange={(e) => setQuickAddProject(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px",
+                      border: "1px solid " + theme.colors.borderMedium,
+                      borderRadius: 6,
+                      fontSize: 14,
+                    }}
+                  >
+                    <option value="">Select Project...</option>
+                    {projects
+                      .filter(p => !quickAddClient || p.clientId === quickAddClient)
+                      .map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                          {p.isDefault && " (Default)"}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                <button
+                  onClick={() => addQuickTask(null)}
+                  disabled={!quickAddName.trim() || !quickAddProject}
+                  style={{
+                    padding: "8px 16px",
+                    background: (!quickAddName.trim() || !quickAddProject) ? theme.colors.bgTertiary : theme.colors.primary,
+                    color: (!quickAddName.trim() || !quickAddProject) ? theme.colors.textMuted : "white",
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: (!quickAddName.trim() || !quickAddProject) ? "not-allowed" : "pointer",
+                    fontWeight: 500,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  Add Task
+                </button>
+                <button
+                  onClick={() => {
+                    setQuickAddCategory(null);
+                    setQuickAddName("");
+                  }}
+                  style={{
+                    padding: "8px 16px",
+                    background: theme.colors.bgTertiary,
+                    color: theme.colors.textSecondary,
+                    border: "none",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontWeight: 500,
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
