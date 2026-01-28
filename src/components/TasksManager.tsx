@@ -35,9 +35,6 @@ type TaskCategory = {
   order: number;
 };
 
-const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
-const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
-
 type TasksManagerProps = {
   context: "general" | "client" | "project";
   clientId?: string;
@@ -81,6 +78,10 @@ export default function TasksManager({
   const [quickAddProject, setQuickAddProject] = useState("");
   const [quickAddClient, setQuickAddClient] = useState("");
   const [clients, setClients] = useState<any[]>([]);
+  
+  // Dynamic status and priority options from API
+  const [statusOptions, setStatusOptions] = useState<string[]>([]);
+  const [priorityOptions, setPriorityOptions] = useState<string[]>([]);
 
   // Determine API endpoints based on context
   const getTasksEndpoint = () => {
@@ -98,6 +99,28 @@ export default function TasksManager({
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch custom statuses and priorities
+        const [statusRes, priorityRes] = await Promise.all([
+          fetch("/api/task-statuses"),
+          fetch("/api/task-priorities")
+        ]);
+
+        if (statusRes.ok) {
+          const statuses = await statusRes.json();
+          setStatusOptions(statuses.map((s: any) => s.name));
+        } else {
+          // Fallback to defaults if API fails
+          setStatusOptions(["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"]);
+        }
+
+        if (priorityRes.ok) {
+          const priorities = await priorityRes.json();
+          setPriorityOptions(priorities.map((p: any) => p.name));
+        } else {
+          // Fallback to defaults if API fails
+          setPriorityOptions(["HIGH", "MEDIUM", "LOW"]);
+        }
+
         const requests: Promise<any>[] = [
           fetch(getTasksEndpoint()).then(res => res.json()),
           fetch("/api/task-categories").then(res => res.json()),
@@ -157,6 +180,9 @@ export default function TasksManager({
         setLoading(false);
       } catch (err) {
         console.error("Failed to load data:", err);
+        // Set fallback options on error
+        setStatusOptions(["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"]);
+        setPriorityOptions(["HIGH", "MEDIUM", "LOW"]);
         setLoading(false);
       }
     };
@@ -472,7 +498,7 @@ export default function TasksManager({
             outline: "none",
           }}
         >
-          {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+          {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
         </select>
       </td>
 
@@ -494,7 +520,7 @@ export default function TasksManager({
             width: "100%",
           }}
         >
-          {STATUS_OPTIONS.map(s => (
+          {statusOptions.map(s => (
             <option key={s} value={s}>
               {s.replace(/_/g, " ")}
             </option>
@@ -916,7 +942,7 @@ export default function TasksManager({
               }}
             >
               <option value="ALL">All</option>
-              {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+              {statusOptions.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
             </select>
           </div>
 
@@ -934,7 +960,7 @@ export default function TasksManager({
               }}
             >
               <option value="ALL">All</option>
-              {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+              {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           </div>
 
@@ -1106,13 +1132,13 @@ export default function TasksManager({
                 <div>
                   <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Status</label>
                   <select value={editForm.status || ""} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })} style={inputStyle}>
-                    {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
+                    {statusOptions.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
                   </select>
                 </div>
                 <div>
                   <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Priority</label>
                   <select value={editForm.priority || ""} onChange={(e) => setEditForm({ ...editForm, priority: e.target.value })} style={inputStyle}>
-                    {PRIORITY_OPTIONS.map(p => <option key={p} value={p}>{p}</option>)}
+                    {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </div>
               </div>
