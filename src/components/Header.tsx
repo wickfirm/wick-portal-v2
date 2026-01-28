@@ -50,14 +50,12 @@ export default function Header() {
     { href: "/platform-admin/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ] : userRole === "MEMBER" ? [
-    // MEMBERs see limited navigation
+    // MEMBERs see limited navigation (no HR, Media Hub)
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
-    { href: "/dashboard/hr", label: "HR" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
-    { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/settings", label: "Settings" },
   ] : isSuperAdmin ? [
