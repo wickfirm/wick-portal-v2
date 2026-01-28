@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 
@@ -47,8 +47,6 @@ interface TasksListProps {
   currentUserRole: string;
 }
 
-const STATUS_OPTIONS = ["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"];
-const PRIORITY_OPTIONS = ["HIGH", "MEDIUM", "LOW"];
 const OWNER_OPTIONS = ["AGENCY", "CLIENT"];
 
 export default function TasksList({
@@ -60,6 +58,11 @@ export default function TasksList({
   currentUserRole,
 }: TasksListProps) {
   const [tasks, setTasks] = useState(initialTasks);
+  
+  // Dynamic status and priority options from API
+  const [statusOptions, setStatusOptions] = useState<string[]>(["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"]);
+  const [priorityOptions, setPriorityOptions] = useState<string[]>(["HIGH", "MEDIUM", "LOW"]);
+  
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedClient, setSelectedClient] = useState<string>("");
   const [selectedProject, setSelectedProject] = useState<string>("");
@@ -79,6 +82,29 @@ export default function TasksList({
     dueDate: "",
   });
   const [savingTask, setSavingTask] = useState(false);
+
+  // Fetch custom statuses and priorities on mount
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/task-statuses"),
+      fetch("/api/task-priorities")
+    ])
+      .then(([statusRes, priorityRes]) => {
+        return Promise.all([statusRes.json(), priorityRes.json()]);
+      })
+      .then(([statuses, priorities]) => {
+        if (statuses.length > 0) {
+          setStatusOptions(statuses.map((s: any) => s.name));
+        }
+        if (priorities.length > 0) {
+          setPriorityOptions(priorities.map((p: any) => p.name));
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load custom options:", err);
+        // Keep fallback defaults already set in state
+      });
+  }, []);
 
   // Delete task
   const deleteTask = async (taskId: string) => {
@@ -634,7 +660,7 @@ export default function TasksList({
                           cursor: "pointer",
                         }}
                       >
-                        {PRIORITY_OPTIONS.map(p => (
+                        {priorityOptions.map(p => (
                           <option key={p} value={p}>{p}</option>
                         ))}
                       </select>
@@ -656,7 +682,7 @@ export default function TasksList({
                           cursor: "pointer",
                         }}
                       >
-                        {STATUS_OPTIONS.map(s => (
+                        {statusOptions.map(s => (
                           <option key={s} value={s}>{s.replace(/_/g, " ")}</option>
                         ))}
                       </select>
