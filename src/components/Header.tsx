@@ -117,10 +117,10 @@ export default function Header() {
       <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
         <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
           <img 
-            src="/Wick-logo-black1.png" 
+            src="/Wick-logo-black.png" 
             alt="Wick"
             style={{
-              height: 28,
+              height: 36,
               width: "auto"
             }}
           />
