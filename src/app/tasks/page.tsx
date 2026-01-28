@@ -69,6 +69,7 @@ export default function TasksPage() {
           context="general"
           showClientColumn={true}
           currentUserId={user.id}
+          currentUserRole={user.role}
         />
       </main>
     </div>
