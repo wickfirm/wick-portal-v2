@@ -67,6 +67,7 @@ export default function ClientTasksPage() {
           clientId={clientId}
           showClientColumn={false}
           currentUserId={user?.id}
+          currentUserRole={user?.role}
         />
       </main>
     </div>
