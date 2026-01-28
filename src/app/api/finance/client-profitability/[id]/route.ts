@@ -127,7 +127,7 @@ export async function GET(
       });
     });
 
-    // Calculate expense costs
+    // Calculate expense costs and add to project breakdown
     let totalExpenseCost = 0;
     let totalExpenseRevenue = 0;
 
@@ -143,6 +143,33 @@ export async function GET(
       // Track per-project
       if (projectBreakdown[expense.projectId]) {
         projectBreakdown[expense.projectId].expenses += amount;
+      } else {
+        // Project has expenses but no time entries yet
+        const project = projects.find(p => p.id === expense.projectId);
+        if (project) {
+          projectBreakdown[expense.projectId] = {
+            projectId: expense.projectId,
+            projectName: project.name,
+            hours: 0,
+            laborCost: 0,
+            laborRevenue: 0,
+            expenses: amount,
+          };
+        }
+      }
+    });
+
+    // Add projects with no time entries or expenses
+    projects.forEach((project) => {
+      if (!projectBreakdown[project.id]) {
+        projectBreakdown[project.id] = {
+          projectId: project.id,
+          projectName: project.name,
+          hours: 0,
+          laborCost: 0,
+          laborRevenue: 0,
+          expenses: 0,
+        };
       }
     });
 
