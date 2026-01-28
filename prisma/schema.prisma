@@ -213,7 +213,7 @@ model OnboardingTemplateItem {
   order           Int
   autoCreateTask  Boolean            @default(false)
   taskName        String?
-  taskPriority    TaskPriority?
+  taskPriority    String?
   taskAssignRole  String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
