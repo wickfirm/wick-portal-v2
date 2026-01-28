@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import TasksManager from "@/components/TasksManager";
+import TasksLoadingSkeleton from "@/components/TasksLoadingSkeleton";
 import { theme } from "@/lib/theme";
 
 export default function TasksPage() {
@@ -23,9 +24,24 @@ export default function TasksPage() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
-            Loading...
+          <div style={{ marginBottom: 24 }}>
+            <div style={{
+              height: 28,
+              width: 150,
+              background: theme.colors.bgTertiary,
+              borderRadius: 4,
+              marginBottom: 8,
+              animation: "pulse 1.5s ease-in-out infinite"
+            }} />
+            <div style={{
+              height: 18,
+              width: 250,
+              background: theme.colors.bgTertiary,
+              borderRadius: 4,
+              animation: "pulse 1.5s ease-in-out 0.2s infinite"
+            }} />
           </div>
+          <TasksLoadingSkeleton />
         </main>
       </div>
     );
