@@ -445,12 +445,12 @@ export default function TasksManager({
     const canEdit = canEditTask(task); // Check if user can edit THIS specific task
     
     return (
-    <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
-      {/* Task Number & Name */}
-      <td style={{ padding: "10px 12px", minWidth: 180 }}>
-        <div 
-          onClick={() => openTaskPanel(task)}
-          style={{ 
+      <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
+        {/* Task Number & Name */}
+        <td style={{ padding: "10px 12px", minWidth: 180 }}>
+          <div 
+            onClick={() => openTaskPanel(task)}
+            style={{ 
             display: "flex",
             alignItems: "center",
             gap: 8,
@@ -660,8 +660,8 @@ export default function TasksManager({
             Delete
           </button>
         )}
-      </td>
-    </tr>
+        </td>
+      </tr>
     );
   };
 
