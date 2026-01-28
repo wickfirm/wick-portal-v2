@@ -34,6 +34,7 @@ model User {
   bookings               Booking[]  @relation("UserBookings")
   calendarConnected      Boolean @default(false) @map("calendar_connected")
   googleCalendarId       String? @map("google_calendar_id")
+
   
   // HR System Relations
   employeeProfile         EmployeeProfile?
@@ -1366,8 +1367,6 @@ enum NotificationType {
   EXPENSE_SUBMITTED
   TIMESHEET_REMINDER
   SYSTEM_ANNOUNCEMENT
-  
-  @@map("notification_type")
 }
 
 enum NotificationCategory {
@@ -1377,8 +1376,6 @@ enum NotificationCategory {
   FINANCE
   APPROVAL
   SYSTEM
-  
-  @@map("notification_category")
 }
 
 enum NotificationPriority {
@@ -1386,13 +1383,11 @@ enum NotificationPriority {
   NORMAL
   HIGH
   URGENT
-  
-  @@map("notification_priority")
 }
 
 model Notification {
   id          String               @id @default(cuid())
-  userId      String               @map("user_id")
+  userId      String
   user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   type        NotificationType
@@ -1403,16 +1398,16 @@ model Notification {
   message     String
   link        String?
   
-  isRead      Boolean              @default(false) @map("is_read")
-  readAt      DateTime?            @map("read_at")
+  isRead      Boolean              @default(false)
+  readAt      DateTime?
   
-  actionType  String?              @map("action_type")
-  actionUrl   String?              @map("action_url")
+  actionType  String?
+  actionUrl   String?
   
   metadata    Json?
   
-  createdAt   DateTime             @default(now()) @map("created_at")
-  expiresAt   DateTime?            @map("expires_at")
+  createdAt   DateTime             @default(now())
+  expiresAt   DateTime?
   
   @@index([userId, isRead])
   @@index([userId, createdAt])
@@ -1423,21 +1418,20 @@ model Notification {
 
 model NotificationPreference {
   id              String   @id @default(cuid())
-  userId          String   @unique @map("user_id")
+  userId          String   @unique
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   
-  emailEnabled    Boolean  @default(true) @map("email_enabled")
-  pushEnabled     Boolean  @default(true) @map("push_enabled")
+  emailEnabled    Boolean  @default(true)
+  pushEnabled     Boolean  @default(true)
   
-  emailDigest     String   @default("REAL_TIME") @map("email_digest") // REAL_TIME, DAILY, WEEKLY, NEVER
-  quietHoursStart Int?     @map("quiet_hours_start") // 22 (10 PM)
-  quietHoursEnd   Int?     @map("quiet_hours_end")   // 8 (8 AM)
+  emailDigest     String   @default("REAL_TIME")
+  quietHoursStart Int?
+  quietHoursEnd   Int?
   
-  preferences     Json     @default("{}") // Per-type preferences
+  preferences     Json     @default("{}")
   
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
   
   @@map("notification_preferences")
 }
-
