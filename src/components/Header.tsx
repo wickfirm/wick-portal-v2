@@ -77,18 +77,15 @@ export default function Header() {
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ] : [
-    // ADMINs see full navigation WITHOUT Finance
+    // ADMINs see navigation WITHOUT Lead Qualifier, Media Hub, Agencies, or Finance
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
-    { href: "/lead-qualifier", label: "Lead Qualifier" },
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
-    { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/team", label: "Team" },
-    { href: "/agencies", label: "Agencies" },
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ];
