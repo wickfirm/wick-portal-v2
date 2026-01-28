@@ -10,8 +10,8 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || '';
   const subdomain = getSubdomainFromHost(hostname);
   
-  // Skip middleware for ALL API routes, NextAuth, static files, signout, and test page
-  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test'];
+  // Skip middleware for ALL API routes, NextAuth, static files, signout, test page, and widget
+  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test', '/widget/'];
   if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
@@ -88,7 +88,8 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - widget (public widget scripts)
      */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|widget).*)',
   ],
 };
