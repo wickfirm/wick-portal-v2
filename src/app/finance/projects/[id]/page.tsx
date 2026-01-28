@@ -216,8 +216,79 @@ export default function ProjectFinancePage() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
-            Loading...
+          {/* Back Button Skeleton */}
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ width: 180, height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+          </div>
+
+          {/* Header Skeleton */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ width: 300, height: 32, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
+            <div style={{ width: 200, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+          </div>
+
+          {/* Summary Cards Skeleton */}
+          <div style={{ 
+            display: "grid", 
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
+            gap: 16, 
+            marginBottom: 32 
+          }}>
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} style={{
+                background: theme.colors.bgSecondary,
+                border: `1px solid ${theme.colors.borderLight}`,
+                borderRadius: theme.borderRadius.lg,
+                padding: 20,
+                height: 100,
+              }}>
+                <div style={{ width: 80, height: 12, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 12 }} />
+                <div style={{ width: 120, height: 28, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
+                <div style={{ width: 140, height: 10, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+
+          {/* Expenses Section Skeleton */}
+          <div style={{
+            background: theme.colors.bgSecondary,
+            border: `1px solid ${theme.colors.borderLight}`,
+            borderRadius: theme.borderRadius.lg,
+            overflow: "hidden",
+          }}>
+            <div style={{ 
+              padding: 24, 
+              borderBottom: `1px solid ${theme.colors.borderLight}`,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}>
+              <div style={{ width: 180, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              <div style={{ width: 100, height: 36, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+            </div>
+
+            {/* Table Header Skeleton */}
+            <div style={{ padding: "12px 16px", background: theme.colors.bgTertiary, borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 100px", gap: 16 }}>
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div key={i} style={{ width: "80%", height: 12, background: theme.colors.bgPrimary, borderRadius: 4 }} />
+                ))}
+              </div>
+            </div>
+
+            {/* Table Rows Skeleton */}
+            {[1, 2, 3].map((i) => (
+              <div key={i} style={{ padding: "12px 16px", borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr 100px", gap: 16, alignItems: "center" }}>
+                  <div style={{ width: "70%", height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  <div style={{ width: "60%", height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  <div style={{ width: "80%", height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  <div style={{ width: "50%", height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  <div style={{ width: "60%", height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                  <div style={{ width: 60, height: 28, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                </div>
+              </div>
+            ))}
           </div>
         </main>
       </div>
