@@ -998,6 +998,32 @@ export default function TasksManager({
 
   return (
     <>
+      {/* Global Create Task Button */}
+      {canCreate && (
+        <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end" }}>
+          <button
+            onClick={() => {
+              // Open quick add for first available category
+              const firstCategory = categories.length > 0 ? categories[0].id : null;
+              setQuickAddCategory(firstCategory);
+            }}
+            style={{
+              padding: "10px 20px",
+              fontSize: 14,
+              background: theme.colors.primary,
+              color: "white",
+              border: "none",
+              borderRadius: 8,
+              cursor: "pointer",
+              fontWeight: 500,
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            }}
+          >
+            + Create Task
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div style={{
         background: theme.colors.bgSecondary,
