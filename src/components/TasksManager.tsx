@@ -444,21 +444,22 @@ export default function TasksManager({
   const renderTaskRow = (task: Task, index: number) => {
     const canEdit = canEditTask(task); // Check if user can edit THIS specific task
     
-    return <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
+    return (
+      <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
         {/* Task Number & Name */}
         <td style={{ padding: "10px 12px", minWidth: 180 }}>
           <div 
             onClick={() => openTaskPanel(task)}
             style={{ 
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            fontWeight: 500, 
-            color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary,
-            textDecoration: task.status === "COMPLETED" ? "line-through" : "none",
-            cursor: "pointer",
-          }}
-        >
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              fontWeight: 500, 
+              color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary,
+              textDecoration: task.status === "COMPLETED" ? "line-through" : "none",
+              cursor: "pointer",
+            }}
+          >
           <span style={{
             fontSize: 11,
             fontWeight: 600,
@@ -659,8 +660,9 @@ export default function TasksManager({
             Delete
           </button>
         )}
-        </td>
-      </tr>;
+      </td>
+    </tr>
+    );
   };
 
   const renderCategorySection = (categoryId: string | null, categoryName: string) => {
