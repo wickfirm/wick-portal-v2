@@ -444,8 +444,7 @@ export default function TasksManager({
   const renderTaskRow = (task: Task, index: number) => {
     const canEdit = canEditTask(task); // Check if user can edit THIS specific task
     
-    return (
-      <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
+    return <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
         {/* Task Number & Name */}
         <td style={{ padding: "10px 12px", minWidth: 180 }}>
           <div 
@@ -661,8 +660,7 @@ export default function TasksManager({
           </button>
         )}
         </td>
-      </tr>
-    );
+      </tr>;
   };
 
   const renderCategorySection = (categoryId: string | null, categoryName: string) => {
