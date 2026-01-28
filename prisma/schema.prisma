@@ -51,6 +51,10 @@ model User {
   activityReactions   ActivityReaction[]
   taskModifications   TaskModification[]
   dailyTimestamps     DailyTimestamp[]
+  
+  // Notification System Relations
+  notifications           Notification[]
+  notificationPreferences NotificationPreference?
 
   @@map("users")
 }
@@ -1363,3 +1367,99 @@ model ProjectExpense {
   @@index([date])
   @@map("project_expenses")
 }
+
+// ============================================================================
+// NOTIFICATION SYSTEM
+// ============================================================================
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_DUE_SOON
+  TASK_OVERDUE
+  TASK_COMPLETED
+  TASK_STATUS_CHANGED
+  TASK_COMMENT
+  TASK_MENTIONED
+  PROJECT_DEADLINE
+  PROJECT_MILESTONE
+  APPROVAL_REQUESTED
+  APPROVAL_RESPONSE
+  BUDGET_ALERT
+  EXPENSE_SUBMITTED
+  TIMESHEET_REMINDER
+  SYSTEM_ANNOUNCEMENT
+  
+  @@map("notification_type")
+}
+
+enum NotificationCategory {
+  TASK
+  PROJECT
+  TIME
+  FINANCE
+  APPROVAL
+  SYSTEM
+  
+  @@map("notification_category")
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+  
+  @@map("notification_priority")
+}
+
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String               @map("user_id")
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  type        NotificationType
+  category    NotificationCategory
+  priority    NotificationPriority @default(NORMAL)
+  
+  title       String
+  message     String
+  link        String?
+  
+  isRead      Boolean              @default(false) @map("is_read")
+  readAt      DateTime?            @map("read_at")
+  
+  actionType  String?              @map("action_type")
+  actionUrl   String?              @map("action_url")
+  
+  metadata    Json?
+  
+  createdAt   DateTime             @default(now()) @map("created_at")
+  expiresAt   DateTime?            @map("expires_at")
+  
+  @@index([userId, isRead])
+  @@index([userId, createdAt])
+  @@index([category])
+  @@index([type])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  emailEnabled    Boolean  @default(true) @map("email_enabled")
+  pushEnabled     Boolean  @default(true) @map("push_enabled")
+  
+  emailDigest     String   @default("REAL_TIME") @map("email_digest") // REAL_TIME, DAILY, WEEKLY, NEVER
+  quietHoursStart Int?     @map("quiet_hours_start") // 22 (10 PM)
+  quietHoursEnd   Int?     @map("quiet_hours_end")   // 8 (8 AM)
+  
+  preferences     Json     @default("{}") // Per-type preferences
+  
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  
+  @@map("notification_preferences")
+}
+
