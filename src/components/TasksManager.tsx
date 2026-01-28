@@ -22,6 +22,7 @@ type Task = {
   ownerType: string;
   assigneeId: string | null;
   assignee: { id: string; name: string; email: string } | null;
+  order: number;
   client?: {
     id: string;
     nickname: string | null;
@@ -42,6 +43,7 @@ type TasksManagerProps = {
   projectId?: string;
   showClientColumn?: boolean;
   currentUserId?: string;
+  currentUserRole?: string;
 };
 
 export default function TasksManager({
@@ -50,6 +52,7 @@ export default function TasksManager({
   projectId,
   showClientColumn = false,
   currentUserId,
+  currentUserRole = "MEMBER",
 }: TasksManagerProps) {
   const [client, setClient] = useState<any>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -83,6 +86,49 @@ export default function TasksManager({
   // Dynamic status and priority options from API
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<string[]>([]);
+
+  // Permission checks
+  const canCreate = true; // Everyone can create tasks
+  const canDelete = currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN";
+  
+  // Helper to check if user can edit a specific task
+  const canEditTask = (task: Task) => {
+    // Admins can edit everything
+    if (currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN") return true;
+    // Members can only edit their own assigned tasks
+    return task.assigneeId === currentUserId;
+  };
+
+  // Smart task sorting: Priority + Due Date + Manual Order
+  const priorityWeight = { "URGENT": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1 };
+  
+  const smartSortTasks = (tasksToSort: Task[]) => {
+    return [...tasksToSort].sort((a, b) => {
+      // 1. First by manual order if set (non-zero)
+      if (a.order !== 0 && b.order !== 0) {
+        return a.order - b.order;
+      }
+      if (a.order !== 0) return -1; // a has manual order, comes first
+      if (b.order !== 0) return 1;  // b has manual order, comes first
+      
+      // 2. Then by priority (URGENT > HIGH > MEDIUM > LOW)
+      const priorityA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0;
+      const priorityB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0;
+      if (priorityA !== priorityB) {
+        return priorityB - priorityA; // Higher priority first
+      }
+      
+      // 3. Then by due date (earliest first, null last)
+      if (a.dueDate && !b.dueDate) return -1;
+      if (!a.dueDate && b.dueDate) return 1;
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+      }
+      
+      // 4. Finally by creation (tasks array order)
+      return 0;
+    });
+  };
 
   // Determine API endpoints based on context
   const getTasksEndpoint = () => {
@@ -395,19 +441,33 @@ export default function TasksManager({
     color: theme.colors.textPrimary,
   };
 
-  const renderTaskRow = (task: Task) => (
+  const renderTaskRow = (task: Task, index: number) => {
+    const canEdit = canEditTask(task); // Check if user can edit THIS specific task
+    
+    return (
     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
-      {/* Task Name */}
+      {/* Task Number & Name */}
       <td style={{ padding: "10px 12px", minWidth: 180 }}>
         <div 
           onClick={() => openTaskPanel(task)}
           style={{ 
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
             fontWeight: 500, 
             color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary,
             textDecoration: task.status === "COMPLETED" ? "line-through" : "none",
             cursor: "pointer",
           }}
         >
+          <span style={{
+            fontSize: 11,
+            fontWeight: 600,
+            color: theme.colors.textMuted,
+            minWidth: 20,
+          }}>
+            #{index + 1}
+          </span>
           {task.name}
         </div>
       </td>
@@ -417,16 +477,18 @@ export default function TasksManager({
         <select
           value={task.assigneeId || ""}
           onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             borderRadius: 6,
             border: "1px solid " + theme.colors.borderLight,
             fontSize: 12,
-            background: "white",
+            background: canEdit ? "white" : theme.colors.bgTertiary,
             color: task.assigneeId ? theme.colors.textPrimary : theme.colors.textMuted,
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
             maxWidth: "100%",
+            opacity: canEdit ? 1 : 0.6,
           }}
         >
           <option value="">Unassigned</option>
@@ -443,6 +505,7 @@ export default function TasksManager({
         <select
           value={task.ownerType}
           onChange={(e) => updateTaskField(task.id, "ownerType", e.target.value)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             borderRadius: 6,
@@ -451,8 +514,9 @@ export default function TasksManager({
             fontWeight: 500,
             background: task.ownerType === "CLIENT" ? theme.colors.warningBg : theme.colors.infoBg,
             color: task.ownerType === "CLIENT" ? "#92400E" : theme.colors.info,
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
+            opacity: canEdit ? 1 : 0.6,
           }}
         >
           <option value="AGENCY">{context === "general" ? "Agency" : agencyDisplayName}</option>
@@ -466,18 +530,20 @@ export default function TasksManager({
           type="date"
           value={task.dueDate ? task.dueDate.split("T")[0] : ""}
           onChange={(e) => updateTaskField(task.id, "dueDate", e.target.value || null)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             border: "1px solid transparent",
             borderRadius: 4,
             fontSize: 12,
             background: "transparent",
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             color: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED" 
               ? theme.colors.error 
               : theme.colors.textSecondary,
+            opacity: canEdit ? 1 : 0.6,
           }}
-          onFocus={(e) => e.currentTarget.style.borderColor = theme.colors.borderMedium}
+          onFocus={(e) => canEdit && (e.currentTarget.style.borderColor = theme.colors.borderMedium)}
           onBlur={(e) => e.currentTarget.style.borderColor = "transparent"}
         />
       </td>
@@ -487,6 +553,7 @@ export default function TasksManager({
         <select
           value={task.priority}
           onChange={(e) => updateTaskField(task.id, "priority", e.target.value)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             borderRadius: 20,
@@ -495,8 +562,9 @@ export default function TasksManager({
             fontWeight: 500,
             background: PRIORITY_STYLES[task.priority]?.bg || theme.colors.bgTertiary,
             color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textSecondary,
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
+            opacity: canEdit ? 1 : 0.6,
           }}
         >
           {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
@@ -508,6 +576,13 @@ export default function TasksManager({
         <select
           value={task.status}
           onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
+          disabled={!canEdit}
+          style={{
+            padding: "10px 12px", width: 130 }}>
+        <select
+          value={task.status}
+          onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             borderRadius: 6,
@@ -516,9 +591,10 @@ export default function TasksManager({
             fontWeight: 500,
             background: STATUS_STYLES[task.status]?.bg || theme.colors.bgTertiary,
             color: STATUS_STYLES[task.status]?.color || theme.colors.textSecondary,
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
             width: "100%",
+            opacity: canEdit ? 1 : 0.6,
           }}
         >
           {statusOptions.map(s => (
@@ -534,16 +610,18 @@ export default function TasksManager({
         <select
           value={task.categoryId || ""}
           onChange={(e) => updateTaskField(task.id, "categoryId", e.target.value || null)}
+          disabled={!canEdit}
           style={{
             padding: "4px 8px",
             borderRadius: 6,
             border: "1px solid " + theme.colors.borderLight,
             fontSize: 12,
-            background: "white",
+            background: canEdit ? "white" : theme.colors.bgTertiary,
             color: task.categoryId ? theme.colors.textPrimary : theme.colors.textMuted,
-            cursor: "pointer",
+            cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
             maxWidth: "100%",
+            opacity: canEdit ? 1 : 0.6,
           }}
         >
           <option value="">None</option>
@@ -566,29 +644,34 @@ export default function TasksManager({
 
       {/* Actions */}
       <td style={{ padding: "10px 12px", width: 80, textAlign: "center" }}>
-        <button
-          onClick={() => deleteTask(task.id)}
-          style={{
-            padding: "4px 8px",
-            fontSize: 11,
-            background: "transparent",
-            color: theme.colors.error,
-            border: "1px solid " + theme.colors.borderLight,
-            borderRadius: 4,
-            cursor: "pointer",
-          }}
-        >
-          Delete
-        </button>
+        {canDelete && (
+          <button
+            onClick={() => deleteTask(task.id)}
+            style={{
+              padding: "4px 8px",
+              fontSize: 11,
+              background: "transparent",
+              color: theme.colors.error,
+              border: "1px solid " + theme.colors.borderLight,
+              borderRadius: 4,
+              cursor: "pointer",
+            }}
+          >
+            Delete
+          </button>
+        )}
       </td>
     </tr>
-  );
+    );
+  };
 
   const renderCategorySection = (categoryId: string | null, categoryName: string) => {
-    const categoryTasks = tasks.filter(t => {
-      const matchesCategory = categoryId ? t.categoryId === categoryId : !t.categoryId;
-      return matchesCategory && matchesFilters(t);
-    });
+    const categoryTasks = smartSortTasks(
+      tasks.filter(t => {
+        const matchesCategory = categoryId ? t.categoryId === categoryId : !t.categoryId;
+        return matchesCategory && matchesFilters(t);
+      })
+    );
 
     if (categoryTasks.length === 0) return null;
 
@@ -614,24 +697,26 @@ export default function TasksManager({
           }}>
             {isCollapsed ? "▶" : "▼"} {categoryName} ({categoryTasks.length})
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setQuickAddCategory(categoryId);
-            }}
-            style={{
-              padding: "4px 12px",
-              fontSize: 12,
-              background: theme.colors.primary,
-              color: "white",
-              border: "none",
-              borderRadius: 6,
-              cursor: "pointer",
-              fontWeight: 500,
-            }}
-          >
-            + Add Task
-          </button>
+          {canCreate && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setQuickAddCategory(categoryId);
+              }}
+              style={{
+                padding: "4px 12px",
+                fontSize: 12,
+                background: theme.colors.primary,
+                color: "white",
+                border: "none",
+                borderRadius: 6,
+                cursor: "pointer",
+                fontWeight: 500,
+              }}
+            >
+              + Add Task
+            </button>
+          )}
         </div>
 
         {!isCollapsed && (
@@ -805,7 +890,7 @@ export default function TasksManager({
                   </tr>
                 </thead>
                 <tbody>
-                  {categoryTasks.map(renderTaskRow)}
+                  {categoryTasks.map((task, index) => renderTaskRow(task, index))}
                 </tbody>
               </table>
             </div>
@@ -837,6 +922,7 @@ export default function TasksManager({
     }
 
     return Array.from(clientGroups.entries()).map(([clientId, clientTasks]) => {
+      const sortedClientTasks = smartSortTasks(clientTasks);
       const clientData = clients.find(c => c.id === clientId);
       const clientName = clientData?.nickname || clientData?.name || "No Client";
       const isCollapsed = collapsedClients.has(clientId);
@@ -900,7 +986,7 @@ export default function TasksManager({
                   </tr>
                 </thead>
                 <tbody>
-                  {clientTasks.map(renderTaskRow)}
+                  {sortedClientTasks.map((task, index) => renderTaskRow(task, index))}
                 </tbody>
               </table>
             </div>
