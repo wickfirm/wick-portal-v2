@@ -151,6 +151,8 @@ export async function GET(
         name: project.client.name,
         nickname: project.client.nickname,
         revenueModel: project.client.revenueModel,
+        pricingModel: project.client.pricingModel,
+        monthlyRevenue: project.client.monthlyRevenue ? Number(project.client.monthlyRevenue) : null,
       },
       hours: {
         total: Math.round(totalHours * 100) / 100,
