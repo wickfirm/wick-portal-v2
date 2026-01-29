@@ -1435,3 +1435,176 @@ model NotificationPreference {
   
   @@map("notification_preferences")
 }
+
+// Add to prisma/schema.prisma
+
+model Note {
+  id          String   @id @default(cuid())
+  title       String?
+  content     String   @db.Text // Rich text JSON or HTML
+  color       String   @default("yellow") // yellow, pink, blue, green, purple
+  isPinned    Boolean  @default(false)
+  
+  // Ownership
+  createdBy   String
+  creator     User     @relation("CreatedNotes", fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  agencyId    String?
+  agency      Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  
+  // Optional associations
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  taskId      String?
+  task        ClientTask? @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  // Metadata
+  tags        String[] @default([])
+  metadata    Json     @default("{}")
+  
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  archivedAt  DateTime?
+  
+  // Relations
+  attachments NoteAttachment[]
+  shares      NoteShare[]
+  reminders   NoteReminder[]
+  
+  @@index([createdBy])
+  @@index([agencyId])
+  @@index([clientId])
+  @@index([projectId])
+  @@index([isPinned])
+  @@index([archivedAt])
+  @@map("notes")
+}
+
+model NoteAttachment {
+  id          String   @id @default(cuid())
+  noteId      String
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  
+  // File info
+  filename    String
+  originalName String
+  mimeType    String
+  size        BigInt
+  
+  // Storage (using existing R2 setup)
+  r2Key       String
+  r2Bucket    String   @default("omnixia-media")
+  
+  // Metadata
+  type        AttachmentType // IMAGE, AUDIO, VIDEO, DOCUMENT, OTHER
+  duration    Int?     // For audio/video in seconds
+  thumbnail   String?  // R2 key for thumbnail
+  
+  uploadedBy  String
+  uploader    User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([noteId])
+  @@index([type])
+  @@map("note_attachments")
+}
+
+model NoteShare {
+  id          String   @id @default(cuid())
+  noteId      String
+  note        Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  
+  // Share type
+  shareType   ShareType // USER, TEAM, CLIENT, PUBLIC
+  
+  // Share targets
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  
+  // Permissions
+  canEdit     Boolean  @default(false)
+  
+  // Metadata
+  sharedBy    String
+  sharer      User     @relation("SharedNotes", fields: [sharedBy], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  
+  @@unique([noteId, userId])
+  @@unique([noteId, clientId])
+  @@index([noteId])
+  @@index([userId])
+  @@index([clientId])
+  @@index([shareType])
+  @@map("note_shares")
+}
+
+model NoteReminder {
+  id              String   @id @default(cuid())
+  noteId          String
+  note            Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  
+  // Reminder settings
+  remindAt        DateTime
+  recurring       Boolean  @default(false)
+  recurringType   RecurringType? // DAILY, WEEKLY, MONTHLY
+  recurringValue  Int?     // Day of week (0-6) or day of month (1-31)
+  
+  // Actions
+  createNotification Boolean @default(true)
+  createTask         Boolean @default(false)
+  sendEmail          Boolean @default(false)
+  sendWhatsapp       Boolean @default(false)
+  
+  // Task details (if createTask = true)
+  taskTitle       String?
+  taskPriority    String? // HIGH, MEDIUM, LOW
+  taskAssigneeId  String?
+  
+  // Status
+  isActive        Boolean  @default(true)
+  lastTriggered   DateTime?
+  nextTrigger     DateTime?
+  
+  createdBy       String
+  creator         User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([noteId])
+  @@index([remindAt])
+  @@index([isActive])
+  @@index([nextTrigger])
+  @@map("note_reminders")
+}
+
+enum AttachmentType {
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  OTHER
+}
+
+enum ShareType {
+  USER
+  TEAM
+  CLIENT
+  PUBLIC
+}
+
+enum RecurringType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
