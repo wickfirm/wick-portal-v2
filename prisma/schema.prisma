@@ -74,7 +74,7 @@ model Client {
   website         String?
   industry        String?
   status          ClientStatus      @default(LEAD)
-  notes           String?
+  internalNotes   String?  @map("notes")  // Old text notes field, mapped to keep DB column name
   monthlyRetainer Decimal?          @db.Decimal(10, 2)
   primaryContact  String?
   primaryEmail    String?
