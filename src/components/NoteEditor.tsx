@@ -35,6 +35,9 @@ export default function NoteEditor({ note, onClose, onSave }: NoteEditorProps) {
   const [tags, setTags] = useState<string[]>(note?.tags || []);
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
+  const [attachmentKey, setAttachmentKey] = useState(0);
+  const [tagInput, setTagInput] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!content.trim()) {
@@ -313,17 +316,23 @@ export default function NoteEditor({ note, onClose, onSave }: NoteEditorProps) {
                 <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, display: "block", marginBottom: 8 }}>
                   Attachments
                 </label>
-                <AttachmentUploader noteId={note.id} onUploadComplete={() => {}} />
+                <AttachmentUploader 
+                  noteId={note.id} 
+                  onUploadComplete={() => setAttachmentKey(prev => prev + 1)} 
+                />
               </div>
 
               <div style={{ marginBottom: 16 }}>
                 <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, display: "block", marginBottom: 8 }}>
                   Voice Memo
                 </label>
-                <VoiceRecorder noteId={note.id} onRecordingComplete={() => {}} />
+                <VoiceRecorder 
+                  noteId={note.id} 
+                  onRecordingComplete={() => setAttachmentKey(prev => prev + 1)} 
+                />
               </div>
 
-              <AttachmentList noteId={note.id} />
+              <AttachmentList key={attachmentKey} noteId={note.id} />
             </>
           )}
         </div>
