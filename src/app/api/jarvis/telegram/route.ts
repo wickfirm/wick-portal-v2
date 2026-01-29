@@ -32,7 +32,7 @@ async function processMessage(chatId: number, text: string, telegramUserId: numb
         // Temporary: match by email pattern until we add telegramId field
         OR: [
           { email: { contains: String(telegramUserId) } },
-          { id: { contains: "Omnixia_JarvisBot" } }, // REPLACE WITH YOUR USER ID FOR TESTING
+          { id: { contains: "YOUR_USER_ID_HERE" } }, // REPLACE WITH YOUR USER ID FOR TESTING
         ],
       },
       select: { id: true, agencyId: true, name: true },
@@ -102,7 +102,12 @@ EXAMPLES:
       ],
     });
 
-    const aiText = response.content[0].text;
+    // Extract text from response
+    const textBlock = response.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+      throw new Error("No text response from Claude");
+    }
+    const aiText = textBlock.text;
     const result = JSON.parse(aiText);
 
     // Execute the action
