@@ -126,7 +126,16 @@ export async function PUT(
       },
     });
 
-    return NextResponse.json({ note });
+    // Convert BigInt to Number for JSON serialization
+    const serializedNote = {
+      ...note,
+      attachments: note.attachments.map(att => ({
+        ...att,
+        size: Number(att.size),
+      })),
+    };
+
+    return NextResponse.json({ note: serializedNote });
   } catch (error) {
     console.error("Error updating note:", error);
     return NextResponse.json({ error: "Failed to update note" }, { status: 500 });
