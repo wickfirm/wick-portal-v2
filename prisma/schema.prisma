@@ -1,7 +1,5 @@
 generator client {
   provider = "prisma-client-js"
-ss s s s ss s
-
 }
 
 // Force rebuild v5 - Added HR System
