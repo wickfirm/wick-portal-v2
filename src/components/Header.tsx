@@ -20,7 +20,7 @@ export default function Header() {
   const { data: session } = useSession();
   const user = session?.user as any;
   const userRole = user?.role || "";
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
   const isSuperAdmin = userRole === "SUPER_ADMIN";
