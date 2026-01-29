@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { theme } from "@/lib/theme";
+import AttachmentUploader from "./AttachmentUploader";
+import VoiceRecorder from "./VoiceRecorder";
+import AttachmentList from "./AttachmentList";
 
 interface NoteEditorProps {
   note?: {
@@ -302,6 +305,27 @@ export default function NoteEditor({ note, onClose, onSave }: NoteEditorProps) {
               </button>
             </div>
           </div>
+
+          {/* Attachments (only for existing notes) */}
+          {note && (
+            <>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, display: "block", marginBottom: 8 }}>
+                  Attachments
+                </label>
+                <AttachmentUploader noteId={note.id} onUploadComplete={() => {}} />
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, display: "block", marginBottom: 8 }}>
+                  Voice Memo
+                </label>
+                <VoiceRecorder noteId={note.id} onRecordingComplete={() => {}} />
+              </div>
+
+              <AttachmentList noteId={note.id} />
+            </>
+          )}
         </div>
 
         {/* Footer */}
