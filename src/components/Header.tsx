@@ -10,7 +10,7 @@ import NotificationBell from "./NotificationBell";
 // Icon mapping
 const ICONS: Record<string, string> = {
   "Dashboard": "📊", "Daily": "📅", "HR": "👔", "Lead Qualifier": "🎯",
-  "Clients": "👤", "Projects": "📁", "Tasks": "✓", "Finance": "💰",
+  "Clients": "👤", "Projects": "📁", "Tasks": "✓", "Notes": "📝", "Finance": "💰",
   "Media Hub": "🎬", "Timesheet": "⏱️", "Team": "👥", "Agencies": "🏢",
   "Analytics": "📈", "Settings": "⚙️", "Tenants": "🏢", "Users": "👥",
 };
@@ -46,6 +46,7 @@ export default function Header() {
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/notes", label: "Notes" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/settings", label: "Settings" },
   ] : isSuperAdmin ? [
@@ -56,6 +57,7 @@ export default function Header() {
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/notes", label: "Notes" },
     { href: "/finance", label: "Finance" },
     { href: "/media", label: "Media Hub" },
     { href: "/timesheet", label: "Timesheet" },
@@ -70,6 +72,7 @@ export default function Header() {
     { href: "/clients", label: "Clients" },
     { href: "/projects", label: "Projects" },
     { href: "/tasks", label: "Tasks" },
+    { href: "/notes", label: "Notes" },
     { href: "/timesheet", label: "Timesheet" },
     { href: "/team", label: "Team" },
     { href: "/analytics", label: "Analytics" },
