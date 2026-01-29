@@ -103,7 +103,7 @@ export default function Header() {
           justifyContent: collapsed ? "center" : "flex-start",
         }}>
           <Link href="/dashboard">
-            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 28 : 32 }} />
+            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 36 : 42 }} />
           </Link>
         </div>
 
