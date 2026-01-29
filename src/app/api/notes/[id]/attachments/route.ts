@@ -167,7 +167,13 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json({ attachments });
+    // Convert BigInt to Number for JSON serialization
+    const serializedAttachments = attachments.map(att => ({
+      ...att,
+      size: Number(att.size),
+    }));
+
+    return NextResponse.json({ attachments: serializedAttachments });
   } catch (error) {
     console.error("Error fetching attachments:", error);
     return NextResponse.json(
