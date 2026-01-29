@@ -36,8 +36,6 @@ export default function NoteEditor({ note, onClose, onSave }: NoteEditorProps) {
   const [tagInput, setTagInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [attachmentKey, setAttachmentKey] = useState(0);
-  const [tagInput, setTagInput] = useState("");
-  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     if (!content.trim()) {
