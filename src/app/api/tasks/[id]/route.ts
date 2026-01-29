@@ -94,7 +94,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.priority === "URGENT" && oldTask?.priority !== "URGENT" && task.assigneeId) {
       await createNotification({
         userId: task.assigneeId,
-        type: "TASK_UPDATED",
+        type: "TASK_STATUS_CHANGED",
         category: "TASK",
         priority: "URGENT",
         title: "Task Marked Urgent",
