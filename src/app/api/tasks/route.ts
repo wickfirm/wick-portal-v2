@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         priority: data.priority || "MEDIUM",
         status: data.status || "TODO",
-        notes: data.notes || null,
+        internalNotes: data.notes || null,
         nextSteps: data.nextSteps || null,
         externalLink: data.externalLink || null,
         externalLinkLabel: data.externalLinkLabel || null,
