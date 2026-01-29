@@ -31,15 +31,18 @@ const ALLOWED_TYPES = {
 export default function AttachmentUploader({ noteId, onUploadComplete }: AttachmentUploaderProps) {
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList) => {
     if (files.length === 0) return;
 
     setUploading(true);
+    const totalFiles = files.length;
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
+      setUploadStatus(`Uploading ${i + 1} of ${totalFiles}: ${file.name}...`);
 
       // Validate type
       if (!ALLOWED_TYPES[file.type as keyof typeof ALLOWED_TYPES]) {
@@ -82,15 +85,19 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
           throw new Error("Failed to upload file");
         }
 
-        console.log(`Uploaded: ${file.name}`);
+        console.log(`✓ Uploaded: ${file.name}`);
       } catch (error) {
         console.error(`Error uploading ${file.name}:`, error);
         alert(`Failed to upload ${file.name}`);
       }
     }
 
-    setUploading(false);
-    onUploadComplete();
+    setUploadStatus("Upload complete!");
+    setTimeout(() => {
+      setUploadStatus("");
+      setUploading(false);
+      onUploadComplete();
+    }, 1000);
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -135,7 +142,7 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
         onDragLeave={handleDrag}
         onDragOver={handleDrag}
         onDrop={handleDrop}
-        onClick={() => fileInputRef.current?.click()}
+        onClick={() => !uploading && fileInputRef.current?.click()}
         style={{
           border: `2px dashed ${dragActive ? theme.colors.primary : "rgba(0,0,0,0.2)"}`,
           borderRadius: 8,
@@ -147,7 +154,12 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
         }}
       >
         {uploading ? (
-          <div style={{ color: theme.colors.textMuted }}>Uploading...</div>
+          <div>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+            <div style={{ color: theme.colors.primary, fontSize: 14, fontWeight: 500 }}>
+              {uploadStatus}
+            </div>
+          </div>
         ) : (
           <>
             <div style={{ fontSize: 32, marginBottom: 8 }}>📎</div>
