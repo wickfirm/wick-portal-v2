@@ -340,7 +340,7 @@ export default function TasksManager({
       assigneeId: task.assigneeId || "",
       categoryId: task.categoryId || "",
       projectId: task.projectId || "",
-      notes: task.notes || "",
+      notes: task.internalNotes || "",
       nextSteps: task.nextSteps || "",
       externalLink: task.externalLink || "",
       externalLinkLabel: task.externalLinkLabel || "",
