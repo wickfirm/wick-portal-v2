@@ -32,6 +32,7 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
   const [uploading, setUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [uploadStatus, setUploadStatus] = useState("");
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = async (files: FileList) => {
@@ -42,7 +43,8 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      setUploadStatus(`Uploading ${i + 1} of ${totalFiles}: ${file.name}...`);
+      setUploadStatus(`Uploading ${i + 1} of ${totalFiles}: ${file.name}`);
+      setUploadProgress(0);
 
       // Validate type
       if (!ALLOWED_TYPES[file.type as keyof typeof ALLOWED_TYPES]) {
@@ -74,16 +76,37 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
 
         const { uploadUrl } = await uploadRes.json();
 
-        // Step 2: Upload to R2
-        const r2Res = await fetch(uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": file.type },
-          body: file,
-        });
+        // Step 2: Upload to R2 with progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
 
-        if (!r2Res.ok) {
-          throw new Error("Failed to upload file");
-        }
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+              const percentComplete = (e.loaded / e.total) * 100;
+              const loadedMB = (e.loaded / (1024 * 1024)).toFixed(1);
+              const totalMB = (e.total / (1024 * 1024)).toFixed(1);
+              setUploadProgress(percentComplete);
+              setUploadStatus(
+                `Uploading ${i + 1} of ${totalFiles}: ${file.name} - ${loadedMB}MB / ${totalMB}MB (${Math.round(percentComplete)}%)`
+              );
+            }
+          });
+
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error("Upload failed"));
+            }
+          });
+
+          xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+          xhr.addEventListener("abort", () => reject(new Error("Upload cancelled")));
+
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", file.type);
+          xhr.send(file);
+        });
 
         console.log(`✓ Uploaded: ${file.name}`);
       } catch (error) {
@@ -95,6 +118,7 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
     setUploadStatus("Upload complete!");
     setTimeout(() => {
       setUploadStatus("");
+      setUploadProgress(0);
       setUploading(false);
       onUploadComplete();
     }, 1000);
@@ -156,8 +180,23 @@ export default function AttachmentUploader({ noteId, onUploadComplete }: Attachm
         {uploading ? (
           <div>
             <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
-            <div style={{ color: theme.colors.primary, fontSize: 14, fontWeight: 500 }}>
+            <div style={{ color: theme.colors.primary, fontSize: 13, fontWeight: 500, marginBottom: 8 }}>
               {uploadStatus}
+            </div>
+            {/* Progress bar */}
+            <div style={{ 
+              width: "100%", 
+              height: 6, 
+              background: "rgba(0,0,0,0.1)", 
+              borderRadius: 3,
+              overflow: "hidden",
+            }}>
+              <div style={{
+                width: `${uploadProgress}%`,
+                height: "100%",
+                background: theme.colors.primary,
+                transition: "width 0.2s ease",
+              }} />
             </div>
           </div>
         ) : (
