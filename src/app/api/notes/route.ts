@@ -105,7 +105,16 @@ export async function GET(request: NextRequest) {
       ],
     });
 
-    return NextResponse.json({ notes });
+    // Convert BigInt to Number for JSON serialization
+    const serializedNotes = notes.map(note => ({
+      ...note,
+      attachments: note.attachments.map(att => ({
+        ...att,
+        size: Number(att.size),
+      })),
+    }));
+
+    return NextResponse.json({ notes: serializedNotes });
   } catch (error) {
     console.error("Error fetching notes:", error);
     return NextResponse.json({ error: "Failed to fetch notes" }, { status: 500 });
