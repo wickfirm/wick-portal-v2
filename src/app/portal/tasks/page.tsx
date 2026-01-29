@@ -70,7 +70,7 @@ export default async function PortalTasksPage() {
                     <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
                       <td style={{ padding: 16 }}>
                         <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{task.name}</div>
-                        {task.notes && <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>{task.notes}</div>}
+                        {task.internalNotes && <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 2 }}>{task.internalNotes}</div>}
                       </td>
                       <td style={{ padding: 16 }}>
                         {task.category ? (
