@@ -51,7 +51,16 @@ export async function GET(
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    return NextResponse.json({ note });
+    // Convert BigInt to Number for JSON serialization
+    const serializedNote = {
+      ...note,
+      attachments: note.attachments.map(att => ({
+        ...att,
+        size: Number(att.size),
+      })),
+    };
+
+    return NextResponse.json({ note: serializedNote });
   } catch (error) {
     console.error("Error fetching note:", error);
     return NextResponse.json({ error: "Failed to fetch note" }, { status: 500 });
