@@ -170,7 +170,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ note });
+    // Convert BigInt to Number for JSON serialization
+    const serializedNote = {
+      ...note,
+      attachments: note.attachments.map(att => ({
+        ...att,
+        size: Number(att.size),
+      })),
+    };
+
+    return NextResponse.json({ note: serializedNote });
   } catch (error) {
     console.error("Error creating note:", error);
     return NextResponse.json({ error: "Failed to create note" }, { status: 500 });
