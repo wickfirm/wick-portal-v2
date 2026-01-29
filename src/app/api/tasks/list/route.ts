@@ -76,7 +76,7 @@ export async function GET() {
         dueDate: true,
         projectId: true,
         categoryId: true,
-        notes: true,
+        internalNotes: true,
         nextSteps: true,
         ownerType: true,
         externalLink: true,
