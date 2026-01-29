@@ -12,7 +12,7 @@ type Task = {
   dueDate: Date | null;
   projectId: string | null;
   categoryId: string | null;
-  notes: string | null;
+  internalNotes: string | null;
   nextSteps: string | null;
   ownerType: string;
   externalLink: string | null;
