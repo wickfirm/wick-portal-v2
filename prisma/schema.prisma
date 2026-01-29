@@ -1517,7 +1517,7 @@ model NoteAttachment {
   thumbnail   String?  // R2 key for thumbnail
   
   uploadedBy  String
-  uploader    User     @relation(fields: [uploadedBy], references: [id], onDelete: Cascade)
+  uploader    User     @relation("UploadedNoteAttachments", fields: [uploadedBy], references: [id], onDelete: Cascade)
   
   createdAt   DateTime @default(now())
   
@@ -1536,7 +1536,7 @@ model NoteShare {
   
   // Share targets
   userId      String?
-  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User?    @relation("SharedNotesWith", fields: [userId], references: [id], onDelete: Cascade)
   
   clientId    String?
   client      Client?  @relation(fields: [clientId], references: [id], onDelete: Cascade)
@@ -1546,7 +1546,7 @@ model NoteShare {
   
   // Metadata
   sharedBy    String
-  sharer      User     @relation("SharedNotes", fields: [sharedBy], references: [id], onDelete: Cascade)
+  sharer      User     @relation("SharedNotesBy", fields: [sharedBy], references: [id], onDelete: Cascade)
   
   createdAt   DateTime @default(now())
   
@@ -1587,7 +1587,7 @@ model NoteReminder {
   nextTrigger     DateTime?
   
   createdBy       String
-  creator         User     @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  creator         User     @relation("CreatedNoteReminders", fields: [createdBy], references: [id], onDelete: Cascade)
   
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
