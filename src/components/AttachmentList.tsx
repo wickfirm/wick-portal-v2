@@ -26,6 +26,7 @@ interface AttachmentListProps {
 export default function AttachmentList({ noteId, onDelete }: AttachmentListProps) {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchAttachments();
@@ -36,10 +37,27 @@ export default function AttachmentList({ noteId, onDelete }: AttachmentListProps
       const res = await fetch(`/api/notes/${noteId}/attachments`);
       const data = await res.json();
       setAttachments(data.attachments || []);
+      
+      // Fetch preview URLs for images and audio
+      for (const att of data.attachments || []) {
+        if (att.type === "IMAGE" || att.type === "AUDIO") {
+          fetchPreviewUrl(att.id);
+        }
+      }
     } catch (error) {
       console.error("Error fetching attachments:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPreviewUrl = async (attachmentId: string) => {
+    try {
+      const res = await fetch(`/api/notes/${noteId}/attachments/${attachmentId}/download`);
+      const data = await res.json();
+      setPreviewUrls(prev => ({ ...prev, [attachmentId]: data.downloadUrl }));
+    } catch (error) {
+      console.error("Error fetching preview URL:", error);
     }
   };
 
@@ -111,66 +129,98 @@ export default function AttachmentList({ noteId, onDelete }: AttachmentListProps
             key={attachment.id}
             style={{
               display: "flex",
-              alignItems: "center",
-              gap: 12,
+              flexDirection: "column",
+              gap: 8,
               padding: 12,
               background: "rgba(255,255,255,0.5)",
               border: `1px solid ${theme.colors.borderLight}`,
               borderRadius: 8,
             }}
           >
-            {/* Icon */}
-            <div style={{ fontSize: 24 }}>{getIcon(attachment.type)}</div>
+            {/* Main row */}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {/* Icon */}
+              <div style={{ fontSize: 24 }}>{getIcon(attachment.type)}</div>
 
-            {/* Info */}
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: 13,
-                  fontWeight: 500,
-                  color: theme.colors.textPrimary,
-                  whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                }}
-              >
-                {attachment.originalName}
+              {/* Info */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    color: theme.colors.textPrimary,
+                    whiteSpace: "nowrap",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                  }}
+                >
+                  {attachment.originalName}
+                </div>
+                <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
+                  {formatSize(Number(attachment.size))}
+                  {attachment.duration && ` • ${Math.floor(attachment.duration / 60)}:${(attachment.duration % 60).toString().padStart(2, "0")}`}
+                </div>
               </div>
-              <div style={{ fontSize: 11, color: theme.colors.textMuted }}>
-                {formatSize(Number(attachment.size))}
-                {attachment.duration && ` • ${Math.floor(attachment.duration / 60)}:${(attachment.duration % 60).toString().padStart(2, "0")}`}
+
+              {/* Actions */}
+              <div style={{ display: "flex", gap: 8 }}>
+                <button
+                  onClick={() => handleDownload(attachment)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    padding: 4,
+                  }}
+                  title="Download"
+                >
+                  ⬇️
+                </button>
+                <button
+                  onClick={() => handleDelete(attachment.id)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: 16,
+                    padding: 4,
+                  }}
+                  title="Delete"
+                >
+                  🗑️
+                </button>
               </div>
             </div>
 
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() => handleDownload(attachment)}
+            {/* Image Preview */}
+            {attachment.type === "IMAGE" && previewUrls[attachment.id] && (
+              <img
+                src={previewUrls[attachment.id]}
+                alt={attachment.originalName}
                 style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 16,
-                  padding: 4,
+                  maxWidth: "100%",
+                  maxHeight: 200,
+                  borderRadius: 6,
+                  objectFit: "contain",
+                  background: "#f5f5f5",
                 }}
-                title="Download"
-              >
-                ⬇️
-              </button>
-              <button
-                onClick={() => handleDelete(attachment.id)}
+              />
+            )}
+
+            {/* Audio Player */}
+            {attachment.type === "AUDIO" && previewUrls[attachment.id] && (
+              <audio
+                controls
                 style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: 16,
-                  padding: 4,
+                  width: "100%",
+                  height: 40,
                 }}
-                title="Delete"
               >
-                🗑️
-              </button>
-            </div>
+                <source src={previewUrls[attachment.id]} type={attachment.mimeType} />
+                Your browser does not support audio playback.
+              </audio>
+            )}
           </div>
         ))}
       </div>
