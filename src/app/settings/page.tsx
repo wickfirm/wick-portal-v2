@@ -69,6 +69,14 @@ export default function SettingsPage() {
       roles: ["SUPER_ADMIN", "ADMIN", "MEMBER"],
     },
     {
+      title: "Notifications",
+      description: "Control how and when you receive notifications",
+      href: "/notifications/preferences",
+      icon: "🔔",
+      color: theme.colors.info,
+      roles: ["SUPER_ADMIN", "ADMIN", "MEMBER"],
+    },
+    {
       title: "HR Settings",
       description: "Configure leave policies and working hours",
       href: "/settings/hr",
