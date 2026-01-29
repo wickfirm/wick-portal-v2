@@ -60,7 +60,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         priority: data.priority || "MEDIUM",
         ownerType: data.ownerType || "AGENCY",
         assigneeId: user.id, // Auto-assign to creator
-        notes: data.notes || null,
+        internalNotes: data.notes || null,
         nextSteps: data.nextSteps || null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         externalLink: data.externalLink || null,
