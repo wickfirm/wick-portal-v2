@@ -692,7 +692,7 @@ export default function TasksList({
                     <td style={{ padding: "12px 24px", minWidth: 150 }}>
                       <input
                         type="text"
-                        value={task.notes || ""}
+                        value={task.internalNotes || ""}
                         onChange={(e) => updateTaskField(task.id, "notes", e.target.value)}
                         placeholder="Add notes..."
                         style={{
