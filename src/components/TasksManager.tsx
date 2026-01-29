@@ -7,7 +7,7 @@ import TasksLoadingSkeleton from "./TasksLoadingSkeleton";
 type Task = {
   id: string;
   name: string;
-  notes: string | null;
+  internalNotes: string | null;
   nextSteps: string | null;
   status: string;
   priority: string;
