@@ -74,7 +74,7 @@ model Client {
   website         String?
   industry        String?
   status          ClientStatus      @default(LEAD)
-  internalNotes   String?  @map("notes")  // Old text notes field, mapped to keep DB column name
+  internalNotes   String?           @map("notes")
   monthlyRetainer Decimal?          @db.Decimal(10, 2)
   primaryContact  String?
   primaryEmail    String?
@@ -99,8 +99,8 @@ model Client {
   mediaFolders    MediaFolder[]
   mediaFiles      MediaFile[]
   expenses        ProjectExpense[]
-notes       Note[]
-noteShares  NoteShare[]
+  stickyNotes     Note[]
+  noteShares      NoteShare[]
 
   @@index([status])
   @@index([createdAt])
@@ -147,6 +147,7 @@ model Project {
   billRate    Decimal?  @db.Decimal(10, 2)
   mediaFolders  MediaFolder[]
   expenses      ProjectExpense[]
+  notes         Note[]
 
   @@index([status])              // For filtering by status
   @@index([clientId])            // For filtering by client
@@ -276,7 +277,7 @@ model ClientTask {
   dueDate           DateTime?
   priority          String       @default("MEDIUM")
   status            String       @default("PENDING")
-  notes             String?
+  internalNotes     String?      @map("notes")
   nextSteps         String?
   externalLink      String?
   externalLinkLabel String?
@@ -289,6 +290,7 @@ model ClientTask {
   timeEntries       TimeEntry[]
   dailyTasks          DailyTask[]
   modifications       TaskModification[]
+  stickyNotes         Note[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
