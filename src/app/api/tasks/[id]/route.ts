@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { createNotification } from "@/lib/notifications";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -9,6 +10,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   try {
     const data = await req.json();
+
+    // Get old task data for comparison
+    const oldTask = await prisma.clientTask.findUnique({
+      where: { id: params.id },
+      select: {
+        assigneeId: true,
+        status: true,
+        priority: true,
+        name: true,
+      },
+    });
 
     const updateData: any = { updatedAt: new Date() };
     
@@ -44,6 +56,53 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         },
       },
     });
+
+    // NOTIFICATION TRIGGERS
+    
+    // 1. Task Assignment Notification
+    if (data.assigneeId !== undefined && data.assigneeId !== oldTask?.assigneeId && data.assigneeId) {
+      await createNotification({
+        userId: data.assigneeId,
+        type: "TASK_ASSIGNED",
+        category: "TASK",
+        priority: task.priority === "URGENT" ? "URGENT" : "NORMAL",
+        title: "New Task Assigned",
+        message: `You've been assigned: "${task.name}"`,
+        link: `/tasks?taskId=${task.id}`,
+        metadata: { taskId: task.id, taskName: task.name },
+      });
+    }
+
+    // 2. Status Change to Completed Notification
+    if (data.status === "COMPLETED" && oldTask?.status !== "COMPLETED") {
+      // Notify assignee
+      if (task.assigneeId && task.assigneeId !== session.user.id) {
+        await createNotification({
+          userId: task.assigneeId,
+          type: "TASK_COMPLETED",
+          category: "TASK",
+          priority: "NORMAL",
+          title: "Task Marked Complete",
+          message: `"${task.name}" was marked as completed`,
+          link: `/tasks?taskId=${task.id}`,
+          metadata: { taskId: task.id, completedBy: session.user.id },
+        });
+      }
+    }
+
+    // 3. Priority Change to URGENT Notification
+    if (data.priority === "URGENT" && oldTask?.priority !== "URGENT" && task.assigneeId) {
+      await createNotification({
+        userId: task.assigneeId,
+        type: "TASK_UPDATED",
+        category: "TASK",
+        priority: "URGENT",
+        title: "Task Marked Urgent",
+        message: `"${task.name}" priority changed to URGENT`,
+        link: `/tasks?taskId=${task.id}`,
+        metadata: { taskId: task.id, changedBy: session.user.id },
+      });
+    }
 
     return NextResponse.json(task);
   } catch (error) {
