@@ -3,54 +3,44 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
-import dynamic from "next/dynamic";
+import { useState } from "react";
 import { theme } from "@/lib/theme";
-import { useTenant } from "@/providers/tenant-provider";
 import NotificationBell from "./NotificationBell";
 
-// Lazy load TimerWidget so it doesn't block page load
-const TimerWidget = dynamic(() => import("./TimerWidget"), {
-  ssr: false,
-  loading: () => (
-    <div style={{ 
-      width: 120, 
-      height: 36,
-      borderRadius: 8,
-      background: "transparent"
-    }} />
-  )
-});
+// Icon mapping
+const ICONS: Record<string, string> = {
+  "Dashboard": "📊", "Daily": "📅", "HR": "👔", "Lead Qualifier": "🎯",
+  "Clients": "👤", "Projects": "📁", "Tasks": "✓", "Finance": "💰",
+  "Media Hub": "🎬", "Timesheet": "⏱️", "Team": "👥", "Agencies": "🏢",
+  "Analytics": "📈", "Settings": "⚙️", "Tenants": "🏢", "Users": "👥",
+};
 
 export default function Header() {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const user = session?.user as any;
-  const userName = user?.name || "";
   const userRole = user?.role || "";
-  const userAgencyId = user?.agencyId;
+  const [collapsed, setCollapsed] = useState(false);
+
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
   const isSuperAdmin = userRole === "SUPER_ADMIN";
-  
-  // Get tenant config from context (passed from server, no flash!)
-  const tenantConfig = useTenant();
-  
-  // Determine branding based on tenant config
-  const brandName = tenantConfig.name;
-  const brandLogo = tenantConfig.logoLetter;
-  const brandColor = tenantConfig.colors.primary;
+  const isMember = userRole === "MEMBER";
 
-  // Show loading state to prevent navigation flash
-  const isLoading = status === "loading";
+  // Hide sidebar on public pages
+  const isPublicPage = pathname?.startsWith("/login") || 
+                       pathname?.startsWith("/widget") || 
+                       pathname?.startsWith("/test");
 
-  // Different navigation based on role
+  if (isPublicPage || !session) return null;
+
+  // Navigation based on role
   const navItems = isPlatformAdmin ? [
     { href: "/platform-admin", label: "Dashboard" },
     { href: "/platform-admin/agencies", label: "Tenants" },
     { href: "/platform-admin/users", label: "Users" },
     { href: "/platform-admin/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
-  ] : userRole === "MEMBER" ? [
-    // MEMBERs see limited navigation (no HR, Media Hub)
+  ] : isMember ? [
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
     { href: "/clients", label: "Clients" },
@@ -59,7 +49,6 @@ export default function Header() {
     { href: "/timesheet", label: "Timesheet" },
     { href: "/settings", label: "Settings" },
   ] : isSuperAdmin ? [
-    // SUPER_ADMINs see full navigation including Finance
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
@@ -75,7 +64,6 @@ export default function Header() {
     { href: "/analytics", label: "Analytics" },
     { href: "/settings", label: "Settings" },
   ] : [
-    // ADMINs see navigation WITHOUT Lead Qualifier, Media Hub, Agencies, or Finance
     { href: "/dashboard", label: "Dashboard" },
     { href: "/daily", label: "Daily" },
     { href: "/dashboard/hr", label: "HR" },
@@ -88,111 +76,141 @@ export default function Header() {
     { href: "/settings", label: "Settings" },
   ];
 
-  // Create gradient based on tenant colors
-  const brandGradient = tenantConfig.colors.secondary
-    ? `linear-gradient(135deg, ${brandColor}, ${tenantConfig.colors.secondary})`
-    : `linear-gradient(135deg, ${brandColor}, ${brandColor})`;
-
   const isActive = (href: string) => {
-    if (href === "/dashboard" || href === "/platform-admin") {
-      return pathname === href;
-    }
+    if (href === "/dashboard" || href === "/platform-admin") return pathname === href;
     return pathname?.startsWith(href);
   };
 
   return (
-    <header style={{
-      background: theme.colors.bgSecondary,
-      padding: "0 24px",
-      borderBottom: `1px solid ${theme.colors.borderLight}`,
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-      height: 64,
-      position: "sticky",
-      top: 0,
-      zIndex: 100,
-      boxShadow: "0 1px 3px rgba(0,0,0,0.04)"
-    }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-        <Link href="/dashboard" style={{ display: "flex", alignItems: "center", gap: 12, textDecoration: "none" }}>
-          <img 
-            src="/Wick-logo-black.png" 
-            alt="Wick"
-            style={{
-              height: 36,
-              width: "auto"
-            }}
-          />
-        </Link>
-        
-        <nav style={{ display: "flex", gap: 4 }}>
-          {!isLoading && navItems.map((item) => (
+    <>
+      {/* Sidebar */}
+      <aside style={{
+        width: collapsed ? 60 : 220,
+        background: theme.colors.bgSecondary,
+        borderRight: `1px solid ${theme.colors.borderLight}`,
+        position: "fixed",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        transition: "width 0.2s",
+        zIndex: 1000,
+      }}>
+        {/* Logo */}
+        <div style={{
+          padding: collapsed ? "16px 12px" : "16px 20px",
+          borderBottom: `1px solid ${theme.colors.borderLight}`,
+          display: "flex",
+          justifyContent: collapsed ? "center" : "flex-start",
+        }}>
+          <Link href="/dashboard">
+            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 28 : 32 }} />
+          </Link>
+        </div>
+
+        {/* Nav */}
+        <nav style={{ flex: 1, padding: "12px 0", overflowY: "auto" }}>
+          {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               style={{
-                padding: "8px 16px",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: 500,
-                color: isActive(item.href) ? theme.colors.primary : theme.colors.textSecondary,
-                background: isActive(item.href) ? `${theme.colors.primary}14` : "transparent",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: collapsed ? "12px 16px" : "12px 20px",
                 textDecoration: "none",
-                transition: "all 150ms ease",
+                color: isActive(item.href) ? theme.colors.primary : theme.colors.textSecondary,
+                background: isActive(item.href) ? theme.colors.primaryBg : "transparent",
+                borderLeft: isActive(item.href) ? `3px solid ${theme.colors.primary}` : "3px solid transparent",
+                fontSize: 14,
+                fontWeight: isActive(item.href) ? 600 : 400,
+                transition: "all 0.15s",
               }}
+              onMouseEnter={(e) => !isActive(item.href) && (e.currentTarget.style.background = theme.colors.bgTertiary)}
+              onMouseLeave={(e) => !isActive(item.href) && (e.currentTarget.style.background = "transparent")}
             >
-              {item.label}
+              <span style={{ fontSize: 18 }}>{ICONS[item.label] || "•"}</span>
+              {!collapsed && <span>{item.label}</span>}
             </Link>
           ))}
         </nav>
-      </div>
-      
-      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-        <TimerWidget />
-        <NotificationBell />
-        
-        {userName && (
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+
+        {/* Toggle */}
+        <button
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            padding: 12,
+            border: "none",
+            borderTop: `1px solid ${theme.colors.borderLight}`,
+            background: "transparent",
+            cursor: "pointer",
+            fontSize: 18,
+            color: theme.colors.textMuted,
+          }}
+        >
+          {collapsed ? "→" : "←"}
+        </button>
+      </aside>
+
+      {/* Top Bar */}
+      <header style={{
+        marginLeft: collapsed ? 60 : 220,
+        background: theme.colors.bgSecondary,
+        borderBottom: `1px solid ${theme.colors.borderLight}`,
+        padding: "0 24px",
+        height: 60,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 90,
+        transition: "margin-left 0.2s",
+      }}>
+        {/* Search */}
+        <div style={{ flex: 1, maxWidth: 400 }}>
+          <input
+            type="text"
+            placeholder="Search..."
+            style={{
+              width: "100%",
+              padding: "8px 12px",
+              border: `1px solid ${theme.colors.borderLight}`,
+              borderRadius: 6,
+              fontSize: 14,
+              background: theme.colors.bgPrimary,
+            }}
+          />
+        </div>
+
+        {/* Right */}
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <NotificationBell />
+          <Link href="/settings/account" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
             <div style={{
-              width: 36,
-              height: 36,
-              borderRadius: 18,
-              background: theme.gradients.accent,
+              width: 32,
+              height: 32,
+              borderRadius: "50%",
+              background: theme.colors.primary,
+              color: "white",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              color: "white",
+              fontSize: 14,
               fontWeight: 600,
-              fontSize: 14
             }}>
-              {userName.charAt(0).toUpperCase()}
+              {user?.name?.charAt(0) || "U"}
             </div>
-            <div>
-              <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>{userName}</div>
-              {userRole && (
-                <div style={{ fontSize: 11, color: theme.colors.textMuted, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                  {userRole.replace("_", " ")}
-                </div>
-              )}
+            <div style={{ fontSize: 14 }}>
+              <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{user?.name || "User"}</div>
+              <div style={{ fontSize: 11, color: theme.colors.textMuted }}>{userRole.replace("_", " ")}</div>
             </div>
-          </div>
-        )}
-        <Link 
-          href="/auth/signout" 
-          style={{ 
-            color: theme.colors.textSecondary, 
-            textDecoration: "none", 
-            fontSize: 14,
-            padding: "8px 12px",
-            borderRadius: 6,
-            border: `1px solid ${theme.colors.borderLight}`,
-            transition: "all 150ms ease"
-          }}
-        >
-          Sign out
-        </Link>
-      </div>
-    </header>
+          </Link>
+        </div>
+      </header>
+
+      {/* Content spacer */}
+      <div style={{ marginLeft: collapsed ? 60 : 220, transition: "margin-left 0.2s" }} />
+    </>
   );
 }
