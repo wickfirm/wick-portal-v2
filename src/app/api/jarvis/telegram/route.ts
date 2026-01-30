@@ -114,7 +114,8 @@ EXAMPLES:
         break;
 
       case "create_task":
-        await sendMessage(chatId, `✅ *${result.message}*\n\n(Task creation coming in Phase 2!)`);
+        await createTask(result.data, user.id, user.agencyId);
+        await sendMessage(chatId, `✅ *Task Created!*\n\n${result.message}`);
         break;
 
       case "query":
@@ -170,14 +171,39 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       email: data.email || null,
       phone: data.phone || null,
       website: data.website || null,
-      notes: data.notes || null,
+      internalNotes: data.notes || null,
       createdBy: userId,
       agencies: {
         create: {
           agencyId: agencyId || "",
-          role: "PRIMARY",
         },
       },
+    },
+  });
+}
+
+// Create task in database
+async function createTask(data: any, userId: string, agencyId: string | null | undefined) {
+  // Parse due date if provided
+  let dueDate = null;
+  if (data.dueDate) {
+    try {
+      dueDate = new Date(data.dueDate);
+    } catch (e) {
+      // Invalid date, ignore
+    }
+  }
+
+  await prisma.task.create({
+    data: {
+      name: data.name,
+      priority: data.priority || "MEDIUM",
+      status: data.status || "TODO",
+      dueDate: dueDate,
+      internalNotes: data.notes || null,
+      ownerType: "AGENCY",
+      assigneeId: userId, // Auto-assign to creator
+      agencyId: agencyId || "",
     },
   });
 }
