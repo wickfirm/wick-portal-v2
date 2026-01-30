@@ -12,7 +12,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 // Send message to Telegram
 async function sendMessage(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${8539093100:AAFqa3ZveFvZuOF4tepTzv66Y80nwdYtIK8}/sendMessage`, {
+  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
