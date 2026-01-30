@@ -12,7 +12,7 @@ const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 
 // Send message to Telegram
 async function sendMessage(chatId: number, text: string) {
-  await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+  await fetch(`https://api.telegram.org/bot${8539093100:AAFqa3ZveFvZuOF4tepTzv66Y80nwdYtIK8}/sendMessage`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -26,25 +26,12 @@ async function sendMessage(chatId: number, text: string) {
 // Process message with Claude
 async function processMessage(chatId: number, text: string, telegramUserId: number) {
   try {
-    // Find user by Telegram ID (we'll need to add telegramId field to User model)
-    const user = await prisma.user.findFirst({
-      where: {
-        // Temporary: match by email pattern until we add telegramId field
-        OR: [
-          { email: { contains: String(telegramUserId) } },
-          { id: { contains: "cmjr6w9gx0001h2g0tta6h37g" } }, // REPLACE WITH YOUR USER ID FOR TESTING
-        ],
-      },
-      select: { id: true, agencyId: true, name: true },
-    });
-
-    if (!user) {
-      await sendMessage(
-        chatId,
-        "❌ *Not Linked*\n\nYour Telegram is not linked to Omnixia.\n\nFor now, update the code with your user ID to test!"
-      );
-      return;
-    }
+    // HARDCODED FOR TESTING - Your user ID
+    const user = {
+      id: "cmjr6w9gx0001h2g0tta6h37g",
+      agencyId: "agency-wick", // Update with your actual agency ID if needed
+      name: "MBzle",
+    };
 
     await sendMessage(chatId, "🤔 *Jarvis is thinking...*");
 
@@ -107,7 +94,11 @@ EXAMPLES:
     if (!textBlock || textBlock.type !== "text") {
       throw new Error("No text response from Claude");
     }
-    const aiText = textBlock.text;
+    
+    // Strip markdown code blocks if present
+    let aiText = textBlock.text;
+    aiText = aiText.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    
     const result = JSON.parse(aiText);
 
     // Execute the action
