@@ -195,11 +195,6 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       primaryEmail: data.primaryEmail || null,
       monthlyRetainer: data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null,
       
-      // Enums with defaults
-      status: data.status || "LEAD",
-      pricingModel: data.pricingModel || "TIME_AND_MATERIALS",
-      revenueModel: data.revenueModel || "PROJECT_BASED",
-      
       // Relation
       agencies: {
         create: {
