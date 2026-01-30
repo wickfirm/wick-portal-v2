@@ -187,10 +187,37 @@ export async function POST(request: NextRequest) {
 
       // Voice messages
       if (body.message.voice) {
-        await sendMessage(
-          chatId,
-          "🎤 *Voice notes coming soon!*\n\nFor now, send text like:\n'Add a note: your note here'"
-        );
+        await sendMessage(chatId, "🎤 *Transcribing your voice message...*");
+        
+        try {
+          // Get voice file from Telegram
+          const fileId = body.message.voice.file_id;
+          const fileRes = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getFile?file_id=${fileId}`);
+          const fileData = await fileRes.json();
+          
+          if (!fileData.ok) {
+            throw new Error("Failed to get file from Telegram");
+          }
+          
+          // Download the audio file
+          const fileUrl = `https://api.telegram.org/file/bot${TELEGRAM_BOT_TOKEN}/${fileData.result.file_path}`;
+          const audioRes = await fetch(fileUrl);
+          const audioBuffer = await audioRes.arrayBuffer();
+          
+          // Transcribe with OpenAI Whisper
+          const transcript = await transcribeAudio(audioBuffer);
+          
+          await sendMessage(chatId, `📝 *Transcribed:*\n"${transcript}"\n\n_Processing..._`);
+          
+          // Process with Claude
+          const telegramUserId = body.message.from.id;
+          await processMessage(chatId, transcript, telegramUserId);
+        } catch (error) {
+          console.error("Voice transcription error:", error);
+          await sendMessage(chatId, "❌ Failed to transcribe voice message. Please try again or send text.");
+        }
+        
+        return NextResponse.json({ ok: true });
       }
     }
 
@@ -199,6 +226,40 @@ export async function POST(request: NextRequest) {
     console.error("Webhook error:", error);
     return NextResponse.json({ ok: true }); // Always return 200 to Telegram
   }
+}
+
+// Transcribe audio using OpenAI Whisper
+async function transcribeAudio(audioBuffer: ArrayBuffer): Promise<string> {
+  const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+  
+  if (!OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY not set");
+  }
+  
+  // Convert ArrayBuffer to File/Blob
+  const blob = new Blob([audioBuffer], { type: "audio/ogg" });
+  
+  // Create FormData for Whisper API
+  const formData = new FormData();
+  formData.append("file", blob, "voice.ogg");
+  formData.append("model", "whisper-1");
+  
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${OPENAI_API_KEY}`,
+    },
+    body: formData,
+  });
+  
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Whisper API error:", error);
+    throw new Error("Failed to transcribe audio");
+  }
+  
+  const data = await response.json();
+  return data.text;
 }
 
 export async function GET() {
