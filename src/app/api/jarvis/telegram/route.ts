@@ -45,14 +45,14 @@ Parse user requests and extract structured data.
 
 SUPPORTED ACTIONS:
 1. create_note - Add sticky notes
-2. create_client - Add new clients
+2. create_client - Add new clients (asks for missing required info)
 3. create_task - Add tasks
 4. query - Answer questions about data
 5. help - Show what you can do
 
 RESPONSE FORMAT (JSON only):
 {
-  "action": "create_note" | "create_client" | "create_task" | "query" | "help" | "unknown",
+  "action": "create_note" | "create_client" | "create_task" | "query" | "help" | "unknown" | "needs_info",
   "data": {
     // For create_note:
     "title": "optional short title",
@@ -61,26 +61,42 @@ RESPONSE FORMAT (JSON only):
     "color": "yellow" | "pink" | "blue" | "green" | "purple",
     "isPinned": false
     
-    // For create_client:
-    "name": "Client Name",
-    "company": "Company Name",
-    "email": "email@example.com",
+    // For create_client - extract ALL available info:
+    "name": "REQUIRED - Client/Company Name",
+    "nickname": "optional short name",
+    "email": "optional",
     "phone": "optional",
-    "website": "optional"
+    "company": "optional if different from name",
+    "website": "optional",
+    "industry": "optional",
+    "primaryContact": "optional contact person name",
+    "primaryEmail": "optional contact person email",
+    "monthlyRetainer": "optional decimal",
+    "status": "LEAD" | "ONBOARDING" | "ACTIVE" | "PAUSED" | "CHURNED" (default: LEAD),
+    "pricingModel": "FIXED_FEE" | "TIME_AND_MATERIALS" (default: TIME_AND_MATERIALS),
+    "revenueModel": "CLIENT_LEVEL" | "PROJECT_BASED" (default: PROJECT_BASED),
+    "notes": "optional internal notes"
     
     // For create_task:
     "name": "Task name",
     "priority": "HIGH" | "MEDIUM" | "LOW",
     "dueDate": "YYYY-MM-DD or null"
   },
-  "message": "Friendly confirmation to send user"
+  "missing_fields": ["field1", "field2"],  // Only for needs_info action
+  "message": "Friendly confirmation or question to send user"
 }
 
+IMPORTANT FOR CLIENTS:
+- If user provides name → create client immediately with available data
+- Don't ask for optional fields unless user seems to have the info
+- Extract everything mentioned (email, phone, website, etc.)
+- Use smart defaults: status=LEAD, pricingModel=TIME_AND_MATERIALS
+
 EXAMPLES:
-"add note: meeting went well" → create_note with content
-"create client Acme Corp, email info@acme.com" → create_client
-"what tasks do I have?" → query
-"help" → help`,
+"add note: meeting went well" → create_note
+"create client Acme Corp, email info@acme.com, website acme.com, retainer 5000" → create_client with all fields
+"add client Tech Startup" → create_client with just name
+"what tasks do I have?" → query`,
       messages: [
         {
           role: "user",
@@ -165,13 +181,27 @@ async function createNote(data: any, userId: string, agencyId: string | null | u
 async function createClient(data: any, userId: string, agencyId: string | null | undefined) {
   await prisma.client.create({
     data: {
+      // Required
       name: data.name,
-      nickname: data.company || data.name,
+      
+      // Optional fields - use what's provided
+      nickname: data.nickname || data.company || null,
       email: data.email || null,
       phone: data.phone || null,
+      company: data.company || null,
       website: data.website || null,
-      internalNotes: data.notes || null,
-      status: "ACTIVE",
+      industry: data.industry || null,
+      primaryContact: data.primaryContact || null,
+      primaryEmail: data.primaryEmail || null,
+      notes: data.notes || null,
+      monthlyRetainer: data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null,
+      
+      // Enums with defaults
+      status: data.status || "LEAD",
+      pricingModel: data.pricingModel || "TIME_AND_MATERIALS",
+      revenueModel: data.revenueModel || "PROJECT_BASED",
+      
+      // Relation
       agencies: {
         create: {
           agencyId: agencyId || "",
