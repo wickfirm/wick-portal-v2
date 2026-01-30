@@ -109,7 +109,8 @@ EXAMPLES:
         break;
 
       case "create_client":
-        await sendMessage(chatId, `📋 *${result.message}*\n\n(Client creation coming in Phase 2!)`);
+        await createClient(result.data, user.id, user.agencyId);
+        await sendMessage(chatId, `👥 *Client Created!*\n\n${result.message}`);
         break;
 
       case "create_task":
@@ -156,6 +157,27 @@ async function createNote(data: any, userId: string, agencyId: string | null | u
       tags: data.tags || [],
       createdBy: userId,
       agencyId: agencyId || null,
+    },
+  });
+}
+
+// Create client in database
+async function createClient(data: any, userId: string, agencyId: string | null | undefined) {
+  await prisma.client.create({
+    data: {
+      name: data.name,
+      nickname: data.company || data.name,
+      email: data.email || null,
+      phone: data.phone || null,
+      website: data.website || null,
+      notes: data.notes || null,
+      createdBy: userId,
+      agencies: {
+        create: {
+          agencyId: agencyId || "",
+          role: "PRIMARY",
+        },
+      },
     },
   });
 }
