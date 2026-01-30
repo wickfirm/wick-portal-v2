@@ -73,16 +73,16 @@ model Client {
   company         String?
   website         String?
   industry        String?
-  status          ClientStatus      @default(LEAD)
+  status          String            @default("LEAD")  // Changed from ClientStatus enum
   internalNotes   String?           @map("notes")
   monthlyRetainer Decimal?          @db.Decimal(10, 2)
   primaryContact  String?
   primaryEmail    String?
   nickname        String?
   showTimeInPortal Boolean          @default(false)
-  revenueModel    String            @default("PROJECT_BASED") @map("revenue_model")  // NEW: 'CLIENT_LEVEL' or 'PROJECT_BASED'
-  pricingModel    PricingModel      @default(TIME_AND_MATERIALS) @map("pricing_model")  // NEW
-  monthlyRevenue  Decimal?          @db.Decimal(10, 2) @map("monthly_revenue")  // NEW
+  revenueModel    String            @default("PROJECT_BASED") @map("revenue_model")
+  pricingModel    String            @default("TIME_AND_MATERIALS") @map("pricing_model")  // Added quotes
+  monthlyRevenue  Decimal?          @db.Decimal(10, 2) @map("monthly_revenue")
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   projects        Project[]
@@ -105,7 +105,7 @@ model Client {
   @@index([status])
   @@index([createdAt])
   @@index([name])
-  @@index([revenueModel])  // NEW
+  @@index([revenueModel])
   @@map("clients")
 }
 
