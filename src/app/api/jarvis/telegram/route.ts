@@ -45,14 +45,17 @@ Parse user requests and extract structured data.
 
 SUPPORTED ACTIONS:
 1. create_note - Add sticky notes
-2. create_client - Add new clients (asks for missing required info)
-3. create_task - Add tasks
-4. query - Answer questions about data
-5. help - Show what you can do
+2. create_client - Add new clients
+3. update_client - Update existing client details
+4. get_client - Get client details (if multiple found, lists them)
+5. select_client - Select client by number from list
+6. create_task - Add tasks
+7. query - Answer questions about data
+8. help - Show what you can do
 
 RESPONSE FORMAT (JSON only):
 {
-  "action": "create_note" | "create_client" | "create_task" | "query" | "help" | "unknown" | "needs_info",
+  "action": "create_note" | "create_client" | "update_client" | "get_client" | "select_client" | "create_task" | "query" | "help" | "unknown",
   "data": {
     // For create_note:
     "title": "optional short title",
@@ -61,41 +64,42 @@ RESPONSE FORMAT (JSON only):
     "color": "yellow" | "pink" | "blue" | "green" | "purple",
     "isPinned": false
     
-    // For create_client - extract ALL available info:
+    // For create_client:
     "name": "REQUIRED - Client/Company Name",
-    "nickname": "optional short name",
     "email": "optional",
     "phone": "optional",
-    "company": "optional if different from name",
-    "website": "optional",
-    "industry": "optional",
-    "primaryContact": "optional contact person name",
-    "primaryEmail": "optional contact person email",
-    "monthlyRetainer": "optional decimal",
-    "status": "LEAD" | "ONBOARDING" | "ACTIVE" | "PAUSED" | "CHURNED" (default: LEAD),
-    "pricingModel": "FIXED_FEE" | "TIME_AND_MATERIALS" (default: TIME_AND_MATERIALS),
-    "revenueModel": "CLIENT_LEVEL" | "PROJECT_BASED" (default: PROJECT_BASED),
-    "notes": "optional internal notes"
+    "website": "optional"
+    
+    // For update_client:
+    "clientName": "REQUIRED - Name to search for",
+    "updates": {
+      "email": "new email",
+      "phone": "new phone", 
+      "website": "new website"
+    }
+    
+    // For get_client:
+    "clientName": "REQUIRED - Name to search for"
+    
+    // For select_client:
+    "clientNumber": "REQUIRED - Number from list (1, 2, 3, etc)"
     
     // For create_task:
     "name": "Task name",
     "priority": "HIGH" | "MEDIUM" | "LOW",
     "dueDate": "YYYY-MM-DD or null"
   },
-  "missing_fields": ["field1", "field2"],  // Only for needs_info action
   "message": "Friendly confirmation or question to send user"
 }
 
-IMPORTANT FOR CLIENTS:
-- If user provides name → create client immediately with available data
-- Don't ask for optional fields unless user seems to have the info
-- Extract everything mentioned (email, phone, website, etc.)
-- Use smart defaults: status=LEAD, pricingModel=TIME_AND_MATERIALS
+IMPORTANT:
+- If user sends just a number (1, 2, 3), use select_client action
+- Get client searches by name, if multiple found lists them
 
 EXAMPLES:
-"add note: meeting went well" → create_note
-"create client Acme Corp, email info@acme.com, website acme.com, retainer 5000" → create_client with all fields
-"add client Tech Startup" → create_client with just name
+"show me details for Acme" → get_client (might list multiple if ambiguous)
+"1" → select_client (after seeing a list)
+"update Acme Corp: add email info@acme.com" → update_client
 "what tasks do I have?" → query`,
       messages: [
         {
@@ -127,6 +131,21 @@ EXAMPLES:
       case "create_client":
         await createClient(result.data, user.id, user.agencyId);
         await sendMessage(chatId, `👥 *Client Created!*\n\n${result.message}`);
+        break;
+
+      case "update_client":
+        await updateClient(result.data, user.agencyId);
+        await sendMessage(chatId, `✏️ *Client Updated!*\n\n${result.message}`);
+        break;
+
+      case "get_client":
+        const clientInfo = await getClient(result.data, user.agencyId, chatId);
+        await sendMessage(chatId, clientInfo);
+        break;
+
+      case "select_client":
+        const selectedClientInfo = await selectClient(result.data, user.agencyId, chatId);
+        await sendMessage(chatId, selectedClientInfo);
         break;
 
       case "create_task":
@@ -192,6 +211,158 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       },
     },
   });
+}
+
+// Update client in database
+async function updateClient(data: any, agencyId: string | null | undefined) {
+  // Find client by name
+  const client = await prisma.client.findFirst({
+    where: {
+      name: {
+        contains: data.clientName,
+        mode: 'insensitive',
+      },
+      agencies: {
+        some: {
+          agencyId: agencyId || "",
+        },
+      },
+    },
+  });
+
+  if (!client) {
+    throw new Error(`Client "${data.clientName}" not found`);
+  }
+
+  // Update with provided fields
+  await prisma.client.update({
+    where: { id: client.id },
+    data: data.updates,
+  });
+}
+
+// Get client details
+// Store recent client searches per chat (in-memory, simple approach)
+const clientSearchCache: { [chatId: number]: any[] } = {};
+
+async function getClient(data: any, agencyId: string | null | undefined, chatId: number): Promise<string> {
+  // Find clients by name (partial match)
+  const clients = await prisma.client.findMany({
+    where: {
+      name: {
+        contains: data.clientName,
+        mode: 'insensitive',
+      },
+      agencies: {
+        some: {
+          agencyId: agencyId || "",
+        },
+      },
+    },
+    include: {
+      projects: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+        },
+      },
+      tasks: {
+        where: {
+          status: {
+            not: "COMPLETED",
+          },
+        },
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          priority: true,
+        },
+        take: 5,
+      },
+    },
+    take: 10, // Max 10 results
+  });
+
+  if (clients.length === 0) {
+    return `❌ No clients found matching "${data.clientName}".`;
+  }
+
+  // If multiple clients found, list them
+  if (clients.length > 1) {
+    // Store in cache for selection
+    clientSearchCache[chatId] = clients;
+    
+    let response = `❓ *Found ${clients.length} clients:*\n\n`;
+    clients.forEach((client, index) => {
+      response += `${index + 1}. ${client.name}`;
+      if (client.company && client.company !== client.name) {
+        response += ` (${client.company})`;
+      }
+      response += `\n`;
+    });
+    response += `\nReply with the number to see details.`;
+    
+    return response;
+  }
+
+  // Single match - show details
+  const client = clients[0];
+  return formatClientDetails(client);
+}
+
+// Select client from numbered list
+async function selectClient(data: any, agencyId: string | null | undefined, chatId: number): Promise<string> {
+  const clientNumber = parseInt(data.clientNumber);
+  
+  if (!clientSearchCache[chatId] || clientSearchCache[chatId].length === 0) {
+    return `❌ No recent client search. Try searching for a client first.`;
+  }
+  
+  if (clientNumber < 1 || clientNumber > clientSearchCache[chatId].length) {
+    return `❌ Invalid number. Please choose between 1 and ${clientSearchCache[chatId].length}.`;
+  }
+  
+  const client = clientSearchCache[chatId][clientNumber - 1];
+  
+  // Clear cache after selection
+  delete clientSearchCache[chatId];
+  
+  return formatClientDetails(client);
+}
+
+// Format client details for display
+function formatClientDetails(client: any): string {
+  let response = `📋 *${client.name}*\n\n`;
+  
+  if (client.email) response += `📧 Email: ${client.email}\n`;
+  if (client.phone) response += `📞 Phone: ${client.phone}\n`;
+  if (client.website) response += `🌐 Website: ${client.website}\n`;
+  if (client.company) response += `🏢 Company: ${client.company}\n`;
+  if (client.industry) response += `🏭 Industry: ${client.industry}\n`;
+  if (client.status) response += `📊 Status: ${client.status}\n`;
+  
+  if (client.projects && client.projects.length > 0) {
+    response += `\n*Projects (${client.projects.length}):*\n`;
+    client.projects.slice(0, 3).forEach((p: any) => {
+      response += `• ${p.name} (${p.status})\n`;
+    });
+    if (client.projects.length > 3) {
+      response += `• ...and ${client.projects.length - 3} more\n`;
+    }
+  }
+  
+  if (client.tasks && client.tasks.length > 0) {
+    response += `\n*Active Tasks (${client.tasks.length}):*\n`;
+    client.tasks.forEach((t: any) => {
+      response += `• ${t.name} - ${t.priority} (${t.status})\n`;
+    });
+  }
+  
+  response += `\n🔗 [View in Omnixia](https://wick.omnixia.ai/clients)`;
+  
+  return response;
 }
 
 // Webhook handler
