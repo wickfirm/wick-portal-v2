@@ -172,7 +172,6 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       website: data.website || null,
       internalNotes: data.notes || null,
       status: "ACTIVE",
-      type: "DIRECT",
       agencies: {
         create: {
           agencyId: agencyId || "",
