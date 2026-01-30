@@ -181,21 +181,10 @@ async function createNote(data: any, userId: string, agencyId: string | null | u
 async function createClient(data: any, userId: string, agencyId: string | null | undefined) {
   await prisma.client.create({
     data: {
-      // Required
       name: data.name,
-      
-      // Optional fields - use what's provided
-      nickname: data.nickname || data.company || null,
       email: data.email || null,
       phone: data.phone || null,
-      company: data.company || null,
       website: data.website || null,
-      industry: data.industry || null,
-      primaryContact: data.primaryContact || null,
-      primaryEmail: data.primaryEmail || null,
-      monthlyRetainer: data.monthlyRetainer ? parseFloat(data.monthlyRetainer) : null,
-      
-      // Relation
       agencies: {
         create: {
           agencyId: agencyId || "",
