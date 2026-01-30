@@ -32,7 +32,7 @@ async function processMessage(chatId: number, text: string, telegramUserId: numb
         // Temporary: match by email pattern until we add telegramId field
         OR: [
           { email: { contains: String(telegramUserId) } },
-          { id: { contains: "Omnixia_JarvisBot" } }, // REPLACE WITH YOUR USER ID FOR TESTING
+          { id: { contains: "cmjr6w9gx0001h2g0tta6h37g" } }, // REPLACE WITH YOUR USER ID FOR TESTING
         ],
       },
       select: { id: true, agencyId: true, name: true },
