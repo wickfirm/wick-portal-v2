@@ -5,7 +5,21 @@ import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
 import { theme } from "@/lib/theme";
+import dynamic from "next/dynamic";
 import NotificationBell from "./NotificationBell";
+import GlobalSearch from "./GlobalSearch";
+
+const TimerWidget = dynamic(() => import("./TimerWidget"), {
+  ssr: false,
+  loading: () => (
+    <div style={{
+      width: 120,
+      height: 36,
+      borderRadius: 8,
+      background: "transparent"
+    }} />
+  )
+});
 
 // Icon mapping
 const ICONS: Record<string, string> = {
@@ -171,23 +185,11 @@ export default function Header() {
         transition: "margin-left 0.2s",
       }}>
         {/* Search */}
-        <div style={{ flex: 1, maxWidth: 400 }}>
-          <input
-            type="text"
-            placeholder="Search..."
-            style={{
-              width: "100%",
-              padding: "8px 12px",
-              border: `1px solid ${theme.colors.borderLight}`,
-              borderRadius: 6,
-              fontSize: 14,
-              background: theme.colors.bgPrimary,
-            }}
-          />
-        </div>
+        <GlobalSearch />
 
         {/* Right */}
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <TimerWidget />
           <NotificationBell />
           <Link href="/settings/account" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
             <div style={{
