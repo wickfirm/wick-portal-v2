@@ -241,11 +241,11 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
       VALUES (
         ${`proj-${clientId}-default`},
-        'Admin/Operations',
-        'General administrative tasks and operations',
+        ${'Admin/Operations'},
+        ${'General administrative tasks and operations'},
         ${client.id},
-        'CONSULTING'::service_type,
-        'IN_PROGRESS'::project_status,
+        ${'CONSULTING'},
+        ${'IN_PROGRESS'},
         true,
         NOW(),
         NOW()
