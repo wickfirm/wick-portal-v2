@@ -52,6 +52,10 @@ export async function GET() {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
+    // 7 days ago for weekly trends
+    const weekAgo = new Date(today);
+    weekAgo.setDate(weekAgo.getDate() - 7);
+
     // COMBINED STATS QUERY - All counts in ONE database round trip!
     interface DashboardStats {
       clientCount: bigint;
@@ -61,56 +65,62 @@ export async function GET() {
       overdueTasks: bigint;
       dueTodayTasks: bigint;
       totalTasks: bigint;
+      completedThisWeek: bigint;
     }
 
     const statsQueryAdmin = Prisma.sql`
-      SELECT 
+      SELECT
         (SELECT COUNT(DISTINCT c.id) FROM clients c
          INNER JOIN client_agencies ca ON c.id = ca.client_id
          WHERE ca.agency_id = ${currentUser.agencyId} AND c.status = 'ACTIVE') as "clientCount",
-        (SELECT COUNT(DISTINCT p.id) FROM projects p 
-         INNER JOIN clients c ON p."clientId" = c.id 
+        (SELECT COUNT(DISTINCT p.id) FROM projects p
+         INNER JOIN clients c ON p."clientId" = c.id
          INNER JOIN client_agencies ca ON c.id = ca.client_id
          WHERE ca.agency_id = ${currentUser.agencyId}) as "projectCount",
-        (SELECT COUNT(DISTINCT p.id) FROM projects p 
+        (SELECT COUNT(DISTINCT p.id) FROM projects p
          INNER JOIN clients c ON p."clientId" = c.id
-         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
          WHERE ca.agency_id = ${currentUser.agencyId} AND p.status = 'IN_PROGRESS') as "activeProjects",
         (SELECT COUNT(*) FROM users WHERE agency_id = ${currentUser.agencyId}) as "teamCount",
-        (SELECT COUNT(*) FROM client_tasks ct 
+        (SELECT COUNT(*) FROM client_tasks ct
          INNER JOIN clients c ON ct."clientId" = c.id
-         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
          WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" < ${today}) as "overdueTasks",
-        (SELECT COUNT(*) FROM client_tasks ct 
+        (SELECT COUNT(*) FROM client_tasks ct
          INNER JOIN clients c ON ct."clientId" = c.id
-         INNER JOIN client_agencies ca ON c.id = ca.client_id 
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
          WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED' AND ct."dueDate" >= ${today} AND ct."dueDate" < ${tomorrow}) as "dueTodayTasks",
-        (SELECT COUNT(*) FROM client_tasks ct 
+        (SELECT COUNT(*) FROM client_tasks ct
          INNER JOIN clients c ON ct."clientId" = c.id
-         INNER JOIN client_agencies ca ON c.id = ca.client_id 
-         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED') as "totalTasks"
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
+         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status != 'COMPLETED') as "totalTasks",
+        (SELECT COUNT(*) FROM client_tasks ct
+         INNER JOIN clients c ON ct."clientId" = c.id
+         INNER JOIN client_agencies ca ON c.id = ca.client_id
+         WHERE ca.agency_id = ${currentUser.agencyId} AND ct.status = 'COMPLETED' AND ct."updatedAt" >= ${weekAgo}) as "completedThisWeek"
     `;
 
     const statsQueryNonAdmin = Prisma.sql`
-      SELECT 
-        (SELECT COUNT(DISTINCT c.id) FROM clients c 
-         INNER JOIN client_team_members ctm ON c.id = ctm."clientId" 
+      SELECT
+        (SELECT COUNT(DISTINCT c.id) FROM clients c
+         INNER JOIN client_team_members ctm ON c.id = ctm."clientId"
          WHERE ctm."userId" = ${currentUser.id}) as "clientCount",
-        (SELECT COUNT(*) FROM projects WHERE "clientId" IN 
+        (SELECT COUNT(*) FROM projects WHERE "clientId" IN
          (SELECT "clientId" FROM client_team_members WHERE "userId" = ${currentUser.id})) as "projectCount",
-        (SELECT COUNT(*) FROM projects WHERE status = 'IN_PROGRESS' AND "clientId" IN 
+        (SELECT COUNT(*) FROM projects WHERE status = 'IN_PROGRESS' AND "clientId" IN
          (SELECT "clientId" FROM client_team_members WHERE "userId" = ${currentUser.id})) as "activeProjects",
         0 as "teamCount",
         (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED' AND "dueDate" < ${today}) as "overdueTasks",
         (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED' AND "dueDate" >= ${today} AND "dueDate" < ${tomorrow}) as "dueTodayTasks",
-        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED') as "totalTasks"
+        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status != 'COMPLETED') as "totalTasks",
+        (SELECT COUNT(*) FROM client_tasks WHERE "assigneeId" = ${currentUser.id} AND status = 'COMPLETED' AND "updatedAt" >= ${weekAgo}) as "completedThisWeek"
     `;
 
-    // Execute 3 queries in parallel (instead of 9!)
-    const [statsResult, overdueTasks, dueTodayTasks, recentProjects, recentClients] = await Promise.all([
-      // 1. Combined stats query (7 counts in 1 query!)
+    // Execute queries in parallel
+    const [statsResult, overdueTasks, dueTodayTasks, recentProjects, recentClients, recentActivity, todayTimeEntries] = await Promise.all([
+      // 1. Combined stats query
       prisma.$queryRaw<DashboardStats[]>(isAdmin ? statsQueryAdmin : statsQueryNonAdmin),
-      
+
       // 2. Overdue tasks details
       prisma.clientTask.findMany({
         where: {
@@ -125,6 +135,7 @@ export async function GET() {
           name: true,
           dueDate: true,
           priority: true,
+          status: true,
           client: {
             select: {
               id: true,
@@ -148,6 +159,7 @@ export async function GET() {
           name: true,
           dueDate: true,
           priority: true,
+          status: true,
           client: {
             select: {
               id: true,
@@ -195,10 +207,47 @@ export async function GET() {
           industry: true,
         },
       }),
+
+      // 6. Recent team activity
+      prisma.teamActivity.findMany({
+        where: {
+          createdAt: { gte: weekAgo },
+          ...(currentUser.agencyId ? {
+            user: { agencyId: currentUser.agencyId }
+          } : {}),
+        },
+        take: 8,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          activityType: true,
+          content: true,
+          createdAt: true,
+          user: {
+            select: {
+              name: true,
+            },
+          },
+        },
+      }),
+
+      // 7. Today's time entries for hours logged
+      prisma.timeEntry.findMany({
+        where: {
+          userId: currentUser.id,
+          date: { gte: today, lt: tomorrow },
+        },
+        select: {
+          duration: true,
+        },
+      }),
     ]);
 
     // Convert BigInt to Number for JSON serialization
     const stats = statsResult[0];
+    const todayHoursSeconds = todayTimeEntries.reduce((sum, e) => sum + e.duration, 0);
+    const todayHours = Math.round((todayHoursSeconds / 3600) * 10) / 10;
+
     const formattedStats = {
       clientCount: Number(stats.clientCount),
       projectCount: Number(stats.projectCount),
@@ -215,12 +264,15 @@ export async function GET() {
           total: Number(stats.totalTasks),
           overdue: Number(stats.overdueTasks),
           dueToday: Number(stats.dueTodayTasks),
+          completedThisWeek: Number(stats.completedThisWeek),
         },
       },
       recent: {
         recentProjects,
         recentClients,
       },
+      activity: recentActivity,
+      timeToday: todayHours,
     });
   } catch (error) {
     console.error("Dashboard API error:", error);
