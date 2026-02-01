@@ -170,11 +170,11 @@ export async function POST(req: NextRequest) {
         INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
         VALUES (
           ${`proj-${clientId}-default`},
-          ${'Admin/Operations'},
-          ${'General administrative tasks and operations'},
+          'Admin/Operations',
+          'General administrative tasks and operations',
           ${client.id},
-          ${'CONSULTING'},
-          ${'IN_PROGRESS'},
+          'CONSULTING'::service_type,
+          'IN_PROGRESS'::project_status,
           true,
           NOW(),
           NOW()
