@@ -461,7 +461,7 @@ export default function TasksManager({
       <>
       <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
         {/* Task Number & Name */}
-        <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+        <td style={{ padding: "10px 12px" }}>
           <div
             onClick={() => openTaskPanel(task)}
             style={{
@@ -491,7 +491,7 @@ export default function TasksManager({
       </td>
 
       {/* Assignee */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <select
           value={task.assigneeId || ""}
           onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
@@ -505,7 +505,8 @@ export default function TasksManager({
             color: task.assigneeId ? theme.colors.textPrimary : theme.colors.textMuted,
             cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
-            maxWidth: "100%",
+            width: "100%",
+            boxSizing: "border-box" as const,
             opacity: canEdit ? 1 : 0.6,
           }}
         >
@@ -519,7 +520,7 @@ export default function TasksManager({
       </td>
 
       {/* Owner */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <select
           value={task.ownerType}
           onChange={(e) => updateTaskField(task.id, "ownerType", e.target.value)}
@@ -534,6 +535,8 @@ export default function TasksManager({
             color: task.ownerType === "CLIENT" ? "#92400E" : theme.colors.info,
             cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
+            width: "100%",
+            boxSizing: "border-box" as const,
             opacity: canEdit ? 1 : 0.6,
           }}
         >
@@ -543,7 +546,7 @@ export default function TasksManager({
       </td>
 
       {/* Due Date */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <input
           type="date"
           value={task.dueDate ? task.dueDate.split("T")[0] : ""}
@@ -554,10 +557,12 @@ export default function TasksManager({
             border: "1px solid transparent",
             borderRadius: 4,
             fontSize: 12,
+            width: "100%",
+            boxSizing: "border-box" as const,
             background: "transparent",
             cursor: canEdit ? "pointer" : "not-allowed",
-            color: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED" 
-              ? theme.colors.error 
+            color: task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED"
+              ? theme.colors.error
               : theme.colors.textSecondary,
             opacity: canEdit ? 1 : 0.6,
           }}
@@ -567,7 +572,7 @@ export default function TasksManager({
       </td>
 
       {/* Priority */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <select
           value={task.priority}
           onChange={(e) => updateTaskField(task.id, "priority", e.target.value)}
@@ -582,6 +587,8 @@ export default function TasksManager({
             color: PRIORITY_STYLES[task.priority]?.color || theme.colors.textSecondary,
             cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
+            width: "100%",
+            boxSizing: "border-box" as const,
             opacity: canEdit ? 1 : 0.6,
           }}
         >
@@ -590,7 +597,7 @@ export default function TasksManager({
       </td>
 
       {/* Status */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <select
           value={task.status}
           onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
@@ -606,6 +613,7 @@ export default function TasksManager({
             cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
             width: "100%",
+            boxSizing: "border-box" as const,
             opacity: canEdit ? 1 : 0.6,
           }}
         >
@@ -618,7 +626,7 @@ export default function TasksManager({
       </td>
 
       {/* Category */}
-      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+      <td style={{ padding: "10px 12px" }}>
         <select
           value={task.categoryId || ""}
           onChange={(e) => updateTaskField(task.id, "categoryId", e.target.value || null)}
@@ -632,7 +640,8 @@ export default function TasksManager({
             color: task.categoryId ? theme.colors.textPrimary : theme.colors.textMuted,
             cursor: canEdit ? "pointer" : "not-allowed",
             outline: "none",
-            maxWidth: "100%",
+            width: "100%",
+            boxSizing: "border-box" as const,
             opacity: canEdit ? 1 : 0.6,
           }}
         >
@@ -647,8 +656,8 @@ export default function TasksManager({
 
       {/* Client (only in general context) */}
       {showClientColumn && (
-        <td style={{ padding: "10px 12px", overflow: "hidden" }}>
-          <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+        <td style={{ padding: "10px 12px" }}>
+          <div style={{ fontSize: 12, color: theme.colors.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {getClientDisplayName(task)}
           </div>
         </td>
@@ -891,51 +900,39 @@ export default function TasksManager({
               borderRadius: theme.borderRadius.lg,
               overflow: "hidden",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-                <colgroup>
-                  <col />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 120 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 130 }} />
-                  <col style={{ width: 140 }} />
-                  {showClientColumn && <col style={{ width: 150 }} />}
-                  <col style={{ width: 50 }} />
-                  <col style={{ width: 80 }} />
-                </colgroup>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, minWidth: 180 }}>
                       Task
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 130 }}>
                       Assignee
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 90 }}>
                       Owner
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 115 }}>
                       Due Date
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 100 }}>
                       Priority
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 120 }}>
                       Status
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 120 }}>
                       Category
                     </th>
                     {showClientColumn && (
-                      <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 120 }}>
                         Client
                       </th>
                     )}
-                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
                       Actions
                     </th>
                   </tr>
@@ -1007,45 +1004,34 @@ export default function TasksManager({
               borderRadius: theme.borderRadius.lg,
               overflow: "hidden",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
-                <colgroup>
-                  <col />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 120 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 130 }} />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 50 }} />
-                  <col style={{ width: 80 }} />
-                </colgroup>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, minWidth: 180 }}>
                       Task
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 130 }}>
                       Assignee
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 90 }}>
                       Owner
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 115 }}>
                       Due Date
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 100 }}>
                       Priority
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 120 }}>
                       Status
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 120 }}>
                       Category
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
                     </th>
-                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
                       Actions
                     </th>
                   </tr>
