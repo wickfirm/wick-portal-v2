@@ -461,33 +461,37 @@ export default function TasksManager({
       <>
       <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
         {/* Task Number & Name */}
-        <td style={{ padding: "10px 12px", minWidth: 180 }}>
-          <div 
+        <td style={{ padding: "10px 12px", overflow: "hidden" }}>
+          <div
             onClick={() => openTaskPanel(task)}
-            style={{ 
+            style={{
               display: "flex",
               alignItems: "center",
               gap: 8,
-              fontWeight: 500, 
+              fontWeight: 500,
               color: task.status === "COMPLETED" ? theme.colors.textMuted : theme.colors.textPrimary,
               textDecoration: task.status === "COMPLETED" ? "line-through" : "none",
               cursor: "pointer",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
             }}
           >
           <span style={{
             fontSize: 11,
             fontWeight: 600,
             color: theme.colors.textMuted,
+            flexShrink: 0,
             minWidth: 20,
           }}>
             #{index + 1}
           </span>
-          {task.name}
+          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.name}</span>
         </div>
       </td>
 
       {/* Assignee */}
-      <td style={{ padding: "10px 12px", minWidth: 140 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <select
           value={task.assigneeId || ""}
           onChange={(e) => updateTaskField(task.id, "assigneeId", e.target.value || null)}
@@ -515,7 +519,7 @@ export default function TasksManager({
       </td>
 
       {/* Owner */}
-      <td style={{ padding: "10px 12px", width: 100 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <select
           value={task.ownerType}
           onChange={(e) => updateTaskField(task.id, "ownerType", e.target.value)}
@@ -539,7 +543,7 @@ export default function TasksManager({
       </td>
 
       {/* Due Date */}
-      <td style={{ padding: "10px 12px", width: 120 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <input
           type="date"
           value={task.dueDate ? task.dueDate.split("T")[0] : ""}
@@ -563,7 +567,7 @@ export default function TasksManager({
       </td>
 
       {/* Priority */}
-      <td style={{ padding: "10px 12px", width: 100 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <select
           value={task.priority}
           onChange={(e) => updateTaskField(task.id, "priority", e.target.value)}
@@ -586,7 +590,7 @@ export default function TasksManager({
       </td>
 
       {/* Status */}
-      <td style={{ padding: "10px 12px", width: 130 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <select
           value={task.status}
           onChange={(e) => updateTaskField(task.id, "status", e.target.value)}
@@ -614,7 +618,7 @@ export default function TasksManager({
       </td>
 
       {/* Category */}
-      <td style={{ padding: "10px 12px", width: 140 }}>
+      <td style={{ padding: "10px 12px", overflow: "hidden" }}>
         <select
           value={task.categoryId || ""}
           onChange={(e) => updateTaskField(task.id, "categoryId", e.target.value || null)}
@@ -643,7 +647,7 @@ export default function TasksManager({
 
       {/* Client (only in general context) */}
       {showClientColumn && (
-        <td style={{ padding: "10px 12px", minWidth: 150 }}>
+        <td style={{ padding: "10px 12px", overflow: "hidden" }}>
           <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
             {getClientDisplayName(task)}
           </div>
@@ -651,7 +655,7 @@ export default function TasksManager({
       )}
 
       {/* Internal Link */}
-      <td style={{ padding: "10px 12px", width: 50, textAlign: "center" }}>
+      <td style={{ padding: "10px 12px", textAlign: "center" }}>
         {task.internalLink && (
           <a
             href={task.internalLink}
@@ -674,7 +678,7 @@ export default function TasksManager({
       </td>
 
       {/* Actions */}
-      <td style={{ padding: "10px 12px", width: 80, textAlign: "center" }}>
+      <td style={{ padding: "10px 12px", textAlign: "center" }}>
         {canDelete && (
           <button
             onClick={() => deleteTask(task.id)}
@@ -887,7 +891,19 @@ export default function TasksManager({
               borderRadius: theme.borderRadius.lg,
               overflow: "hidden",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <colgroup>
+                  <col />
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 140 }} />
+                  {showClientColumn && <col style={{ width: 150 }} />}
+                  <col style={{ width: 50 }} />
+                  <col style={{ width: 80 }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
@@ -991,7 +1007,18 @@ export default function TasksManager({
               borderRadius: theme.borderRadius.lg,
               overflow: "hidden",
             }}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                <colgroup>
+                  <col />
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 50 }} />
+                  <col style={{ width: 80 }} />
+                </colgroup>
                 <thead>
                   <tr style={{ background: theme.colors.bgTertiary, borderBottom: "1px solid " + theme.colors.borderLight }}>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>

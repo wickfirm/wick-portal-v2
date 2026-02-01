@@ -142,13 +142,13 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Link client to agency
-    const agencyIdToUse = data.agencyId || currentUser.agencyId;
-    
+    // Link client to the user's main agency (not partner agency)
+    // The form sends a PartnerAgency ID in data.agencyId, but ClientAgency
+    // references the Agency table. Always use the user's actual agency ID.
     await prisma.clientAgency.create({
       data: {
         clientId: client.id,
-        agencyId: agencyIdToUse,
+        agencyId: currentUser.agencyId,
       },
     });
 
