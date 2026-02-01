@@ -166,7 +166,7 @@ export async function POST(req: NextRequest) {
     // Use raw SQL to avoid Prisma enum type mismatch with pricing_model
     try {
       await prisma.$executeRaw`
-        INSERT INTO projects (id, name, description, client_id, service_type, status, is_default, pricing_model, created_at, updated_at)
+        INSERT INTO projects (id, name, description, client_id, service_type, status, is_default, created_at, updated_at)
         VALUES (
           ${`proj-${clientId}-default`},
           'Admin/Operations',
@@ -175,7 +175,6 @@ export async function POST(req: NextRequest) {
           'CONSULTING'::"ServiceType",
           'IN_PROGRESS'::"ProjectStatus",
           true,
-          'TIME_AND_MATERIALS'::"PricingModel",
           NOW(),
           NOW()
         )
