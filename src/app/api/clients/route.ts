@@ -163,16 +163,27 @@ export async function POST(req: NextRequest) {
     }
 
     // Auto-create "Admin/Operations" default project
-    await prisma.project.create({
-      data: {
-        name: "Admin/Operations",
-        description: "General administrative tasks and operations",
-        clientId: client.id,
-        serviceType: "CONSULTING",
-        status: "IN_PROGRESS",
-        isDefault: true,
-      },
-    });
+    // Use raw SQL to avoid Prisma enum type mismatch with pricing_model
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO projects (id, name, description, client_id, service_type, status, is_default, pricing_model, created_at, updated_at)
+        VALUES (
+          ${`proj-${clientId}-default`},
+          'Admin/Operations',
+          'General administrative tasks and operations',
+          ${client.id},
+          'CONSULTING'::"ServiceType",
+          'IN_PROGRESS'::"ProjectStatus",
+          true,
+          'TIME_AND_MATERIALS'::"PricingModel",
+          NOW(),
+          NOW()
+        )
+      `;
+    } catch (projError) {
+      // Non-critical: client is already created, just log the project creation failure
+      console.error("Warning: Failed to create default project:", projError);
+    }
 
     return NextResponse.json(client);
   } catch (error: any) {
