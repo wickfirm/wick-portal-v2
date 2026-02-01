@@ -35,14 +35,16 @@ export default async function PortalProjectsPage() {
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Projects</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Projects</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Track the progress of all your active projects.</p>
         </div>
 
         <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {projects.length === 0 ? (
             <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>P</div>
+              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>
+              </div>
               <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects yet</div>
               <div style={{ color: theme.colors.textSecondary }}>Projects will appear here once they are started.</div>
             </div>

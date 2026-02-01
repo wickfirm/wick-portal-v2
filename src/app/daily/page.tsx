@@ -259,7 +259,7 @@ export default function DailyPage() {
         <div style={{ marginBottom: 32 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
-              <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
                 {view === "sod" ? "🌅 Start of Day" : "🌆 End of Day"}
               </h1>
               <p style={{ fontSize: 14, color: theme.colors.textMuted }}>
@@ -312,7 +312,7 @@ export default function DailyPage() {
                 border: `2px solid ${theme.colors.primary}`,
                 textAlign: "center",
               }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>🌅</div>
+                <div style={{ color: theme.colors.warning, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 18a5 5 0 0 0-10 0" /><line x1="12" y1="2" x2="12" y2="9" /><line x1="4.22" y1="10.22" x2="5.64" y2="11.64" /><line x1="1" y1="18" x2="3" y2="18" /><line x1="21" y1="18" x2="23" y2="18" /><line x1="18.36" y1="11.64" x2="19.78" y2="10.22" /><line x1="23" y1="22" x2="1" y2="22" /><polyline points="8 6 12 2 16 6" /></svg></div>
                 <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
                   Ready to start your day?
                 </h2>
@@ -713,7 +713,7 @@ export default function DailyPage() {
                 borderRadius: theme.borderRadius.lg,
                 textAlign: "center",
               }}>
-                <div style={{ fontSize: 48, marginBottom: 8 }}>✅</div>
+                <div style={{ color: theme.colors.success, marginBottom: 8, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg></div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.success }}>
                   Day Complete! See you tomorrow.
                 </div>

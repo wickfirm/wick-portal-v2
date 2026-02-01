@@ -236,7 +236,7 @@ export default function PortalMetricsDashboard({ metrics }: PortalMetricsDashboa
       {/* Header with Date Range Toggle */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
         <div>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Performance Metrics</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Performance Metrics</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15, margin: 0 }}>Track your digital marketing performance.</p>
         </div>
         <DateRangeToggle value={dateRange} onChange={setDateRange} />

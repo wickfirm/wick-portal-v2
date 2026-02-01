@@ -156,7 +156,7 @@ export default function NotificationsPage() {
       <main style={{ maxWidth: 900, margin: "0 auto", padding: "32px 24px" }}>
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
             Notifications
           </h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
@@ -260,7 +260,7 @@ export default function NotificationsPage() {
             </div>
           ) : notifications.length === 0 ? (
             <div style={{ padding: 60, textAlign: "center", color: theme.colors.textMuted }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔔</div>
+              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg></div>
               <div style={{ fontSize: 16, marginBottom: 8 }}>No notifications</div>
               <div style={{ fontSize: 14 }}>You're all caught up!</div>
             </div>

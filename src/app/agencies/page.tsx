@@ -161,7 +161,7 @@ export default function PartnerAgenciesPage() {
         {/* Page Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
               Partner Agencies
             </h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
@@ -275,7 +275,7 @@ export default function PartnerAgenciesPage() {
         }}>
           {agencies.length === 0 ? (
             <div style={{ padding: 48, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🤝</div>
+              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" /></svg></div>
               <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>No partner agencies yet</h3>
               <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
                 Add your first partner agency to get started

@@ -95,7 +95,7 @@ export default async function RatesPage() {
       
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 8 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: 0, marginBottom: 8 }}>
             Rates & Billing
           </h1>
           <p style={{ fontSize: 14, color: theme.colors.textSecondary, margin: 0 }}>

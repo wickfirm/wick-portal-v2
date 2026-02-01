@@ -57,7 +57,7 @@ export default function TasksPage() {
 
       <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
             All Tasks
           </h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>

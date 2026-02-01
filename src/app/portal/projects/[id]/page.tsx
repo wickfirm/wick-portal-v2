@@ -51,7 +51,7 @@ export default async function PortalProjectDetailPage({ params }: { params: { id
         <div style={{ background: theme.colors.bgSecondary, padding: 32, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, marginBottom: 24 }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
             <div>
-              <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 4 }}>{project.name}</h1>
+              <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: 0, marginBottom: 4 }}>{project.name}</h1>
               <div style={{ fontSize: 14, color: theme.colors.textMuted }}>{project.serviceType.replace("_", " ")}</div>
             </div>
             <span style={{

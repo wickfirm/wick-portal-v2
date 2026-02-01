@@ -174,7 +174,7 @@ export default function ClientOnboardingView({
           </Link>
 
           <div style={{ marginBottom: 32 }}>
-            <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8 }}>Start Onboarding</h1>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, marginBottom: 8 }}>Start Onboarding</h1>
             <p style={{ color: theme.colors.textSecondary, margin: 0 }}>
               Select the services you'll be providing to {client.name}
             </p>
@@ -261,7 +261,7 @@ export default function ClientOnboardingView({
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8 }}>Onboarding Checklist</h1>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, marginBottom: 8 }}>Onboarding Checklist</h1>
             <p style={{ color: theme.colors.textSecondary, margin: 0 }}>
               Complete these items to fully onboard {client.name}
             </p>

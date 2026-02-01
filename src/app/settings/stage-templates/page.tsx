@@ -85,7 +85,7 @@ export default function StageTemplatesPage() {
         </div>
 
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Stage Templates</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Stage Templates</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Define default stages for each service type. New projects will automatically use these stages.</p>
         </div>
 

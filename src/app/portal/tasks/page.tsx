@@ -37,7 +37,7 @@ export default async function PortalTasksPage() {
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Tasks</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Tasks</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Track tasks assigned to you by the team.</p>
         </div>
 
@@ -49,7 +49,9 @@ export default async function PortalTasksPage() {
 
           {pendingTasks.length === 0 ? (
             <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>✓</div>
+              <div style={{ color: theme.colors.success, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
+              </div>
               <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>All caught up!</div>
               <div style={{ color: theme.colors.textSecondary }}>No pending tasks at the moment.</div>
             </div>

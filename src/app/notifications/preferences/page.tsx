@@ -123,7 +123,7 @@ export default function NotificationPreferencesPage() {
 
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 8 }}>
             Notification Preferences
           </h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>

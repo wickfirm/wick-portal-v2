@@ -26,7 +26,7 @@ export default async function PortalDashboard() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <PortalHeader userName={user.name} />
         <main style={{ maxWidth: 600, margin: "0 auto", padding: 48, textAlign: "center" }}>
-          <h1 style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textPrimary }}>No Client Linked</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, fontWeight: 400, color: theme.colors.textPrimary }}>No Client Linked</h1>
           <p style={{ color: theme.colors.textSecondary }}>Your account is not linked to a client.</p>
         </main>
       </div>
@@ -119,7 +119,7 @@ export default async function PortalDashboard() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary }}>
             Welcome back{user.name ? ", " + user.name.split(" ")[0] : ""}!
           </h1>
           <p style={{ color: theme.colors.textSecondary }}>

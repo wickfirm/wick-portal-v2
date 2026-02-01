@@ -33,7 +33,7 @@ export default async function PortalResourcesPage() {
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <PortalHeader userName={user.name} />
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>Resources</h1>
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary }}>Resources</h1>
         <p style={{ color: theme.colors.textSecondary, marginBottom: 32 }}>Quick access to your documents.</p>
         <div style={{ background: theme.colors.bgSecondary, borderRadius: 12, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
           {resources.length === 0 ? (

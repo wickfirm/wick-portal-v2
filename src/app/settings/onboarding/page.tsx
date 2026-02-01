@@ -136,7 +136,7 @@ export default function OnboardingSettingsPage() {
         </div>
 
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>Onboarding Templates</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 8 }}>Onboarding Templates</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15, margin: 0 }}>
             These templates define the onboarding checklists for each service type. Click on any item to edit it.
           </p>
@@ -429,7 +429,7 @@ export default function OnboardingSettingsPage() {
             textAlign: "center",
             border: "1px solid " + theme.colors.borderLight,
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+            <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></svg></div>
             <div style={{ fontSize: 18, fontWeight: 500, marginBottom: 8 }}>No Templates Found</div>
             <p style={{ color: theme.colors.textSecondary, margin: 0 }}>
               Run the SQL seed script to add default onboarding templates.

@@ -72,7 +72,7 @@ export default function AccountSettingsPage() {
           </Link>
         </div>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Account Settings</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Account Settings</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Manage your account and security</p>
         </div>
 

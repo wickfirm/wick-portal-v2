@@ -48,7 +48,7 @@ export default function MediaHubPage() {
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '2rem' }}>
         {/* Page Header */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: '2rem', fontWeight: 400, marginBottom: '0.5rem' }}>
             Media Hub
           </h1>
           <p style={{ color: theme.colors.textSecondary }}>

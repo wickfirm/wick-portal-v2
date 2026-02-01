@@ -121,7 +121,7 @@ export default function NotesPage() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
               Sticky Notes
             </h1>
             <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
@@ -202,7 +202,7 @@ export default function NotesPage() {
           <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>Loading...</div>
         ) : notes.length === 0 ? (
           <div style={{ textAlign: "center", padding: 64 }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📝</div>
+            <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></div>
             <p style={{ color: theme.colors.textMuted, fontSize: 16 }}>No notes yet. Create your first one!</p>
           </div>
         ) : (

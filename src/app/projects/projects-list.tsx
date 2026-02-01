@@ -55,7 +55,11 @@ export default function ProjectsList({ projects, isAdmin }: Props) {
         padding: 64,
         textAlign: "center"
       }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📁</div>
+        <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
+          </svg>
+        </div>
         <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects yet</div>
         <div style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>Get started by creating your first project</div>
         {isAdmin && (
@@ -103,13 +107,16 @@ export default function ProjectsList({ projects, isAdmin }: Props) {
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ 
-                  fontSize: 18, 
+                <span style={{
                   transition: "transform 200ms",
                   transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                  display: "inline-block"
+                  display: "inline-flex",
+                  alignItems: "center",
+                  color: theme.colors.textMuted,
                 }}>
-                  ▶
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
                 </span>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>

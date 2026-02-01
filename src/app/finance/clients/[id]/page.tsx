@@ -157,7 +157,7 @@ export default function ClientFinancePage() {
 
         {/* Header */}
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 8 }}>
             {profitability.client.nickname || profitability.client.name}
           </h1>
           <div style={{ display: "flex", gap: 12, alignItems: "center" }}>

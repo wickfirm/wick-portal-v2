@@ -53,7 +53,7 @@ export default async function PortalTeamPage() {
 
       <main style={{ maxWidth: 1000, margin: "0 auto", padding: "32px 24px" }}>
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Team</h1>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Your Team</h1>
           <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
             The people working on {client.nickname || client.name}.
           </p>
@@ -112,7 +112,9 @@ export default async function PortalTeamPage() {
               border: "1px solid " + theme.colors.borderLight, 
               textAlign: "center" 
             }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+              </div>
               <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No team members assigned yet</div>
               <div style={{ color: theme.colors.textSecondary }}>Your account manager will assign team members to your account.</div>
             </div>

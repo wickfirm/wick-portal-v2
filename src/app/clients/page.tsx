@@ -33,42 +33,103 @@ type ClientsData = {
   };
 };
 
+// SVG Icons
+const icons = {
+  users: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  checkCircle: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" />
+    </svg>
+  ),
+  loader: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="2" x2="12" y2="6" /><line x1="12" y1="18" x2="12" y2="22" /><line x1="4.93" y1="4.93" x2="7.76" y2="7.76" /><line x1="16.24" y1="16.24" x2="19.07" y2="19.07" /><line x1="2" y1="12" x2="6" y2="12" /><line x1="18" y1="12" x2="22" y2="12" /><line x1="4.93" y1="19.07" x2="7.76" y2="16.24" /><line x1="16.24" y1="7.76" x2="19.07" y2="4.93" />
+    </svg>
+  ),
+  target: (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+    </svg>
+  ),
+  plus: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+    </svg>
+  ),
+  search: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
+  ),
+  building: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9 22 9 12 15 12 15 22" />
+    </svg>
+  ),
+  mail: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" /><polyline points="22,6 12,13 2,6" />
+    </svg>
+  ),
+  phone: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  ),
+  alertTriangle: (
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+  usersEmpty: (
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  ),
+  chevron: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  ),
+};
+
 // Loading skeleton component
 function ClientsPageSkeleton() {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        {/* Header Skeleton */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
           <div>
-            <div style={{ width: 140, height: 36, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
-            <div style={{ width: 260, height: 20, background: theme.colors.bgSecondary, borderRadius: 6 }} />
+            <div style={{ width: 140, height: 32, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+            <div style={{ width: 260, height: 18, background: theme.colors.bgSecondary, borderRadius: 6 }} />
           </div>
-          <div style={{ width: 140, height: 44, background: theme.colors.bgSecondary, borderRadius: 8 }} />
+          <div style={{ width: 140, height: 42, background: theme.colors.bgSecondary, borderRadius: 10 }} />
         </div>
-
-        {/* Stats Skeleton */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-              <div style={{ width: 60, height: 36, background: theme.colors.bgTertiary, borderRadius: 6, marginBottom: 8 }} />
-              <div style={{ width: 100, height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+            <div key={i} style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 11, background: theme.colors.bgTertiary }} />
+                <div style={{ width: 48, height: 28, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+              </div>
+              <div style={{ width: 100, height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
             </div>
           ))}
         </div>
-
-        {/* Clients List Skeleton */}
-        <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
+        <div style={{ background: theme.colors.bgSecondary, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}` }}>
           {[1, 2, 3, 4, 5].map((i) => (
-            <div key={i} style={{ padding: "20px 24px", borderBottom: i < 5 ? "1px solid " + theme.colors.bgTertiary : "none", display: "flex", gap: 16, alignItems: "center" }}>
-              <div style={{ width: 56, height: 56, background: theme.colors.bgTertiary, borderRadius: 12 }} />
+            <div key={i} style={{ padding: "18px 22px", borderBottom: i < 5 ? `1px solid ${theme.colors.bgTertiary}` : "none", display: "flex", gap: 14, alignItems: "center" }}>
+              <div style={{ width: 48, height: 48, background: theme.colors.bgTertiary, borderRadius: 12 }} />
               <div style={{ flex: 1 }}>
-                <div style={{ width: 180, height: 20, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
-                <div style={{ width: 240, height: 16, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+                <div style={{ width: 180, height: 18, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
+                <div style={{ width: 240, height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
               </div>
-              <div style={{ width: 80, height: 24, background: theme.colors.bgTertiary, borderRadius: 12 }} />
+              <div style={{ width: 60, height: 24, background: theme.colors.bgTertiary, borderRadius: 12 }} />
             </div>
           ))}
         </div>
@@ -82,20 +143,21 @@ function ClientsError({ error, retry }: { error: Error; retry: () => void }) {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ 
-          background: theme.colors.errorBg, 
-          border: "1px solid " + theme.colors.error, 
-          borderRadius: theme.borderRadius.lg, 
-          padding: 48, 
-          textAlign: "center" 
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+        <div style={{
+          background: theme.colors.errorBg,
+          border: `1px solid ${theme.colors.error}20`,
+          borderRadius: 16,
+          padding: 56,
+          textAlign: "center",
         }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
+          <div style={{ color: theme.colors.error, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+            {icons.alertTriangle}
+          </div>
           <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.error, marginBottom: 8 }}>
             Failed to load clients
           </h2>
-          <p style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>
+          <p style={{ color: theme.colors.textSecondary, marginBottom: 24, fontSize: 14 }}>
             {error.message || "An unexpected error occurred"}
           </p>
           <button
@@ -103,12 +165,13 @@ function ClientsError({ error, retry }: { error: Error; retry: () => void }) {
             style={{
               background: theme.gradients.primary,
               color: "white",
-              padding: "12px 24px",
-              borderRadius: theme.borderRadius.md,
+              padding: "10px 24px",
+              borderRadius: 10,
               border: "none",
               fontWeight: 500,
               fontSize: 14,
               cursor: "pointer",
+              boxShadow: theme.shadows.button,
             }}
           >
             Try Again
@@ -131,136 +194,162 @@ export default function ClientsPage() {
     }
   }, [status, router]);
 
-  // Fetch clients data with React Query
   const { data, isLoading, error, refetch } = useQuery<ClientsData>({
     queryKey: ["clients"],
     queryFn: async () => {
       const res = await fetch("/api/clients/list");
-      if (!res.ok) {
-        throw new Error("Failed to fetch clients");
-      }
+      if (!res.ok) throw new Error("Failed to fetch clients");
       return res.json();
     },
     enabled: status === "authenticated",
   });
 
-  // Show loading state while checking authentication
-  if (status === "loading") {
-    return <ClientsPageSkeleton />;
-  }
-
-  // Don't render anything if not authenticated (will redirect)
+  if (status === "loading") return <ClientsPageSkeleton />;
   if (!session) return null;
-
-  // Show loading skeleton while fetching data
-  if (isLoading) {
-    return <ClientsPageSkeleton />;
-  }
-
-  // Show error state
-  if (error) {
-    return <ClientsError error={error as Error} retry={() => refetch()} />;
-  }
-
-  // Show error if no data
-  if (!data) {
-    return <ClientsError error={new Error("No data received")} retry={() => refetch()} />;
-  }
+  if (isLoading) return <ClientsPageSkeleton />;
+  if (error) return <ClientsError error={error as Error} retry={() => refetch()} />;
+  if (!data) return <ClientsError error={new Error("No data received")} retry={() => refetch()} />;
 
   const { clients, stats } = data;
 
-  // Filter clients
   const filteredClients = clients.filter(client => {
     const matchesFilter = filter === "ALL" || client.status === filter;
-    const matchesSearch = !search || 
+    const matchesSearch = !search ||
       client.name.toLowerCase().includes(search.toLowerCase()) ||
       client.nickname?.toLowerCase().includes(search.toLowerCase()) ||
       client.email?.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
+  const statCards = [
+    { label: "Total Clients", value: stats.total, icon: icons.users, color: theme.colors.primary, bg: theme.colors.primaryBg },
+    { label: "Active", value: stats.active, icon: icons.checkCircle, color: theme.colors.success, bg: theme.colors.successBg },
+    { label: "Onboarding", value: stats.onboarding, icon: icons.loader, color: theme.colors.info, bg: theme.colors.infoBg },
+    { label: "Leads", value: stats.leads, icon: icons.target, color: theme.colors.warning, bg: theme.colors.warningBg },
+  ];
+
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
+      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px 48px" }}>
         {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 4 }}>Clients</h1>
-            <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Manage your client relationships</p>
+            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: "0 0 4px 0" }}>
+              Clients
+            </h1>
+            <p style={{ color: theme.colors.textMuted, fontSize: 14, margin: 0 }}>
+              Manage your client relationships
+            </p>
           </div>
           <Link href="/clients/new" style={{
             background: theme.gradients.primary,
             color: "white",
-            padding: "12px 24px",
-            borderRadius: theme.borderRadius.md,
+            padding: "10px 22px",
+            borderRadius: 10,
             textDecoration: "none",
             fontWeight: 500,
             fontSize: 14,
             display: "flex",
             alignItems: "center",
             gap: 8,
-            boxShadow: theme.shadows.button
+            boxShadow: theme.shadows.button,
+            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
           }}>
-            <span style={{ fontSize: 18 }}>+</span> New Client
+            {icons.plus} New Client
           </Link>
         </div>
 
-        {/* Stats */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 32 }}>
-          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>{stats.total}</div>
-            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Total Clients</div>
-          </div>
-          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.success }}>{stats.active}</div>
-            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Active</div>
-          </div>
-          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.info }}>{stats.onboarding}</div>
-            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Onboarding</div>
-          </div>
-          <div style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight }}>
-            <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.warning }}>{stats.leads}</div>
-            <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>Leads</div>
-          </div>
+        {/* Stats Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+          {statCards.map((card) => (
+            <div
+              key={card.label}
+              style={{
+                background: theme.colors.bgSecondary,
+                padding: "18px 20px",
+                borderRadius: 14,
+                border: `1px solid ${theme.colors.borderLight}`,
+                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-2px)";
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "none";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
+                <div style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 11,
+                  background: card.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: card.color,
+                  flexShrink: 0,
+                }}>
+                  {card.icon}
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
+                  {card.value}
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: theme.colors.textSecondary, fontWeight: 500 }}>{card.label}</div>
+            </div>
+          ))}
         </div>
 
         {/* Filters and Search */}
-        <div style={{ display: "flex", gap: 16, marginBottom: 24 }}>
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "12px 16px",
-              borderRadius: theme.borderRadius.md,
-              border: "1px solid " + theme.colors.borderLight,
-              background: theme.colors.bgSecondary,
-              color: theme.colors.textPrimary,
-              fontSize: 14,
-            }}
-          />
-          <div style={{ display: "flex", gap: 8 }}>
-            {["ALL", "ACTIVE", "ONBOARDING", "LEAD"].map((status) => (
+        <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+          <div style={{ flex: 1, position: "relative" }}>
+            <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: theme.colors.textMuted, display: "flex", alignItems: "center" }}>
+              {icons.search}
+            </div>
+            <input
+              type="text"
+              placeholder="Search clients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "10px 16px 10px 40px",
+                borderRadius: 10,
+                border: `1px solid ${theme.colors.borderLight}`,
+                background: theme.colors.bgSecondary,
+                color: theme.colors.textPrimary,
+                fontSize: 14,
+                outline: "none",
+                transition: "border-color 0.15s",
+              }}
+              onFocus={(e) => e.currentTarget.style.borderColor = theme.colors.primary}
+              onBlur={(e) => e.currentTarget.style.borderColor = theme.colors.borderLight}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 6 }}>
+            {["ALL", "ACTIVE", "ONBOARDING", "LEAD"].map((s) => (
               <button
-                key={status}
-                onClick={() => setFilter(status)}
+                key={s}
+                onClick={() => setFilter(s)}
                 style={{
-                  padding: "12px 20px",
-                  borderRadius: theme.borderRadius.md,
-                  border: "1px solid " + theme.colors.borderLight,
-                  background: filter === status ? theme.gradients.primary : theme.colors.bgSecondary,
-                  color: filter === status ? "white" : theme.colors.textPrimary,
+                  padding: "10px 18px",
+                  borderRadius: 10,
+                  border: filter === s ? "none" : `1px solid ${theme.colors.borderLight}`,
+                  background: filter === s ? theme.gradients.primary : theme.colors.bgSecondary,
+                  color: filter === s ? "white" : theme.colors.textSecondary,
                   fontSize: 13,
                   fontWeight: 500,
                   cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  boxShadow: filter === s ? theme.shadows.button : "none",
                 }}
               >
-                {status}
+                {s === "ALL" ? "All" : s.charAt(0) + s.slice(1).toLowerCase()}
               </button>
             ))}
           </div>
@@ -268,93 +357,128 @@ export default function ClientsPage() {
 
         {/* Clients List */}
         {filteredClients.length === 0 ? (
-          <div style={{ 
-            background: theme.colors.bgSecondary, 
-            borderRadius: theme.borderRadius.lg, 
-            border: "1px solid " + theme.colors.borderLight, 
-            padding: 64, 
-            textAlign: "center" 
+          <div style={{
+            background: theme.colors.bgSecondary,
+            borderRadius: 16,
+            border: `1px solid ${theme.colors.borderLight}`,
+            padding: 64,
+            textAlign: "center",
           }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>👥</div>
+            <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+              {icons.usersEmpty}
+            </div>
             <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
               {search || filter !== "ALL" ? "No clients found" : "No clients yet"}
             </h3>
-            <p style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>
-              {search || filter !== "ALL" 
+            <p style={{ color: theme.colors.textSecondary, marginBottom: 24, fontSize: 14 }}>
+              {search || filter !== "ALL"
                 ? "Try adjusting your search or filters"
                 : "Get started by adding your first client"}
             </p>
             {!search && filter === "ALL" && (
               <Link href="/clients/new" style={{
-                display: "inline-block",
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
                 background: theme.gradients.primary,
                 color: "white",
-                padding: "12px 24px",
-                borderRadius: theme.borderRadius.md,
+                padding: "10px 22px",
+                borderRadius: 10,
                 textDecoration: "none",
                 fontWeight: 500,
                 fontSize: 14,
+                boxShadow: theme.shadows.button,
               }}>
-                Add Client
+                {icons.plus} Add Client
               </Link>
             )}
           </div>
         ) : (
-          <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
+          <div style={{ background: theme.colors.bgSecondary, borderRadius: 16, border: `1px solid ${theme.colors.borderLight}`, overflow: "hidden" }}>
             {filteredClients.map((client, idx) => {
               const activeProjects = client.projects.filter(p => p.status === "IN_PROGRESS").length;
               return (
                 <Link key={client.id} href={`/clients/${client.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                  <div style={{ 
-                    padding: "20px 24px", 
-                    borderBottom: idx < filteredClients.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 16,
-                    transition: "background 0.15s",
-                  }}>
-                    <div style={{ 
-                      width: 56, 
-                      height: 56, 
-                      borderRadius: 12, 
-                      background: theme.gradients.accent, 
-                      display: "flex", 
-                      alignItems: "center", 
-                      justifyContent: "center", 
-                      color: "white", 
-                      fontWeight: 600, 
-                      fontSize: 20,
+                  <div
+                    style={{
+                      padding: "18px 22px",
+                      borderBottom: idx < filteredClients.length - 1 ? `1px solid ${theme.colors.bgTertiary}` : "none",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 14,
+                      transition: "all 0.15s ease",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = theme.colors.bgPrimary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {/* Avatar */}
+                    <div style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: 12,
+                      background: theme.gradients.wick,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: 18,
                       flexShrink: 0,
                     }}>
                       {client.name.charAt(0).toUpperCase()}
                     </div>
+
+                    {/* Info */}
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+                        <h3 style={{ fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
                           {client.name}
                         </h3>
-                        <span style={{ 
-                          fontSize: 11, 
-                          fontWeight: 500, 
-                          padding: "4px 10px", 
-                          borderRadius: 20, 
-                          background: STATUS_STYLES[client.status]?.bg || theme.colors.bgTertiary, 
-                          color: STATUS_STYLES[client.status]?.color || theme.colors.textSecondary 
+                        <span style={{
+                          fontSize: 11,
+                          fontWeight: 500,
+                          padding: "3px 10px",
+                          borderRadius: 20,
+                          background: STATUS_STYLES[client.status]?.bg || theme.colors.bgTertiary,
+                          color: STATUS_STYLES[client.status]?.color || theme.colors.textSecondary,
                         }}>
                           {client.status}
                         </span>
                       </div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 16, fontSize: 13, color: theme.colors.textMuted }}>
-                        {client.industry && <span>🏢 {client.industry}</span>}
-                        {client.email && <span>📧 {client.email}</span>}
-                        {client.phone && <span>📞 {client.phone}</span>}
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 13, color: theme.colors.textMuted }}>
+                        {client.industry && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            {icons.building} {client.industry}
+                          </span>
+                        )}
+                        {client.email && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            {icons.mail} {client.email}
+                          </span>
+                        )}
+                        {client.phone && (
+                          <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                            {icons.phone} {client.phone}
+                          </span>
+                        )}
                       </div>
                     </div>
+
+                    {/* Project Count */}
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
                       <div style={{ fontSize: 20, fontWeight: 700, color: theme.colors.textPrimary }}>{client.projects.length}</div>
                       <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
                         {activeProjects > 0 ? `${activeProjects} active` : "projects"}
                       </div>
+                    </div>
+
+                    {/* Chevron */}
+                    <div style={{ color: theme.colors.textMuted, flexShrink: 0 }}>
+                      {icons.chevron}
                     </div>
                   </div>
                 </Link>

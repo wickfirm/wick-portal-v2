@@ -116,7 +116,7 @@ export default function ClientDetailTabs({
                 {(client.nickname || client.name).charAt(0).toUpperCase()}
               </div>
               <div>
-                <h1 style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary, margin: 0, marginBottom: 8 }}>
+                <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: 0, marginBottom: 8 }}>
                   {client.name}
                   {client.nickname && (
                     <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 8 }}>
@@ -434,7 +434,7 @@ export default function ClientDetailTabs({
 
             {projects.length === 0 ? (
               <div style={{ padding: 48, textAlign: "center", color: theme.colors.textMuted }}>
-                <div style={{ fontSize: 48, marginBottom: 12 }}>📁</div>
+                <div style={{ color: theme.colors.textMuted, marginBottom: 12, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg></div>
                 <div>No projects yet</div>
               </div>
             ) : (

@@ -105,7 +105,7 @@ export default function PortalOnboardingView({
   if (progress.total === 0) {
     return (
       <div style={{ padding: "48px 24px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+        <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><rect x="8" y="2" width="8" height="4" rx="1" ry="1" /></svg></div>
         <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>No Onboarding Items Yet</h2>
         <p style={{ color: theme.colors.textSecondary }}>
           Your onboarding checklist will appear here once your account manager sets it up.
@@ -118,7 +118,7 @@ export default function PortalOnboardingView({
     <div>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 8 }}>Welcome to The Wick Firm!</h1>
+        <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, marginBottom: 8 }}>Welcome to The Wick Firm!</h1>
         <p style={{ color: theme.colors.textSecondary, margin: 0 }}>
           Complete these items to help us get started on your projects.
         </p>
