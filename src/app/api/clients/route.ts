@@ -166,20 +166,13 @@ export async function POST(req: NextRequest) {
     // Use raw SQL to avoid Prisma enum type mismatch with pricing_model
     // Column names must match actual DB names: Prisma uses camelCase unless @map() overrides
     try {
-      await prisma.$executeRaw`
-        INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
-        VALUES (
-          ${`proj-${clientId}-default`},
-          'Admin/Operations',
-          'General administrative tasks and operations',
-          ${client.id},
-          'CONSULTING'::service_type,
-          'IN_PROGRESS'::project_status,
-          true,
-          NOW(),
-          NOW()
-        )
-      `;
+      const projId = `proj-${clientId}-default`;
+      await prisma.$executeRawUnsafe(
+        `INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
+         VALUES ($1, 'Admin/Operations', 'General administrative tasks and operations', $2, 'CONSULTING'::service_type, 'IN_PROGRESS'::project_status, true, NOW(), NOW())`,
+        projId,
+        client.id
+      );
     } catch (projError) {
       // Non-critical: client is already created, just log the project creation failure
       console.error("Warning: Failed to create default project:", projError);

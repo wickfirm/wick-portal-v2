@@ -237,20 +237,13 @@ async function createClient(data: any, userId: string, agencyId: string | null |
   // Auto-create "Admin/Operations" default project via raw SQL
   // (avoids Prisma enum type mismatch with PricingModel)
   try {
-    await prisma.$executeRaw`
-      INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
-      VALUES (
-        ${`proj-${clientId}-default`},
-        'Admin/Operations',
-        'General administrative tasks and operations',
-        ${client.id},
-        'CONSULTING'::service_type,
-        'IN_PROGRESS'::project_status,
-        true,
-        NOW(),
-        NOW()
-      )
-    `;
+    const projId = `proj-${clientId}-default`;
+    await prisma.$executeRawUnsafe(
+      `INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
+       VALUES ($1, 'Admin/Operations', 'General administrative tasks and operations', $2, 'CONSULTING'::service_type, 'IN_PROGRESS'::project_status, true, NOW(), NOW())`,
+      projId,
+      client.id
+    );
   } catch (projError) {
     console.error("Warning: Jarvis failed to create default project:", projError);
   }
