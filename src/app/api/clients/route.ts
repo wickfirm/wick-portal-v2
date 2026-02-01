@@ -164,9 +164,10 @@ export async function POST(req: NextRequest) {
 
     // Auto-create "Admin/Operations" default project
     // Use raw SQL to avoid Prisma enum type mismatch with pricing_model
+    // Column names must match actual DB names: Prisma uses camelCase unless @map() overrides
     try {
       await prisma.$executeRaw`
-        INSERT INTO projects (id, name, description, client_id, service_type, status, is_default, created_at, updated_at)
+        INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
         VALUES (
           ${`proj-${clientId}-default`},
           'Admin/Operations',
