@@ -53,18 +53,24 @@ export default function LoginPage() {
           targetSubdomain = 'crepe';
         }
         
-        // Check if we're already on correct subdomain
+        // Check if we're on localhost (development)
         const currentHost = window.location.hostname;
-        const currentSubdomain = currentHost.split('.')[0];
-        
-        if (currentSubdomain === targetSubdomain) {
-          // Already on correct subdomain, just go to dashboard
+        const isLocalhost = currentHost === 'localhost' || currentHost === '127.0.0.1';
+
+        if (isLocalhost) {
+          // In development, just go to dashboard directly
           window.location.href = "/dashboard";
         } else {
-          // Redirect to correct subdomain
-          const isProduction = currentHost.includes('omnixia.ai');
-          const baseDomain = isProduction ? 'omnixia.ai' : 'localhost:3000';
-          window.location.href = `https://${targetSubdomain}.${baseDomain}/dashboard`;
+          // Production: check subdomain
+          const currentSubdomain = currentHost.split('.')[0];
+
+          if (currentSubdomain === targetSubdomain) {
+            window.location.href = "/dashboard";
+          } else {
+            const isProduction = currentHost.includes('omnixia.ai');
+            const baseDomain = isProduction ? 'omnixia.ai' : 'omnixia.vercel.app';
+            window.location.href = `https://${targetSubdomain}.${baseDomain}/dashboard`;
+          }
         }
       }
     }
