@@ -198,8 +198,22 @@ async function createNote(data: any, userId: string, agencyId: string | null | u
 
 // Create client in database
 async function createClient(data: any, userId: string, agencyId: string | null | undefined) {
-  await prisma.client.create({
+  // Generate friendly client ID from name
+  const baseSlug = (data.name || "client")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  let clientId = `client-${baseSlug}`;
+  let counter = 1;
+  while (await prisma.client.findUnique({ where: { id: clientId } })) {
+    clientId = `client-${baseSlug}-${counter}`;
+    counter++;
+  }
+
+  const client = await prisma.client.create({
     data: {
+      id: clientId,
       name: data.name,
       email: data.email || null,
       phone: data.phone || null,
@@ -211,6 +225,35 @@ async function createClient(data: any, userId: string, agencyId: string | null |
       },
     },
   });
+
+  // Auto-add creator to client team
+  await prisma.clientTeamMember.create({
+    data: {
+      clientId: client.id,
+      userId: userId,
+    },
+  });
+
+  // Auto-create "Admin/Operations" default project via raw SQL
+  // (avoids Prisma enum type mismatch with PricingModel)
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO projects (id, name, description, "clientId", "serviceType", status, is_default, "createdAt", "updatedAt")
+      VALUES (
+        ${`proj-${clientId}-default`},
+        'Admin/Operations',
+        'General administrative tasks and operations',
+        ${client.id},
+        'CONSULTING'::service_type,
+        'IN_PROGRESS'::project_status,
+        true,
+        NOW(),
+        NOW()
+      )
+    `;
+  } catch (projError) {
+    console.error("Warning: Jarvis failed to create default project:", projError);
+  }
 }
 
 // Update client in database
