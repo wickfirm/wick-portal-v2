@@ -122,6 +122,11 @@ export async function POST(req: NextRequest) {
       counter++;
     }
 
+    // Safely parse monthlyRetainer (avoid NaN)
+    const retainer = data.monthlyRetainer != null && !isNaN(Number(data.monthlyRetainer))
+      ? Number(data.monthlyRetainer)
+      : null;
+
     // Create the client with friendly ID
     const client = await prisma.client.create({
       data: {
@@ -133,7 +138,7 @@ export async function POST(req: NextRequest) {
         status: data.status || "LEAD",
         email: data.primaryEmail || null,
         phone: data.phone || null,
-        monthlyRetainer: data.monthlyRetainer || null,
+        monthlyRetainer: retainer,
       },
     });
 
@@ -170,10 +175,10 @@ export async function POST(req: NextRequest) {
     });
 
     return NextResponse.json(client);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating client:", error);
     return NextResponse.json(
-      { error: "Failed to create client" },
+      { error: "Failed to create client", details: error?.message || String(error) },
       { status: 500 }
     );
   }

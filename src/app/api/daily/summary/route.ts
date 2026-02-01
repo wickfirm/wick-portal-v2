@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
       notes,
       sodCompleted,
       eodCompleted,
+      totalTasks,
+      completedTasks,
+      inProgressTasks,
+      notStartedTasks,
+      completionRate,
     } = data;
 
     const summaryDate = date ? new Date(date) : new Date();
@@ -67,6 +72,11 @@ export async function POST(req: NextRequest) {
     if (notes !== undefined) updateData.notes = notes;
     if (sodCompleted) updateData.sodCompletedAt = new Date();
     if (eodCompleted) updateData.eodCompletedAt = new Date();
+    if (totalTasks !== undefined) updateData.totalTasks = totalTasks;
+    if (completedTasks !== undefined) updateData.completedTasks = completedTasks;
+    if (inProgressTasks !== undefined) updateData.inProgressTasks = inProgressTasks;
+    if (notStartedTasks !== undefined) updateData.notStartedTasks = notStartedTasks;
+    if (completionRate !== undefined) updateData.completionRate = completionRate;
 
     const summary = await prisma.dailySummary.upsert({
       where: {

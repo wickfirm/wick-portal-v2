@@ -80,7 +80,7 @@ export default function EmployeesPage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+        <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto", marginLeft: 60, transition: "margin-left 0.2s" }}>
           <div style={{ marginBottom: "2rem" }}>
             <div style={{ height: "2.5rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
             <div style={{ height: "1rem", width: "300px", background: "#E5E7EB", borderRadius: "4px" }}></div>
@@ -112,7 +112,7 @@ export default function EmployeesPage() {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto" }}>
+      <div style={{ padding: "2rem", maxWidth: "1400px", margin: "0 auto", marginLeft: 60, transition: "margin-left 0.2s" }}>
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "2rem" }}>
           <div>

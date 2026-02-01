@@ -650,6 +650,29 @@ export default function TasksManager({
         </td>
       )}
 
+      {/* Internal Link */}
+      <td style={{ padding: "10px 12px", width: 50, textAlign: "center" }}>
+        {task.internalLink && (
+          <a
+            href={task.internalLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={task.internalLinkLabel || "Internal link"}
+            style={{
+              color: theme.colors.primary,
+              fontSize: 16,
+              textDecoration: "none",
+              opacity: 0.8,
+              transition: "opacity 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+            onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.8")}
+          >
+            🔗
+          </a>
+        )}
+      </td>
+
       {/* Actions */}
       <td style={{ padding: "10px 12px", width: 80, textAlign: "center" }}>
         {canDelete && (
@@ -894,6 +917,9 @@ export default function TasksManager({
                       </th>
                     )}
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Link
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
                       Actions
                     </th>
                   </tr>
@@ -988,6 +1014,9 @@ export default function TasksManager({
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
                       Category
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
+                      Link
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
                       Actions

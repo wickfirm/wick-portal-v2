@@ -163,7 +163,7 @@ export default function EditEmployeePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+        <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto", marginLeft: 60, transition: "margin-left 0.2s" }}>
           {/* Header Skeleton */}
           <div style={{ marginBottom: "2rem" }}>
             <div style={{ height: "1rem", width: "150px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "1rem" }}></div>
@@ -190,7 +190,7 @@ export default function EditEmployeePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem", color: theme.colors.textSecondary }}>
+        <div style={{ padding: "2rem", marginLeft: 60, transition: "margin-left 0.2s", color: theme.colors.textSecondary }}>
           Employee not found
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function EditEmployeePage() {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto" }}>
+      <div style={{ padding: "2rem", maxWidth: "900px", margin: "0 auto", marginLeft: 60, transition: "margin-left 0.2s" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <Link

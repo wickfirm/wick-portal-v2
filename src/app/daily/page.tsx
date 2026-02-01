@@ -153,12 +153,24 @@ export default function DailyPage() {
 
   async function handleEndDay() {
     try {
+      // Snapshot actual task stats — do NOT auto-complete any tasks
+      const completed = dailyTasks.filter(dt => dt.task.status === "COMPLETED").length;
+      const inProgress = dailyTasks.filter(dt => dt.task.status === "IN_PROGRESS").length;
+      const total = dailyTasks.length;
+      const notStarted = total - completed - inProgress;
+      const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+
       await fetch("/api/daily/summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           date: today,
           eodCompleted: true,
+          totalTasks: total,
+          completedTasks: completed,
+          inProgressTasks: inProgress,
+          notStartedTasks: notStarted,
+          completionRate: rate,
         }),
       });
 
@@ -230,6 +242,13 @@ export default function DailyPage() {
 
   const hasStarted = summary?.sodCompletedAt;
   const hasEnded = summary?.eodCompletedAt;
+
+  // Compute live task stats from actual dailyTasks data (not stale summary)
+  const liveCompleted = dailyTasks.filter(dt => dt.task.status === "COMPLETED").length;
+  const liveInProgress = dailyTasks.filter(dt => dt.task.status === "IN_PROGRESS").length;
+  const liveTotal = dailyTasks.length;
+  const liveNotStarted = liveTotal - liveCompleted - liveInProgress;
+  const liveRate = liveTotal > 0 ? Math.round((liveCompleted / liveTotal) * 100) : 0;
 
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
@@ -333,7 +352,7 @@ export default function DailyPage() {
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Total Tasks</div>
                     <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>
-                      {summary?.totalTasks || 0}
+                      {liveTotal}
                     </div>
                   </div>
 
@@ -345,7 +364,7 @@ export default function DailyPage() {
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Completed</div>
                     <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.success }}>
-                      {summary?.completedTasks || 0}
+                      {liveCompleted}
                     </div>
                   </div>
 
@@ -357,7 +376,7 @@ export default function DailyPage() {
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Completion Rate</div>
                     <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>
-                      {summary?.completionRate || 0}%
+                      {liveRate}%
                     </div>
                   </div>
                 </div>
@@ -631,19 +650,19 @@ export default function DailyPage() {
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>Completed</div>
                   <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.success }}>
-                    {summary?.completedTasks || 0}
+                    {liveCompleted}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>In Progress</div>
                   <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.warning }}>
-                    {summary?.inProgressTasks || 0}
+                    {liveInProgress}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>Not Started</div>
                   <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textSecondary }}>
-                    {summary?.notStartedTasks || 0}
+                    {liveNotStarted}
                   </div>
                 </div>
               </div>
@@ -655,14 +674,14 @@ export default function DailyPage() {
                 overflow: "hidden",
               }}>
                 <div style={{
-                  width: `${summary?.completionRate || 0}%`,
+                  width: `${liveRate}%`,
                   height: "100%",
                   background: theme.colors.success,
                   transition: "width 0.3s ease",
                 }} />
               </div>
               <div style={{ fontSize: 13, color: theme.colors.textMuted, marginTop: 8, textAlign: "center" }}>
-                {summary?.completionRate || 0}% Complete
+                {liveRate}% Complete
               </div>
             </div>
 

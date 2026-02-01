@@ -125,7 +125,7 @@ export default function MyLeavePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem" }}>
+        <div style={{ marginLeft: 60, padding: "2rem", transition: "margin-left 0.2s" }}>
           {/* Header Skeleton */}
           <div style={{ marginBottom: "2rem" }}>
             <div style={{ height: "2rem", width: "200px", background: "#E5E7EB", borderRadius: "4px", marginBottom: "0.5rem" }}></div>
@@ -161,7 +161,7 @@ export default function MyLeavePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <div style={{ padding: "2rem" }}>
+        <div style={{ marginLeft: 60, padding: "2rem", transition: "margin-left 0.2s" }}>
           <div style={{ background: "white", padding: "3rem", borderRadius: "12px", textAlign: "center" }}>
             <h3 style={{ fontSize: "1.25rem", fontWeight: "600", marginBottom: "0.5rem" }}>
               No Employee Profile
@@ -180,7 +180,7 @@ export default function MyLeavePage() {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      <div style={{ padding: "2rem" }}>
+      <div style={{ marginLeft: 60, padding: "2rem", transition: "margin-left 0.2s" }}>
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <div>

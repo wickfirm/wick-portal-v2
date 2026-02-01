@@ -17,7 +17,7 @@ export default function NewClientPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [agencies, setAgencies] = useState<Agency[]>([]);
-  const [defaultAgencyId, setDefaultAgencyId] = useState<string>("");
+  const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
 
@@ -30,7 +30,10 @@ export default function NewClientPage() {
         setAgencies(agenciesData);
         const defaultAgency = agenciesData.find((a: Agency) => a.isDefault);
         if (defaultAgency) {
-          setDefaultAgencyId(defaultAgency.id);
+          setSelectedAgencyId(defaultAgency.id);
+        } else if (agenciesData.length === 1) {
+          // Auto-select if only one agency exists
+          setSelectedAgencyId(agenciesData[0].id);
         }
       }
       if (Array.isArray(templatesData)) {
@@ -54,7 +57,7 @@ export default function NewClientPage() {
       status: formData.get("status") || "LEAD",
       primaryContact: formData.get("primaryContact") || null,
       primaryEmail: formData.get("primaryEmail") || null,
-      monthlyRetainer: formData.get("monthlyRetainer") ? parseFloat(formData.get("monthlyRetainer") as string) : null,
+      monthlyRetainer: formData.get("monthlyRetainer") && !isNaN(parseFloat(formData.get("monthlyRetainer") as string)) ? parseFloat(formData.get("monthlyRetainer") as string) : null,
       agencyId: formData.get("agencyId") || null,
     };
 
@@ -68,7 +71,7 @@ export default function NewClientPage() {
 
       if (!res.ok) {
         const err = await res.json();
-        setError(err.error || "Failed to create client");
+        setError(err.details || err.error || "Failed to create client");
         setLoading(false);
         return;
       }
@@ -148,7 +151,12 @@ export default function NewClientPage() {
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
               <div>
                 <label style={labelStyle}>Servicing Agency</label>
-                <select name="agencyId" defaultValue={defaultAgencyId} style={{ ...inputStyle, cursor: "pointer" }}>
+                <select
+                  name="agencyId"
+                  value={selectedAgencyId}
+                  onChange={(e) => setSelectedAgencyId(e.target.value)}
+                  style={{ ...inputStyle, cursor: "pointer" }}
+                >
                   <option value="">Select agency...</option>
                   {agencies.map(agency => (
                     <option key={agency.id} value={agency.id}>

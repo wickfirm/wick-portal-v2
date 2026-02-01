@@ -160,7 +160,7 @@ export default function TeamLeavePage() {
   return (
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
-      <div style={{ padding: "2rem" }}>
+      <div style={{ padding: "2rem", marginLeft: 60, transition: "margin-left 0.2s" }}>
         {/* Header */}
         <div style={{ marginBottom: "2rem" }}>
           <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
