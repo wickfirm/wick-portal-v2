@@ -1318,8 +1318,6 @@ model DailyTimestamp {
 enum PricingModel {
   FIXED_FEE
   TIME_AND_MATERIALS
-
-  @@map("pricing_model")
 }
 
 enum ExpenseCategory {

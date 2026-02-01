@@ -173,8 +173,8 @@ export async function POST(req: NextRequest) {
           'Admin/Operations',
           'General administrative tasks and operations',
           ${client.id},
-          'CONSULTING'::"ServiceType",
-          'IN_PROGRESS'::"ProjectStatus",
+          'CONSULTING'::service_type,
+          'IN_PROGRESS'::project_status,
           true,
           NOW(),
           NOW()
