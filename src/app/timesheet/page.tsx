@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Header from "@/components/Header";
 import TimesheetGrid from "./timesheet-grid";
-import { BarChart, DonutChart } from "@/components/MetricsChart";
+import { BarChart, DonutChart, Sparkline } from "@/components/MetricsChart";
 import { theme } from "@/lib/theme";
 
 type TimesheetData = {
@@ -188,6 +188,28 @@ export default function TimesheetPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(searchParams.get("month") ? "month" : "week");
 
+  // Mini calendar state
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
+
+  // Quick entry state
+  const [showQuickEntry, setShowQuickEntry] = useState(false);
+  const [qeClient, setQeClient] = useState("");
+  const [qeProject, setQeProject] = useState("");
+  const [qeTask, setQeTask] = useState("");
+  const [qeDate, setQeDate] = useState(new Date().toISOString().split("T")[0]);
+  const [qeDuration, setQeDuration] = useState("");
+  const [qeDescription, setQeDescription] = useState("");
+  const [qeProjects, setQeProjects] = useState<any[]>([]);
+  const [qeTasks, setQeTasks] = useState<any[]>([]);
+  const [isQeSubmitting, setIsQeSubmitting] = useState(false);
+
+  // History state
+  const [showHistory, setShowHistory] = useState(true);
+
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
@@ -215,6 +237,59 @@ export default function TimesheetPage() {
     },
     enabled: status === "authenticated",
   });
+
+  // Fetch calendar activity data
+  const calMonthStr = `${calendarMonth.year}-${(calendarMonth.month + 1).toString().padStart(2, "0")}`;
+  const { data: calendarData } = useQuery<{ dailyTotals: Record<string, number> }>({
+    queryKey: ["calendar-activity", calMonthStr, userId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ month: calMonthStr });
+      if (userId) params.set("userId", userId);
+      const res = await fetch(`/api/timesheet/calendar-activity?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch calendar activity");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Fetch weekly history
+  const { data: historyData } = useQuery<{ weeks: { weekStart: string; weekEnd: string; totalSeconds: number; billableSeconds: number; entryCount: number; dailyHours: number[]; hasOvertime: boolean }[] }>({
+    queryKey: ["timesheet-history", userId],
+    queryFn: async () => {
+      const params = new URLSearchParams({ weeks: "12" });
+      if (userId) params.set("userId", userId);
+      const res = await fetch(`/api/timesheet/history?${params}`);
+      if (!res.ok) throw new Error("Failed to fetch history");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+  });
+
+  // Quick entry: load projects when client changes
+  useEffect(() => {
+    if (qeClient) {
+      setQeProject("");
+      setQeTask("");
+      setQeProjects([]);
+      setQeTasks([]);
+      fetch(`/api/projects?clientId=${qeClient}`)
+        .then((r) => r.json())
+        .then(setQeProjects)
+        .catch(console.error);
+    }
+  }, [qeClient]);
+
+  // Quick entry: load tasks when project changes
+  useEffect(() => {
+    if (qeProject && qeClient) {
+      setQeTask("");
+      setQeTasks([]);
+      fetch(`/api/clients/${qeClient}/tasks?projectId=${qeProject}`)
+        .then((r) => r.json())
+        .then((d) => setQeTasks(Array.isArray(d) ? d : []))
+        .catch(console.error);
+    }
+  }, [qeProject, qeClient]);
 
   if (status === "loading") return <TimesheetPageSkeleton />;
   if (!session) return null;
@@ -355,6 +430,120 @@ export default function TimesheetPage() {
   };
 
   const currentUser = session.user as any;
+
+  // ── Calendar helpers ──
+  const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+  function getMonthGrid(year: number, mo: number): Date[][] {
+    const first = new Date(year, mo, 1);
+    const day = first.getDay();
+    const gridStart = new Date(first);
+    gridStart.setDate(gridStart.getDate() - ((day === 0 ? 7 : day) - 1)); // Monday start
+    const weeks: Date[][] = [];
+    const cursor = new Date(gridStart);
+    for (let w = 0; w < 6; w++) {
+      const wk: Date[] = [];
+      for (let d = 0; d < 7; d++) {
+        wk.push(new Date(cursor));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(wk);
+    }
+    return weeks;
+  }
+
+  function getWeekStartDate(date: Date): string {
+    const d = new Date(date);
+    const day = d.getDay();
+    const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+    d.setDate(diff);
+    return d.toISOString().split("T")[0];
+  }
+
+  function getActivityColor(seconds: number): string {
+    if (!seconds || seconds === 0) return "transparent";
+    const h = seconds / 3600;
+    if (h < 2) return theme.colors.primary + "18";
+    if (h < 4) return theme.colors.primary + "35";
+    if (h < 6) return theme.colors.primary + "60";
+    if (h < 8) return theme.colors.primary + "90";
+    return theme.colors.primary;
+  }
+
+  function getActivityTextColor(seconds: number): string {
+    if (!seconds || seconds === 0) return theme.colors.textPrimary;
+    const h = seconds / 3600;
+    if (h < 4) return theme.colors.textPrimary;
+    return "white";
+  }
+
+  // ── Parse duration for quick entry ──
+  function parseDurationInput(value: string): number | null {
+    const colonMatch = value.match(/^(\d+):(\d{1,2})$/);
+    if (colonMatch) return parseInt(colonMatch[1]) * 3600 + parseInt(colonMatch[2]) * 60;
+    const decimalMatch = value.match(/^(\d+(?:\.\d+)?)$/);
+    if (decimalMatch) {
+      const num = parseFloat(decimalMatch[1]);
+      if (num < 24) return Math.round(num * 3600);
+      return Math.round(num * 60);
+    }
+    return null;
+  }
+
+  // ── Quick entry submit ──
+  const handleQuickEntry = async () => {
+    const duration = parseDurationInput(qeDuration);
+    if (!duration || duration <= 0) { alert("Invalid duration. Use h:mm format (e.g., 1:30)"); return; }
+    if (!qeClient || !qeProject || !qeTask || !qeDate) { alert("Please fill all required fields"); return; }
+
+    setIsQeSubmitting(true);
+    try {
+      const res = await fetch("/api/time-entries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId: qeClient, projectId: qeProject, taskId: qeTask, date: qeDate, duration, description: qeDescription || null, billable: true }),
+      });
+      if (res.ok) {
+        setShowQuickEntry(false);
+        setQeClient(""); setQeProject(""); setQeTask(""); setQeDuration(""); setQeDescription("");
+        setQeDate(new Date().toISOString().split("T")[0]);
+        refetch();
+      } else {
+        const err = await res.json();
+        alert("Failed: " + (err.error || "Unknown error"));
+      }
+    } catch { alert("Network error"); }
+    finally { setIsQeSubmitting(false); }
+  };
+
+  // ── CSV Export ──
+  const exportToCSV = () => {
+    const headers = ["Date", "Client", "Project", "Task", "Duration (hours)", "Description", "Billable", "Source"];
+    const rows = timeEntries.map((e: any) => [
+      new Date(e.date).toISOString().split("T")[0],
+      e.project?.client?.name || e.client?.name || "",
+      e.project?.name || "",
+      e.task?.name || "",
+      (e.duration / 3600).toFixed(2),
+      (e.description || "").replace(/"/g, '""'),
+      e.billable ? "Yes" : "No",
+      e.source || "MANUAL",
+    ]);
+    const csv = [headers.join(","), ...rows.map((r: string[]) => r.map((c) => `"${c}"`).join(","))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", viewMode === "month" ? `timesheet-${month}.csv` : `timesheet-${weekStart.split("T")[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const canEdit = !userId || userId === currentUser.id || canViewOthers;
+  const currentWeekStartKey = getWeekStartDate(startDate);
+  const todayStr = new Date().toISOString().split("T")[0];
 
   // Month summary charts data
   const monthSummary = data.monthSummary;
@@ -621,26 +810,174 @@ export default function TimesheetPage() {
             </button>
           </div>
 
-          {/* Right: Today button */}
-          <button
-            onClick={viewMode === "month" ? goToCurrentMonth : goToCurrentWeek}
-            style={{
-              padding: "6px 16px",
-              borderRadius: 8,
-              background: theme.colors.primary + "12",
-              color: theme.colors.primary,
-              border: "1px solid " + theme.colors.primary + "25",
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: "pointer",
-              transition: "background 150ms",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = theme.colors.primary + "20"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = theme.colors.primary + "12"; }}
-          >
-            Today
-          </button>
+          {/* Right: Calendar toggle + Export + Today */}
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button
+              onClick={() => setShowCalendar(!showCalendar)}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                border: showCalendar ? "1px solid " + theme.colors.primary + "40" : "1px solid " + theme.colors.borderLight,
+                background: showCalendar ? theme.colors.primary + "12" : "transparent",
+                color: showCalendar ? theme.colors.primary : theme.colors.textSecondary,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 150ms",
+              }}
+              title={showCalendar ? "Hide calendar" : "Show calendar"}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </button>
+
+            <button
+              onClick={exportToCSV}
+              disabled={timeEntries.length === 0}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                border: "1px solid " + theme.colors.borderLight,
+                background: "transparent",
+                color: timeEntries.length === 0 ? theme.colors.textMuted : theme.colors.textSecondary,
+                cursor: timeEntries.length === 0 ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 150ms",
+                opacity: timeEntries.length === 0 ? 0.4 : 1,
+              }}
+              onMouseEnter={(e) => { if (timeEntries.length > 0) e.currentTarget.style.background = theme.colors.bgTertiary; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              title="Export as CSV"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            </button>
+
+            <button
+              onClick={viewMode === "month" ? goToCurrentMonth : goToCurrentWeek}
+              style={{
+                padding: "6px 16px",
+                borderRadius: 8,
+                background: theme.colors.primary + "12",
+                color: theme.colors.primary,
+                border: "1px solid " + theme.colors.primary + "25",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "background 150ms",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme.colors.primary + "20"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = theme.colors.primary + "12"; }}
+            >
+              Today
+            </button>
+          </div>
         </div>
+
+        {/* Mini Calendar Heatmap */}
+        {showCalendar && (
+          <div style={{
+            background: theme.colors.bgSecondary,
+            borderRadius: 12,
+            border: "1px solid " + theme.colors.borderLight,
+            padding: 16,
+            marginBottom: 16,
+            maxWidth: 320,
+          }}>
+            {/* Calendar month header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <button
+                onClick={() => {
+                  const nm = calendarMonth.month === 0 ? 11 : calendarMonth.month - 1;
+                  const ny = calendarMonth.month === 0 ? calendarMonth.year - 1 : calendarMonth.year;
+                  setCalendarMonth({ year: ny, month: nm });
+                }}
+                style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", color: theme.colors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15,18 9,12 15,6"/></svg>
+              </button>
+              <span style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
+                {MONTH_NAMES[calendarMonth.month]} {calendarMonth.year}
+              </span>
+              <button
+                onClick={() => {
+                  const nm = calendarMonth.month === 11 ? 0 : calendarMonth.month + 1;
+                  const ny = calendarMonth.month === 11 ? calendarMonth.year + 1 : calendarMonth.year;
+                  setCalendarMonth({ year: ny, month: nm });
+                }}
+                style={{ width: 28, height: 28, borderRadius: 6, border: "none", background: "transparent", color: theme.colors.textSecondary, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9,18 15,12 9,6"/></svg>
+              </button>
+            </div>
+
+            {/* Day of week headers */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 4 }}>
+              {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                <div key={i} style={{ textAlign: "center", fontSize: 10, fontWeight: 600, color: theme.colors.textMuted, padding: "4px 0" }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+              {getMonthGrid(calendarMonth.year, calendarMonth.month).flat().map((date, i) => {
+                const dateKey = date.toISOString().split("T")[0];
+                const seconds = calendarData?.dailyTotals?.[dateKey] || 0;
+                const isCurrentMonth = date.getMonth() === calendarMonth.month;
+                const isToday = dateKey === todayStr;
+                const dayWeekStart = getWeekStartDate(date);
+                const isCurrentWeek = dayWeekStart === currentWeekStartKey;
+                const bg = getActivityColor(seconds);
+                const textColor = getActivityTextColor(seconds);
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => {
+                      const ws = getWeekStartDate(date);
+                      router.push(`/timesheet?week=${ws}${userId ? "&userId=" + userId : ""}`);
+                    }}
+                    title={seconds > 0 ? `${(seconds / 3600).toFixed(1)}h logged` : "No time logged"}
+                    style={{
+                      width: "100%",
+                      aspectRatio: "1",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      fontSize: 11,
+                      fontWeight: isToday ? 700 : seconds > 0 ? 600 : 400,
+                      color: !isCurrentMonth ? theme.colors.textMuted + "60" : textColor,
+                      background: !isCurrentMonth ? "transparent" : bg,
+                      borderRadius: 6,
+                      cursor: "pointer",
+                      border: isCurrentWeek && isCurrentMonth ? `2px solid ${theme.colors.primary}` : isToday ? `1px solid ${theme.colors.primary}60` : "1px solid transparent",
+                      transition: "transform 100ms",
+                      opacity: isCurrentMonth ? 1 : 0.3,
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.15)"; e.currentTarget.style.zIndex = "5"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.zIndex = "1"; }}
+                  >
+                    {date.getDate()}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Legend */}
+            <div style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, justifyContent: "center" }}>
+              <span style={{ fontSize: 10, color: theme.colors.textMuted }}>Less</span>
+              {[0, 2, 4, 6, 8].map((h) => (
+                <div key={h} style={{ width: 14, height: 14, borderRadius: 3, background: getActivityColor(h * 3600), border: "1px solid " + theme.colors.borderLight }} />
+              ))}
+              <span style={{ fontSize: 10, color: theme.colors.textMuted }}>More</span>
+            </div>
+          </div>
+        )}
 
         {/* Timesheet Grid */}
         <TimesheetGrid
@@ -648,7 +985,7 @@ export default function TimesheetPage() {
           entries={filteredEntries}
           clients={clients}
           userId={userId || currentUser.id}
-          canEdit={!userId || userId === currentUser.id || canViewOthers}
+          canEdit={canEdit}
           dailyOvertimeThreshold={DAILY_OVERTIME_SECONDS}
           weeklyOvertimeThreshold={WEEKLY_OVERTIME_SECONDS}
         />
@@ -720,7 +1057,211 @@ export default function TimesheetPage() {
             </div>
           </div>
         )}
+
+        {/* Recent Weeks History */}
+        {viewMode === "week" && historyData && historyData.weeks.length > 0 && (
+          <div style={{ marginTop: 32 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <h2 style={{
+                fontFamily: "'DM Serif Display', serif",
+                fontSize: 22,
+                fontWeight: 400,
+                color: theme.colors.textPrimary,
+                margin: 0,
+              }}>
+                Recent Weeks
+              </h2>
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: 8,
+                  border: "1px solid " + theme.colors.borderLight,
+                  background: theme.colors.bgSecondary,
+                  color: theme.colors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                }}
+              >
+                {showHistory ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {showHistory && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 12 }}>
+                {historyData.weeks.map((w) => {
+                  const isThisWeek = w.weekStart === currentWeekStartKey;
+                  const wStart = new Date(w.weekStart);
+                  const wEnd = new Date(w.weekEnd);
+                  const sameMonth = wStart.getMonth() === wEnd.getMonth();
+                  const rangeLabel = sameMonth
+                    ? `${wStart.toLocaleDateString("en-US", { month: "short" })} ${wStart.getDate()}-${wEnd.getDate()}`
+                    : `${wStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${wEnd.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+                  const billableHours = (w.billableSeconds / 3600).toFixed(1);
+
+                  return (
+                    <div
+                      key={w.weekStart}
+                      onClick={() => router.push(`/timesheet?week=${w.weekStart}${userId ? "&userId=" + userId : ""}`)}
+                      style={{
+                        background: isThisWeek ? theme.colors.primary + "08" : theme.colors.bgSecondary,
+                        border: `1px solid ${isThisWeek ? theme.colors.primary + "50" : theme.colors.borderLight}`,
+                        borderRadius: 12,
+                        padding: 16,
+                        cursor: "pointer",
+                        transition: "transform 150ms, box-shadow 150ms",
+                        position: "relative",
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+                    >
+                      {w.hasOvertime && (
+                        <div style={{ position: "absolute", top: 12, right: 12, width: 8, height: 8, borderRadius: "50%", background: theme.colors.error }} title="Overtime week" />
+                      )}
+
+                      <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6 }}>
+                        {rangeLabel}
+                        {isThisWeek && (
+                          <span style={{ marginLeft: 8, fontSize: 10, color: theme.colors.primary, fontWeight: 700, letterSpacing: "0.5px" }}>CURRENT</span>
+                        )}
+                      </div>
+
+                      <div style={{
+                        fontFamily: "'DM Serif Display', serif",
+                        fontSize: 28,
+                        fontWeight: 400,
+                        color: w.hasOvertime ? theme.colors.error : theme.colors.textPrimary,
+                        lineHeight: 1,
+                        marginBottom: 6,
+                      }}>
+                        {formatDuration(w.totalSeconds)}
+                      </div>
+
+                      <div style={{ display: "flex", gap: 10, fontSize: 12, color: theme.colors.textMuted, marginBottom: 10 }}>
+                        <span style={{ color: theme.colors.success, fontWeight: 500 }}>{billableHours}h billable</span>
+                        <span>{w.entryCount} entries</span>
+                      </div>
+
+                      <Sparkline
+                        data={w.dailyHours}
+                        color={w.hasOvertime ? theme.colors.error : theme.colors.primary}
+                        width={248}
+                        height={24}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </main>
+
+      {/* Quick Entry FAB + Modal */}
+      {canEdit && !showQuickEntry && (
+        <button
+          onClick={() => setShowQuickEntry(true)}
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            background: theme.gradients.primary,
+            color: "white",
+            border: "none",
+            fontSize: 28,
+            fontWeight: 300,
+            cursor: "pointer",
+            boxShadow: "0 4px 16px rgba(118,82,124,0.35)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 998,
+            transition: "transform 150ms, box-shadow 150ms",
+            lineHeight: 1,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.1)"; e.currentTarget.style.boxShadow = "0 6px 24px rgba(118,82,124,0.45)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; e.currentTarget.style.boxShadow = "0 4px 16px rgba(118,82,124,0.35)"; }}
+          title="Quick add time entry"
+        >
+          +
+        </button>
+      )}
+
+      {showQuickEntry && (
+        <div
+          style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: 20 }}
+          onClick={() => setShowQuickEntry(false)}
+        >
+          <div
+            style={{ background: theme.colors.bgSecondary, borderRadius: 16, padding: 24, width: 440, maxWidth: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 20, fontWeight: 400, color: theme.colors.textPrimary, margin: 0 }}>
+                Quick Log Time
+              </h2>
+              <button onClick={() => setShowQuickEntry(false)} style={{ background: "none", border: "none", fontSize: 22, color: theme.colors.textMuted, cursor: "pointer", lineHeight: 1, padding: 0 }}>
+                &times;
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Client *</label>
+                <select value={qeClient} onChange={(e) => { setQeClient(e.target.value); setQeProject(""); setQeTask(""); }} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14 }}>
+                  <option value="">Select client...</option>
+                  {clients.map((c: any) => <option key={c.id} value={c.id}>{c.nickname || c.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Project *</label>
+                <select value={qeProject} onChange={(e) => { setQeProject(e.target.value); setQeTask(""); }} disabled={!qeClient} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14, opacity: qeClient ? 1 : 0.5 }}>
+                  <option value="">Select project...</option>
+                  {qeProjects.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Task *</label>
+                <select value={qeTask} onChange={(e) => setQeTask(e.target.value)} disabled={!qeProject} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14, opacity: qeProject ? 1 : 0.5 }}>
+                  <option value="">Select task...</option>
+                  {qeTasks.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Date *</label>
+                  <input type="date" value={qeDate} onChange={(e) => setQeDate(e.target.value)} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14 }} />
+                </div>
+                <div>
+                  <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Duration * (h:mm)</label>
+                  <input type="text" value={qeDuration} onChange={(e) => setQeDuration(e.target.value)} placeholder="1:30" style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14 }} />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: "block", fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary, marginBottom: 4 }}>Description</label>
+                <textarea value={qeDescription} onChange={(e) => setQeDescription(e.target.value)} placeholder="What did you work on?" rows={2} style={{ width: "100%", padding: "8px 12px", borderRadius: 8, border: "1px solid " + theme.colors.borderLight, fontSize: 14, fontFamily: "inherit", resize: "vertical" }} />
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: 12, marginTop: 20 }}>
+              <button onClick={() => setShowQuickEntry(false)} style={{ flex: 1, padding: "10px 16px", borderRadius: 10, border: "1px solid " + theme.colors.borderLight, background: theme.colors.bgTertiary, color: theme.colors.textSecondary, fontSize: 14, fontWeight: 500, cursor: "pointer" }}>
+                Cancel
+              </button>
+              <button onClick={handleQuickEntry} disabled={isQeSubmitting} style={{ flex: 1, padding: "10px 16px", borderRadius: 10, border: "none", background: theme.gradients.primary, color: "white", fontSize: 14, fontWeight: 500, cursor: "pointer", opacity: isQeSubmitting ? 0.5 : 1 }}>
+                {isQeSubmitting ? "Logging..." : "Log Time"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
