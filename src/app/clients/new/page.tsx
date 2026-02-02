@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
@@ -13,6 +14,7 @@ type Agency = {
 };
 
 export default function NewClientPage() {
+  const { data: session, status } = useSession();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -20,6 +22,17 @@ export default function NewClientPage() {
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+
+  const userRole = (session?.user as any)?.role;
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole);
+
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      router.push("/login");
+    } else if (status === "authenticated" && !isAdmin) {
+      router.push("/clients");
+    }
+  }, [status, isAdmin, router]);
 
   useEffect(() => {
     Promise.all([

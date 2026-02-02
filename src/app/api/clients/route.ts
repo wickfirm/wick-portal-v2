@@ -108,6 +108,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "User has no agency" }, { status: 400 });
     }
 
+    // Only ADMIN and SUPER_ADMIN can create clients
+    if (!["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(currentUser.role)) {
+      return NextResponse.json({ error: "Insufficient permissions. Only admins can create clients." }, { status: 403 });
+    }
+
     // Generate friendly client ID from nickname or name
     const baseSlug = (data.nickname || data.name || "client")
       .toLowerCase()

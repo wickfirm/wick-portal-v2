@@ -204,6 +204,9 @@ export default function ClientsPage() {
     enabled: status === "authenticated",
   });
 
+  const userRole = (session?.user as any)?.role;
+  const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole);
+
   if (status === "loading") return <ClientsPageSkeleton />;
   if (!session) return null;
   if (isLoading) return <ClientsPageSkeleton />;
@@ -243,22 +246,24 @@ export default function ClientsPage() {
               Manage your client relationships
             </p>
           </div>
-          <Link href="/clients/new" style={{
-            background: theme.gradients.primary,
-            color: "white",
-            padding: "10px 22px",
-            borderRadius: 10,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: 14,
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            boxShadow: theme.shadows.button,
-            transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-          }}>
-            {icons.plus} New Client
-          </Link>
+          {isAdmin && (
+            <Link href="/clients/new" style={{
+              background: theme.gradients.primary,
+              color: "white",
+              padding: "10px 22px",
+              borderRadius: 10,
+              textDecoration: "none",
+              fontWeight: 500,
+              fontSize: 14,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              boxShadow: theme.shadows.button,
+              transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}>
+              {icons.plus} New Client
+            </Link>
+          )}
         </div>
 
         {/* Stats Cards */}
