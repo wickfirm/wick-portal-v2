@@ -910,6 +910,185 @@ async function reportWeeklyDigest(agencyId: string): Promise<string> {
   return msg;
 }
 
+// --- 11. Team Availability / Who's Free ---
+async function reportTeamAvailability(data: any, agencyId: string): Promise<string> {
+  const department = data?.department?.toUpperCase?.() || null;
+
+  const now = new Date();
+  // Get start of current week (Monday)
+  const startOfWeek = new Date(now);
+  const dayOfWeek = startOfWeek.getDay();
+  const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Monday = 0
+  startOfWeek.setDate(startOfWeek.getDate() - diff);
+  startOfWeek.setHours(0, 0, 0, 0);
+
+  const endOfWeek = new Date(startOfWeek);
+  endOfWeek.setDate(endOfWeek.getDate() + 7);
+
+  // Get all active team members (with optional department filter)
+  const employees = await prisma.employeeProfile.findMany({
+    where: {
+      agencyId,
+      user: { isActive: true },
+      ...(department ? { department: { equals: department, mode: "insensitive" as any } } : {}),
+    },
+    include: {
+      user: {
+        include: {
+          timeEntries: {
+            where: { date: { gte: startOfWeek, lt: endOfWeek } },
+            select: { duration: true },
+          },
+          assignedTasks: {
+            where: { status: { in: ["TODO", "IN_PROGRESS"] } },
+            select: { id: true, name: true, priority: true, dueDate: true, status: true },
+          },
+          projectAssignments: {
+            include: {
+              project: {
+                select: { name: true, status: true },
+              },
+            },
+          },
+        },
+      },
+      leaveRequests: {
+        where: {
+          status: "APPROVED",
+          startDate: { lte: endOfWeek },
+          endDate: { gte: now },
+        },
+        select: { startDate: true, endDate: true, leaveType: true },
+      },
+    },
+    orderBy: { department: "asc" },
+  });
+
+  if (employees.length === 0) {
+    return department
+      ? `🔍 No active employees found in the *${department}* department.`
+      : `🔍 No active employees found. Make sure employee profiles are set up.`;
+  }
+
+  // Calculate availability for each member
+  const teamData = employees.map((emp) => {
+    const weeklyCapacity = Number(emp.weeklyCapacity) || 40;
+    const hoursLogged = emp.user.timeEntries.reduce((sum, t) => sum + t.duration, 0) / 3600;
+    const allocatedHours = emp.user.projectAssignments
+      .filter((pa) => pa.project.status === "IN_PROGRESS")
+      .reduce((sum, pa) => sum + (pa.hoursAllocated || 0), 0);
+    const openTasks = emp.user.assignedTasks.length;
+    const overdueTasks = emp.user.assignedTasks.filter(
+      (t) => t.dueDate && new Date(t.dueDate) < now
+    ).length;
+    const highPriorityTasks = emp.user.assignedTasks.filter(
+      (t) => t.priority === "HIGH"
+    ).length;
+    const isOnLeave = emp.leaveRequests.length > 0;
+
+    // Available = capacity - hours already logged this week
+    const availableHours = Math.max(0, weeklyCapacity - hoursLogged);
+    // Utilization = hours logged / capacity
+    const utilization = weeklyCapacity > 0 ? (hoursLogged / weeklyCapacity) * 100 : 0;
+
+    return {
+      name: emp.user.name || "Unknown",
+      department: emp.department || "Unassigned",
+      jobTitle: emp.jobTitle || "",
+      weeklyCapacity,
+      hoursLogged: Math.round(hoursLogged * 10) / 10,
+      allocatedHours,
+      availableHours: Math.round(availableHours * 10) / 10,
+      utilization: Math.round(utilization),
+      openTasks,
+      overdueTasks,
+      highPriorityTasks,
+      isOnLeave,
+      activeProjects: emp.user.projectAssignments.filter(
+        (pa) => pa.project.status === "IN_PROGRESS"
+      ).length,
+    };
+  });
+
+  // Sort: most available first
+  teamData.sort((a, b) => {
+    if (a.isOnLeave && !b.isOnLeave) return 1;
+    if (!a.isOnLeave && b.isOnLeave) return -1;
+    return b.availableHours - a.availableHours;
+  });
+
+  const deptLabel = department || "All Departments";
+  let msg = `👥 *Team Availability — ${deptLabel}*\n`;
+  msg += `_Week of ${startOfWeek.toLocaleDateString("en-US", { month: "short", day: "numeric" })}_\n\n`;
+
+  // Summary stats
+  const available = teamData.filter((m) => m.availableHours > 10 && !m.isOnLeave);
+  const busy = teamData.filter((m) => m.availableHours <= 10 && m.availableHours > 0 && !m.isOnLeave);
+  const maxedOut = teamData.filter((m) => m.availableHours === 0 && !m.isOnLeave);
+  const onLeave = teamData.filter((m) => m.isOnLeave);
+
+  msg += `*Quick Summary:*\n`;
+  msg += `🟢 Available (10h+): ${available.length}\n`;
+  msg += `🟡 Busy (<10h left): ${busy.length}\n`;
+  msg += `🔴 Maxed out: ${maxedOut.length}\n`;
+  if (onLeave.length > 0) msg += `🏖 On leave: ${onLeave.length}\n`;
+  msg += `\n`;
+
+  // Detailed breakdown
+  let currentDept = "";
+  for (const m of teamData) {
+    if (m.department !== currentDept) {
+      currentDept = m.department;
+      msg += `\n📂 *${currentDept}*\n`;
+    }
+
+    const statusIcon = m.isOnLeave
+      ? "🏖"
+      : m.availableHours > 10
+      ? "🟢"
+      : m.availableHours > 0
+      ? "🟡"
+      : "🔴";
+
+    msg += `${statusIcon} *${m.name}*`;
+    if (m.jobTitle) msg += ` _(${m.jobTitle})_`;
+    msg += `\n`;
+
+    if (m.isOnLeave) {
+      msg += `    On leave — not available\n`;
+    } else {
+      msg += `    ${m.hoursLogged}h / ${m.weeklyCapacity}h used · *${m.availableHours}h free*\n`;
+      msg += `    📋 ${m.openTasks} tasks`;
+      if (m.overdueTasks > 0) msg += ` ⚠️ ${m.overdueTasks} overdue`;
+      if (m.highPriorityTasks > 0) msg += ` 🔥 ${m.highPriorityTasks} high-pri`;
+      msg += ` · ${m.activeProjects} active projects\n`;
+    }
+  }
+
+  // Recommendation: who to assign to
+  msg += `\n━━━━━━━━━━━━━━━━━\n`;
+  msg += `💡 *Best candidates for new work:*\n`;
+  const candidates = teamData
+    .filter((m) => !m.isOnLeave && m.availableHours > 5)
+    .sort((a, b) => {
+      // Prefer: most available hours, fewest high-pri tasks, fewest overdue
+      const scoreA = a.availableHours - a.highPriorityTasks * 5 - a.overdueTasks * 10;
+      const scoreB = b.availableHours - b.highPriorityTasks * 5 - b.overdueTasks * 10;
+      return scoreB - scoreA;
+    })
+    .slice(0, 3);
+
+  if (candidates.length === 0) {
+    msg += `⚠️ Everyone is stretched thin this week!\n`;
+  } else {
+    candidates.forEach((c, i) => {
+      msg += `${i + 1}. *${c.name}* — ${c.availableHours}h free, ${c.openTasks} tasks\n`;
+    });
+  }
+
+  return msg;
+}
+
 // ============================================================================
 // EXISTING CRUD FUNCTIONS
 // ============================================================================
@@ -1124,10 +1303,11 @@ SUPPORTED ACTIONS:
 14. report_hr - HR & leave report ("who's on leave", "HR report", "leave requests")
 15. report_leads - Lead qualifier report ("lead report", "how are our leads", "pipeline")
 16. report_weekly - Weekly digest ("weekly summary", "what happened this week", "weekly report")
+17. report_availability - Team availability / who's free ("who's free", "who's available", "who has capacity", "who can take on more work", "who's free in design", "available in development")
 
 --- OTHER ---
-17. help - Show what you can do
-18. unknown - Unrecognized request
+18. help - Show what you can do
+19. unknown - Unrecognized request
 
 RESPONSE FORMAT (JSON only):
 {
@@ -1139,6 +1319,7 @@ RESPONSE FORMAT (JSON only):
     // For get_client: "clientName" (REQUIRED)
     // For select_client: "clientNumber" (REQUIRED)
     // For report_client_metrics: "clientName" (REQUIRED - the client they're asking about)
+    // For report_availability: "department" (OPTIONAL - filter by department, e.g. "design", "development", "marketing", "seo", "content")
     // For all other reports: {} (empty, no data needed)
   },
   "message": "Friendly confirmation or context"
@@ -1151,7 +1332,10 @@ IMPORTANT:
 - "morning report" or "good morning" → report_daily
 - "how's X doing" where X is a client name → report_client_metrics with clientName
 - "how's the team" → report_team
-- "how's the business" → report_daily`,
+- "how's the business" → report_daily
+- "who's free" / "who's available" / "who has bandwidth" → report_availability
+- "who's free in design" → report_availability with department "design"
+- "who can take on a new task" → report_availability`,
       messages: [{ role: "user", content: text }],
     });
 
@@ -1246,6 +1430,11 @@ IMPORTANT:
         await sendMessage(chatId, weekly);
         break;
 
+      case "report_availability":
+        const availability = await reportTeamAvailability(result.data, user.agencyId);
+        await sendMessage(chatId, availability);
+        break;
+
       case "help":
         await sendMessage(
           chatId,
@@ -1260,7 +1449,9 @@ IMPORTANT:
             `• "how's [client] doing" — marketing metrics\n` +
             `• "HR report" — leave requests & holidays\n` +
             `• "lead report" — qualifier pipeline\n` +
-            `• "weekly summary" — week-in-review digest\n\n` +
+            `• "weekly summary" — week-in-review digest\n` +
+            `• "who's free" — team availability & capacity\n` +
+            `• "who's free in [dept]" — filter by department\n\n` +
             `*✏️ Actions:*\n` +
             `• "add a note: [text]" — create sticky note\n` +
             `• "create client [name]" — add new client\n` +

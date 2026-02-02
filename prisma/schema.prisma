@@ -772,6 +772,7 @@ model EmployeeProfile {
   jobTitle          String?   @map("job_title")
   department        String?
   employmentType    EmploymentType  @default(FULL_TIME) @map("employment_type")
+  weeklyCapacity    Decimal  @default(40) @db.Decimal(5, 2) @map("weekly_capacity") // Max hours per week (e.g. 40 for full-time, 20 for part-time)
   startDate         DateTime?  @map("start_date")
   endDate           DateTime?  @map("end_date")
   
