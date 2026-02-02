@@ -42,6 +42,7 @@ model User {
   createdNotes         Note[]               @relation("NoteCreator")
   noteShares           NoteShare[]          @relation("NoteShareUser")
   noteAttachments      NoteAttachment[]     @relation("NoteAttachmentUploader")
+  reviewedLeaves       LeaveRequest[]       @relation("LeaveReviewer")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -81,6 +82,7 @@ model Client {
   timeEntries      TimeEntry[]
   notes            Note[]        @relation("ClientNotes")
   noteShares       NoteShare[]   @relation("NoteShareClient")
+  metrics          ClientMetrics[] @relation("ClientMetrics")
 
   @@index([status])
   @@index([createdAt])
@@ -401,6 +403,8 @@ model ClientMetrics {
   createdAt              DateTime? @default(now()) @db.Timestamp(6)
   updatedAt              DateTime? @default(now()) @updatedAt @db.Timestamp(6)
 
+  client Client @relation("ClientMetrics", fields: [clientId], references: [id], onDelete: Cascade)
+
   @@unique([clientId, month])
   @@index([clientId])
   @@index([month])
@@ -711,6 +715,7 @@ model LeaveRequest {
   updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
 
   employee EmployeeProfile @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
+  reviewer User?            @relation("LeaveReviewer", fields: [reviewedBy], references: [id])
 
   @@index([agencyId], map: "idx_leave_requests_agency")
   @@index([employeeId], map: "idx_leave_requests_employee")
