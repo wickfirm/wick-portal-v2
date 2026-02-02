@@ -66,6 +66,23 @@ export default function TimerWidget() {
     fetchTimer();
   }, [fetchTimer]);
 
+  // Listen for events from floating bubble
+  useEffect(() => {
+    const handleTimerStop = () => {
+      setTimer(null);
+      setShowStopConfirm(false);
+    };
+    const handleTimerStart = (e: CustomEvent) => {
+      setTimer(e.detail);
+    };
+    window.addEventListener("timer-stopped", handleTimerStop as EventListener);
+    window.addEventListener("timer-started", handleTimerStart as EventListener);
+    return () => {
+      window.removeEventListener("timer-stopped", handleTimerStop as EventListener);
+      window.removeEventListener("timer-started", handleTimerStart as EventListener);
+    };
+  }, []);
+
   // Update elapsed time every second when timer is running
   useEffect(() => {
     if (!timer) {
@@ -171,6 +188,8 @@ export default function TimerWidget() {
 
       const data = await res.json();
       setTimer(data.timer);
+      // Notify floating bubble
+      window.dispatchEvent(new CustomEvent("timer-started", { detail: data.timer }));
       setShowModal(false);
       setSelectedClient("");
       setSelectedProject("");
@@ -201,6 +220,8 @@ export default function TimerWidget() {
 
       setTimer(null);
       setShowStopConfirm(false);
+      // Notify floating bubble
+      window.dispatchEvent(new CustomEvent("timer-stopped"));
     } catch (error) {
       console.error("Error stopping timer:", error);
       alert("Failed to stop timer");

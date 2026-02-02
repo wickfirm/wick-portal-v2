@@ -1,21 +1,35 @@
 "use client";
 
-import { SessionProvider } from "next-auth/react";
+import { SessionProvider, useSession } from "next-auth/react";
 import { QueryProvider } from "@/providers/query-provider";
 import { TenantProvider } from "@/providers/tenant-provider";
 import type { TenantConfig } from "@/lib/tenant";
+import dynamic from "next/dynamic";
 
-export function Providers({ 
-  tenantConfig, 
-  children 
-}: { 
+const FloatingTimerBubble = dynamic(() => import("./FloatingTimerBubble"), {
+  ssr: false,
+});
+
+function AuthenticatedFloatingTimer() {
+  const { status } = useSession();
+  if (status !== "authenticated") return null;
+  return <FloatingTimerBubble />;
+}
+
+export function Providers({
+  tenantConfig,
+  children
+}: {
   tenantConfig: TenantConfig;
   children: React.ReactNode;
 }) {
   return (
     <SessionProvider>
       <TenantProvider tenantConfig={tenantConfig}>
-        <QueryProvider>{children}</QueryProvider>
+        <QueryProvider>
+          {children}
+          <AuthenticatedFloatingTimer />
+        </QueryProvider>
       </TenantProvider>
     </SessionProvider>
   );
