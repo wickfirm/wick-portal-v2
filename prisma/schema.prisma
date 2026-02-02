@@ -40,6 +40,7 @@ model User {
   activityReactions    ActivityReaction[]   @relation("UserActivityReactions")
   createdNotes         Note[]               @relation("NoteCreator")
   noteShares           NoteShare[]          @relation("NoteShareUser")
+  noteAttachments      NoteAttachment[]     @relation("NoteAttachmentUploader")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -74,6 +75,8 @@ model Client {
   tasks            ClientTask[]  @relation("ClientTasks")
   teamMembers      ClientTeamMember[] @relation("ClientTeamMembers")
   agencies         ClientAgency[]    @relation("ClientAgencies")
+  onboardingItems  OnboardingItem[]  @relation("ClientOnboardingItems")
+  resources        ClientResource[]  @relation("ClientResources")
   timeEntries      TimeEntry[]
   notes            Note[]        @relation("ClientNotes")
   noteShares       NoteShare[]   @relation("NoteShareClient")
@@ -95,6 +98,8 @@ model ClientResource {
   order     Int?      @default(0)
   createdAt DateTime? @default(now()) @db.Timestamp(6)
   updatedAt DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+
+  client Client @relation("ClientResources", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("client_resources")
 }
@@ -223,6 +228,8 @@ model OnboardingItem {
   isRequired    Boolean   @default(false)
   inputValue    String?
   fileUrl       String?
+
+  client Client @relation("ClientOnboardingItems", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("onboarding_items")
 }
@@ -1092,7 +1099,8 @@ model NoteAttachment {
   createdAt    DateTime       @default(now())
 
   // Relations
-  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  note     Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  uploader User @relation("NoteAttachmentUploader", fields: [uploadedBy], references: [id])
 
   @@index([noteId])
   @@index([type])
