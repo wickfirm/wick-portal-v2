@@ -29,6 +29,9 @@ model User {
   createdFolders    MediaFolder[]   @relation("FolderCreator")
   watchedTasks      TaskWatcher[]
   timeEntries       TimeEntry[]
+  assignedTasks     ClientTask[]  @relation("AssignedTasks")
+  createdNotes      Note[]        @relation("NoteCreator")
+  noteShares        NoteShare[]   @relation("NoteShareUser")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -59,7 +62,11 @@ model Client {
   monthlyRevenue   Decimal?      @map("monthly_revenue") @db.Decimal(10, 2)
   mediaFiles       MediaFile[]
   mediaFolders     MediaFolder[]
+  projects         Project[]     @relation("ClientProjects")
+  tasks            ClientTask[]  @relation("ClientTasks")
   timeEntries      TimeEntry[]
+  notes            Note[]        @relation("ClientNotes")
+  noteShares       NoteShare[]   @relation("NoteShareClient")
 
   @@index([status])
   @@index([createdAt])
@@ -98,8 +105,11 @@ model Project {
   isDefault      Boolean?       @default(false) @map("is_default")
   pricingModel   PricingModel?  @default(TIME_AND_MATERIALS) @map("pricing_model")
   fixedFeeAmount Decimal?       @map("fixed_fee_amount") @db.Decimal(10, 2)
+  client         Client         @relation("ClientProjects", fields: [clientId], references: [id])
   mediaFolders   MediaFolder[]
+  tasks          ClientTask[]  @relation("ProjectTasks")
   timeEntries    TimeEntry[]
+  notes          Note[]        @relation("ProjectNotes")
 
   @@index([status])
   @@index([clientId])
@@ -209,6 +219,7 @@ model TaskCategory {
   order     Int
   createdAt DateTime? @default(now()) @db.Timestamp(6)
   updatedAt DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+  tasks     ClientTask[] @relation("CategoryTasks")
 
   @@map("task_categories")
 }
@@ -247,8 +258,14 @@ model ClientTask {
   projectId         String?
   ownerType         String?       @default("AGENCY")
   priority          String        @default("MEDIUM")
+  // Relations
+  category          TaskCategory? @relation("CategoryTasks", fields: [categoryId], references: [id])
+  client            Client        @relation("ClientTasks", fields: [clientId], references: [id])
+  assignee          User?         @relation("AssignedTasks", fields: [assigneeId], references: [id])
+  project           Project?      @relation("ProjectTasks", fields: [projectId], references: [id])
   watchers          TaskWatcher[]
   timeEntries       TimeEntry[]
+  notes             Note[]        @relation("TaskNotes")
 
   @@index([status])
   @@index([clientId])
@@ -998,6 +1015,15 @@ model Note {
   updatedAt  DateTime  @default(now()) @updatedAt
   archivedAt DateTime?
 
+  // Relations
+  creator     User            @relation("NoteCreator", fields: [createdBy], references: [id])
+  client      Client?         @relation("ClientNotes", fields: [clientId], references: [id])
+  project     Project?        @relation("ProjectNotes", fields: [projectId], references: [id])
+  task        ClientTask?     @relation("TaskNotes", fields: [taskId], references: [id])
+  attachments NoteAttachment[]
+  shares      NoteShare[]
+  reminders   NoteReminder[]
+
   @@index([createdBy])
   @@index([agencyId])
   @@index([clientId])
@@ -1022,6 +1048,9 @@ model NoteAttachment {
   uploadedBy   String
   createdAt    DateTime       @default(now())
 
+  // Relations
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
   @@index([noteId])
   @@index([type])
   @@map("note_attachments")
@@ -1036,6 +1065,11 @@ model NoteShare {
   canEdit   Boolean   @default(false)
   sharedBy  String
   createdAt DateTime  @default(now())
+
+  // Relations
+  note   Note    @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user   User?   @relation("NoteShareUser", fields: [userId], references: [id])
+  client Client? @relation("NoteShareClient", fields: [clientId], references: [id])
 
   @@unique([noteId, userId])
   @@unique([noteId, clientId])
@@ -1066,6 +1100,9 @@ model NoteReminder {
   createdBy          String
   createdAt          DateTime       @default(now())
   updatedAt          DateTime       @default(now()) @updatedAt
+
+  // Relations
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
 
   @@index([noteId])
   @@index([remindAt])
