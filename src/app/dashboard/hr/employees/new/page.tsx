@@ -38,6 +38,7 @@ export default function AddEmployeePage() {
     jobTitle: "",
     department: "",
     employmentType: "FULL_TIME",
+    weeklyCapacity: 40,
     startDate: "",
     annualLeaveEntitlement: 21,
     sickLeaveEntitlement: 10,
@@ -443,6 +444,39 @@ export default function AddEmployeePage() {
                         }}
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.875rem",
+                        fontWeight: "600",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Weekly Capacity (Hours)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.weeklyCapacity}
+                      onChange={(e) =>
+                        setFormData({ ...formData, weeklyCapacity: parseFloat(e.target.value) || 0 })
+                      }
+                      min="0"
+                      max="168"
+                      step="0.5"
+                      style={{
+                        width: "100%",
+                        padding: "0.75rem",
+                        border: "1px solid #E5E7EB",
+                        borderRadius: "8px",
+                        fontSize: "0.875rem",
+                      }}
+                    />
+                    <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                      Max hours per week (e.g. 40 for full-time, 20 for part-time). Used by Jarvis for availability reports.
+                    </p>
                   </div>
 
                   <div>

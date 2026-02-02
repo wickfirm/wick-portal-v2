@@ -33,6 +33,7 @@ export default function EditEmployeePage() {
     jobTitle: "",
     department: "",
     employmentType: "FULL_TIME",
+    weeklyCapacity: 40,
     startDate: "",
     endDate: "",
     annualLeaveEntitlement: 21,
@@ -86,6 +87,7 @@ export default function EditEmployeePage() {
         jobTitle: empData.jobTitle || "",
         department: empData.department || "",
         employmentType: empData.employmentType || "FULL_TIME",
+        weeklyCapacity: empData.weeklyCapacity != null ? Number(empData.weeklyCapacity) : 40,
         startDate: empData.startDate ? empData.startDate.split("T")[0] : "",
         endDate: empData.endDate ? empData.endDate.split("T")[0] : "",
         annualLeaveEntitlement: Number(empData.annualLeaveEntitlement),
@@ -396,6 +398,39 @@ export default function EditEmployeePage() {
                       }}
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label
+                    style={{
+                      display: "block",
+                      fontSize: "0.875rem",
+                      fontWeight: "600",
+                      marginBottom: "0.5rem",
+                    }}
+                  >
+                    Weekly Capacity (Hours)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.weeklyCapacity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, weeklyCapacity: parseFloat(e.target.value) || 0 })
+                    }
+                    min="0"
+                    max="168"
+                    step="0.5"
+                    style={{
+                      width: "100%",
+                      padding: "0.75rem",
+                      border: "1px solid #E5E7EB",
+                      borderRadius: "8px",
+                      fontSize: "0.875rem",
+                    }}
+                  />
+                  <p style={{ fontSize: "0.75rem", color: theme.colors.textSecondary, marginTop: "0.25rem" }}>
+                    Max hours per week (e.g. 40 for full-time, 20 for part-time). Used by Jarvis for availability reports.
+                  </p>
                 </div>
 
                 <div>
