@@ -480,8 +480,8 @@ model ClientTeamMember {
   assignedAt DateTime? @default(now()) @db.Timestamp(6)
 
   // Relations
-  client Client @relation("ClientTeamMembers", fields: [clientId], references: [id], onDelete: Cascade)
-  user   User   @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
+  client Client? @relation("ClientTeamMembers", fields: [clientId], references: [id], onDelete: Cascade)
+  user   User    @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clientId, userId])
   @@map("client_team_members")
