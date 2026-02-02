@@ -188,9 +188,17 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "No active timer found" }, { status: 404 });
     }
 
-    // Calculate duration in seconds
+    // Calculate duration in seconds (accounting for pause/resume)
     const now = new Date();
-    const duration = Math.floor((now.getTime() - activeTimer.startedAt.getTime()) / 1000);
+    let duration: number;
+    if (activeTimer.pausedAt) {
+      // Timer is paused — total is just the accumulated time
+      duration = Math.floor(activeTimer.accumulatedMs / 1000);
+    } else {
+      // Timer is running — accumulated + current segment
+      const currentSegmentMs = now.getTime() - activeTimer.startedAt.getTime();
+      duration = Math.floor((activeTimer.accumulatedMs + currentSegmentMs) / 1000);
+    }
 
     // Get optional description from request body
     let description = activeTimer.description;
@@ -239,5 +247,83 @@ export async function DELETE(request: Request) {
   } catch (error) {
     console.error("Error stopping timer:", error);
     return NextResponse.json({ error: "Failed to stop timer", details: String(error) }, { status: 500 });
+  }
+}
+
+// PATCH - Pause/Resume current timer
+export async function PATCH() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const activeTimer = await prisma.activeTimer.findUnique({
+      where: { userId: user.id },
+    });
+
+    if (!activeTimer) {
+      return NextResponse.json({ error: "No active timer found" }, { status: 404 });
+    }
+
+    const now = new Date();
+
+    if (activeTimer.pausedAt) {
+      // RESUME: clear pausedAt, reset startedAt to now
+      const updatedTimer = await prisma.activeTimer.update({
+        where: { userId: user.id },
+        data: {
+          pausedAt: null,
+          startedAt: now,
+        },
+      });
+
+      // Fetch related data
+      const [client, project, task] = await Promise.all([
+        prisma.client.findUnique({ where: { id: updatedTimer.clientId }, select: { id: true, name: true, nickname: true } }),
+        prisma.project.findUnique({ where: { id: updatedTimer.projectId }, select: { id: true, name: true } }),
+        prisma.clientTask.findUnique({ where: { id: updatedTimer.taskId }, select: { id: true, name: true } }),
+      ]);
+
+      return NextResponse.json({
+        timer: { ...updatedTimer, client, project, task },
+        action: "resumed",
+      });
+    } else {
+      // PAUSE: set pausedAt, accumulate elapsed time from current segment
+      const currentSegmentMs = now.getTime() - activeTimer.startedAt.getTime();
+      const newAccumulatedMs = activeTimer.accumulatedMs + currentSegmentMs;
+
+      const updatedTimer = await prisma.activeTimer.update({
+        where: { userId: user.id },
+        data: {
+          pausedAt: now,
+          accumulatedMs: newAccumulatedMs,
+        },
+      });
+
+      // Fetch related data
+      const [client, project, task] = await Promise.all([
+        prisma.client.findUnique({ where: { id: updatedTimer.clientId }, select: { id: true, name: true, nickname: true } }),
+        prisma.project.findUnique({ where: { id: updatedTimer.projectId }, select: { id: true, name: true } }),
+        prisma.clientTask.findUnique({ where: { id: updatedTimer.taskId }, select: { id: true, name: true } }),
+      ]);
+
+      return NextResponse.json({
+        timer: { ...updatedTimer, client, project, task },
+        action: "paused",
+      });
+    }
+  } catch (error) {
+    console.error("Error pausing/resuming timer:", error);
+    return NextResponse.json({ error: "Failed to pause/resume timer", details: String(error) }, { status: 500 });
   }
 }

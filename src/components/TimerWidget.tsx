@@ -6,6 +6,8 @@ import { theme } from "@/lib/theme";
 interface TimerData {
   id: string;
   startedAt: string;
+  pausedAt: string | null;
+  accumulatedMs: number;
   description: string | null;
   client: { id: string; name: string; nickname: string | null } | null;
   project: { id: string; name: string } | null;
@@ -48,6 +50,7 @@ export default function TimerWidget() {
   const [description, setDescription] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
 
   // Fetch current timer on mount
   const fetchTimer = useCallback(async () => {
@@ -75,11 +78,16 @@ export default function TimerWidget() {
     const handleTimerStart = (e: CustomEvent) => {
       setTimer(e.detail);
     };
+    const handleTimerPaused = (e: CustomEvent) => {
+      setTimer(e.detail);
+    };
     window.addEventListener("timer-stopped", handleTimerStop as EventListener);
     window.addEventListener("timer-started", handleTimerStart as EventListener);
+    window.addEventListener("timer-paused", handleTimerPaused as EventListener);
     return () => {
       window.removeEventListener("timer-stopped", handleTimerStop as EventListener);
       window.removeEventListener("timer-started", handleTimerStart as EventListener);
+      window.removeEventListener("timer-paused", handleTimerPaused as EventListener);
     };
   }, []);
 
@@ -90,11 +98,19 @@ export default function TimerWidget() {
       return;
     }
 
+    const isPaused = !!timer.pausedAt;
+    const accMs = timer.accumulatedMs || 0;
     const startTime = new Date(timer.startedAt).getTime();
-    
+
+    if (isPaused) {
+      // Frozen at accumulated time
+      setElapsed(Math.floor(accMs / 1000));
+      return;
+    }
+
     const updateElapsed = () => {
-      const now = Date.now();
-      setElapsed(Math.floor((now - startTime) / 1000));
+      const currentSegmentMs = Date.now() - startTime;
+      setElapsed(Math.floor((accMs + currentSegmentMs) / 1000));
     };
 
     updateElapsed();
@@ -203,6 +219,26 @@ export default function TimerWidget() {
     }
   };
 
+  const togglePause = async () => {
+    if (!timer) return;
+    setIsPausing(true);
+    try {
+      const res = await fetch("/api/timer", { method: "PATCH" });
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || "Failed to pause/resume timer");
+        return;
+      }
+      const data = await res.json();
+      setTimer(data.timer);
+      window.dispatchEvent(new CustomEvent("timer-paused", { detail: data.timer }));
+    } catch (error) {
+      console.error("Error pausing/resuming timer:", error);
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
   const stopTimer = async () => {
     setIsStopping(true);
     try {
@@ -244,11 +280,11 @@ export default function TimerWidget() {
         {timer ? (
           <>
             {/* Running timer display */}
-            <div style={{ 
-              display: "flex", 
-              alignItems: "center", 
+            <div style={{
+              display: "flex",
+              alignItems: "center",
               gap: 12,
-              background: theme.colors.successBg,
+              background: timer.pausedAt ? theme.colors.warningBg : theme.colors.successBg,
               padding: "8px 16px",
               borderRadius: theme.borderRadius.md,
             }}>
@@ -258,16 +294,38 @@ export default function TimerWidget() {
                 </span>
                 <span style={{ margin: "0 4px" }}>→</span>
                 <span>{timer.task?.name || "Task"}</span>
+                {timer.pausedAt && (
+                  <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 600, color: theme.colors.warning }}>
+                    PAUSED
+                  </span>
+                )}
               </div>
-              <div style={{ 
-                fontFamily: "monospace", 
-                fontSize: 18, 
-                fontWeight: 700, 
-                color: theme.colors.success,
+              <div style={{
+                fontFamily: "monospace",
+                fontSize: 18,
+                fontWeight: 700,
+                color: timer.pausedAt ? theme.colors.warning : theme.colors.success,
                 minWidth: 80,
               }}>
                 {formatTime(elapsed)}
               </div>
+              <button
+                onClick={togglePause}
+                disabled={isPausing}
+                style={{
+                  background: timer.pausedAt ? theme.colors.success : theme.colors.warning,
+                  color: "white",
+                  border: "none",
+                  padding: "6px 12px",
+                  borderRadius: theme.borderRadius.sm,
+                  fontWeight: 500,
+                  fontSize: 13,
+                  cursor: isPausing ? "not-allowed" : "pointer",
+                  opacity: isPausing ? 0.5 : 1,
+                }}
+              >
+                {timer.pausedAt ? "▶" : "⏸"}
+              </button>
               <button
                 onClick={() => setShowStopConfirm(true)}
                 style={{

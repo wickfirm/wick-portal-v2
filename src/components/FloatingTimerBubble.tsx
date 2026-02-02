@@ -6,6 +6,8 @@ import { theme } from "@/lib/theme";
 interface TimerData {
   id: string;
   startedAt: string;
+  pausedAt: string | null;
+  accumulatedMs: number;
   description: string | null;
   client: { id: string; name: string; nickname: string | null } | null;
   project: { id: string; name: string } | null;
@@ -21,6 +23,7 @@ export default function FloatingTimerBubble() {
   const [isLoading, setIsLoading] = useState(true);
   const [expanded, setExpanded] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const originalTitle = useRef<string>("");
   const originalFavicon = useRef<string>("");
@@ -28,8 +31,8 @@ export default function FloatingTimerBubble() {
   const notificationPermission = useRef<NotificationPermission>("default");
   const faviconAnimFrame = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Generate a timer favicon using canvas (red recording dot)
-  const generateTimerFavicon = useCallback((pulse: boolean) => {
+  // Generate a timer favicon using canvas (red = running, amber = paused)
+  const generateTimerFavicon = useCallback((pulse: boolean, paused: boolean = false) => {
     try {
       const canvas = document.createElement("canvas");
       canvas.width = 32;
@@ -43,19 +46,26 @@ export default function FloatingTimerBubble() {
       ctx.fillStyle = "#1a1a2e";
       ctx.fill();
 
-      // Red recording dot (pulsing size)
-      const dotRadius = pulse ? 7 : 9;
-      ctx.beginPath();
-      ctx.arc(16, 16, dotRadius, 0, Math.PI * 2);
-      ctx.fillStyle = "#ef4444";
-      ctx.fill();
+      if (paused) {
+        // Amber pause bars
+        ctx.fillStyle = "#f59e0b";
+        ctx.fillRect(10, 9, 4, 14);
+        ctx.fillRect(18, 9, 4, 14);
+      } else {
+        // Red recording dot (pulsing size)
+        const dotRadius = pulse ? 7 : 9;
+        ctx.beginPath();
+        ctx.arc(16, 16, dotRadius, 0, Math.PI * 2);
+        ctx.fillStyle = "#ef4444";
+        ctx.fill();
 
-      // Subtle glow
-      ctx.beginPath();
-      ctx.arc(16, 16, 12, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
+        // Subtle glow
+        ctx.beginPath();
+        ctx.arc(16, 16, 12, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
 
       return canvas.toDataURL("image/png");
     } catch {
@@ -207,7 +217,7 @@ export default function FloatingTimerBubble() {
     };
   }, [timer, sendBrowserNotification, sendPlatformCheckin]);
 
-  // Animated favicon when timer is running
+  // Animated favicon when timer is running (amber when paused)
   useEffect(() => {
     if (!timer) {
       // Restore original favicon
@@ -219,15 +229,27 @@ export default function FloatingTimerBubble() {
       return;
     }
 
-    // Alternate between pulse states for favicon animation
-    let pulseState = false;
-    const updateFavicon = () => {
-      const icon = generateTimerFavicon(pulseState);
+    const isPaused = !!timer.pausedAt;
+
+    if (isPaused) {
+      // Static amber pause icon
+      if (faviconAnimFrame.current) {
+        clearInterval(faviconAnimFrame.current);
+        faviconAnimFrame.current = null;
+      }
+      const icon = generateTimerFavicon(false, true);
       if (icon) setFavicon(icon);
-      pulseState = !pulseState;
-    };
-    updateFavicon();
-    faviconAnimFrame.current = setInterval(updateFavicon, 1500);
+    } else {
+      // Alternate between pulse states for favicon animation
+      let pulseState = false;
+      const updateFavicon = () => {
+        const icon = generateTimerFavicon(pulseState, false);
+        if (icon) setFavicon(icon);
+        pulseState = !pulseState;
+      };
+      updateFavicon();
+      faviconAnimFrame.current = setInterval(updateFavicon, 1500);
+    }
 
     return () => {
       if (faviconAnimFrame.current) {
@@ -245,11 +267,24 @@ export default function FloatingTimerBubble() {
       document.title = originalTitle.current;
       return;
     }
+
+    const isPaused = !!timer.pausedAt;
+    const accMs = timer.accumulatedMs || 0;
     const startTime = new Date(timer.startedAt).getTime();
     const taskName = timer.task?.name || "Task";
 
+    if (isPaused) {
+      // When paused, just show accumulated time (frozen)
+      const secs = Math.floor(accMs / 1000);
+      setElapsed(secs);
+      document.title = `⏸ ${formatTime(secs)} — ${taskName} (Paused)`;
+      return; // No interval needed
+    }
+
     const updateElapsed = () => {
-      const secs = Math.floor((Date.now() - startTime) / 1000);
+      const currentSegmentMs = Date.now() - startTime;
+      const totalMs = accMs + currentSegmentMs;
+      const secs = Math.floor(totalMs / 1000);
       setElapsed(secs);
       // Update browser tab title with timer
       document.title = `⏱ ${formatTime(secs)} — ${taskName}`;
@@ -272,13 +307,40 @@ export default function FloatingTimerBubble() {
       document.title = originalTitle.current;
       setFavicon(originalFavicon.current);
     };
+    const handleTimerPaused = (e: CustomEvent) => {
+      setTimer(e.detail);
+    };
     window.addEventListener("timer-started", handleTimerStart as EventListener);
     window.addEventListener("timer-stopped", handleTimerStop as EventListener);
+    window.addEventListener("timer-paused", handleTimerPaused as EventListener);
     return () => {
       window.removeEventListener("timer-started", handleTimerStart as EventListener);
       window.removeEventListener("timer-stopped", handleTimerStop as EventListener);
+      window.removeEventListener("timer-paused", handleTimerPaused as EventListener);
     };
   }, []);
+
+  const togglePause = async () => {
+    if (!timer) return;
+    setIsPausing(true);
+    try {
+      const res = await fetch("/api/timer", { method: "PATCH" });
+      if (!res.ok) {
+        const error = await res.json();
+        alert(error.error || "Failed to pause/resume timer");
+        return;
+      }
+      const data = await res.json();
+      setTimer(data.timer);
+      // Notify other components
+      window.dispatchEvent(new CustomEvent("timer-paused", { detail: data.timer }));
+    } catch (error) {
+      console.error("Error pausing/resuming timer:", error);
+      alert("Failed to pause/resume timer");
+    } finally {
+      setIsPausing(false);
+    }
+  };
 
   const stopTimer = async () => {
     setIsStopping(true);
@@ -352,17 +414,27 @@ export default function FloatingTimerBubble() {
             {/* Header row */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                {/* Pulsing recording dot */}
-                <div style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: "50%",
-                  background: "#ef4444",
-                  animation: "timerPulse 1.5s ease-in-out infinite",
-                }} />
-                <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1, color: "rgba(255,255,255,0.5)" }}>
-                  Recording
-                </span>
+                {timer.pausedAt ? (
+                  <>
+                    <div style={{ width: 8, height: 8, borderRadius: 2, background: "#f59e0b" }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1, color: "#f59e0b" }}>
+                      Paused
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <div style={{
+                      width: 8,
+                      height: 8,
+                      borderRadius: "50%",
+                      background: "#ef4444",
+                      animation: "timerPulse 1.5s ease-in-out infinite",
+                    }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase" as const, letterSpacing: 1, color: "rgba(255,255,255,0.5)" }}>
+                      Recording
+                    </span>
+                  </>
+                )}
               </div>
               <button
                 onClick={() => setExpanded(false)}
@@ -389,7 +461,7 @@ export default function FloatingTimerBubble() {
               fontFamily: "'DM Mono', 'SF Mono', monospace",
               fontSize: 36,
               fontWeight: 700,
-              color: "#4ade80",
+              color: timer.pausedAt ? "#f59e0b" : "#4ade80",
               letterSpacing: 1,
               marginBottom: 12,
               lineHeight: 1,
@@ -421,44 +493,84 @@ export default function FloatingTimerBubble() {
               </div>
             </div>
 
-            {/* Stop button */}
-            <button
-              onClick={() => setShowStopConfirm(true)}
-              style={{
-                width: "100%",
-                padding: "10px 0",
-                borderRadius: 10,
-                border: "none",
-                background: "rgba(239, 68, 68, 0.15)",
-                color: "#f87171",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 6,
-                transition: "background 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)")}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)")}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                <rect x="4" y="4" width="16" height="16" rx="2" />
-              </svg>
-              Stop Timer
-            </button>
+            {/* Pause + Stop buttons */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={togglePause}
+                disabled={isPausing}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: 10,
+                  border: "none",
+                  background: timer.pausedAt ? "rgba(74, 222, 128, 0.15)" : "rgba(245, 158, 11, 0.15)",
+                  color: timer.pausedAt ? "#4ade80" : "#f59e0b",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: isPausing ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "background 0.2s",
+                  opacity: isPausing ? 0.5 : 1,
+                }}
+              >
+                {timer.pausedAt ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5,3 19,12 5,21" />
+                    </svg>
+                    {isPausing ? "..." : "Resume"}
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                      <rect x="4" y="3" width="5" height="18" rx="1" />
+                      <rect x="15" y="3" width="5" height="18" rx="1" />
+                    </svg>
+                    {isPausing ? "..." : "Pause"}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowStopConfirm(true)}
+                style={{
+                  flex: 1,
+                  padding: "10px 0",
+                  borderRadius: 10,
+                  border: "none",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  color: "#f87171",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 6,
+                  transition: "background 0.2s",
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.25)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(239, 68, 68, 0.15)")}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                </svg>
+                Stop
+              </button>
+            </div>
           </div>
         ) : (
           /* Collapsed pill view */
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            {/* Pulsing dot */}
+            {/* Pulsing dot or pause indicator */}
             <div style={{
               width: 8,
               height: 8,
-              borderRadius: "50%",
-              background: "#4ade80",
-              animation: "timerPulse 1.5s ease-in-out infinite",
+              borderRadius: timer?.pausedAt ? 2 : "50%",
+              background: timer?.pausedAt ? "#f59e0b" : "#4ade80",
+              animation: timer?.pausedAt ? "none" : "timerPulse 1.5s ease-in-out infinite",
               flexShrink: 0,
             }} />
             {/* Time */}
@@ -466,7 +578,7 @@ export default function FloatingTimerBubble() {
               fontFamily: "'DM Mono', 'SF Mono', monospace",
               fontSize: 15,
               fontWeight: 700,
-              color: "#4ade80",
+              color: timer?.pausedAt ? "#f59e0b" : "#4ade80",
               letterSpacing: 0.5,
             }}>
               {formatTime(elapsed)}
