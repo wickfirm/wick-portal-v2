@@ -101,6 +101,11 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // Get old settings to check if entitlements changed
+    const oldSettings = await prisma.hRSettings.findUnique({
+      where: { agencyId: user.agencyId }
+    });
+
     // Upsert settings
     const settings = await prisma.hRSettings.upsert({
       where: { agencyId: user.agencyId },
@@ -122,6 +127,51 @@ export async function PUT(req: NextRequest) {
         maxCarryOverDays
       }
     });
+
+    // Sync entitlements to all employee profiles when settings change
+    // Adjusts both entitlement AND balance (balance shifts by the same delta)
+    const annualChanged = oldSettings && Number(oldSettings.annualLeaveEntitlement) !== annualLeaveEntitlement;
+    const sickChanged = oldSettings && Number(oldSettings.sickLeaveEntitlement) !== sickLeaveEntitlement;
+
+    if (annualChanged || sickChanged) {
+      const employees = await prisma.employeeProfile.findMany({
+        where: { agencyId: user.agencyId },
+        select: {
+          id: true,
+          annualLeaveEntitlement: true,
+          annualLeaveBalance: true,
+          sickLeaveEntitlement: true,
+          sickLeaveBalance: true,
+        },
+      });
+
+      for (const emp of employees) {
+        const updates: any = {};
+
+        if (annualChanged) {
+          const oldEntitlement = Number(emp.annualLeaveEntitlement);
+          const oldBalance = Number(emp.annualLeaveBalance);
+          const delta = annualLeaveEntitlement - oldEntitlement;
+          updates.annualLeaveEntitlement = annualLeaveEntitlement;
+          updates.annualLeaveBalance = Math.max(0, oldBalance + delta);
+        }
+
+        if (sickChanged) {
+          const oldEntitlement = Number(emp.sickLeaveEntitlement);
+          const oldBalance = Number(emp.sickLeaveBalance);
+          const delta = sickLeaveEntitlement - oldEntitlement;
+          updates.sickLeaveEntitlement = sickLeaveEntitlement;
+          updates.sickLeaveBalance = Math.max(0, oldBalance + delta);
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await prisma.employeeProfile.update({
+            where: { id: emp.id },
+            data: updates,
+          });
+        }
+      }
+    }
 
     return NextResponse.json(settings);
   } catch (error) {
