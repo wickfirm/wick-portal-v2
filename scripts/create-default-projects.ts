@@ -7,11 +7,11 @@ async function createDefaultProjects() {
 
   try {
     // Get all clients
-    const clients = await prisma.client.findMany({
+    const clients = await (prisma.client.findMany as any)({
       include: {
         projects: true,
       },
-    });
+    }) as any[];
 
     console.log(`Found ${clients.length} clients\n`);
 
@@ -21,7 +21,7 @@ async function createDefaultProjects() {
 
     for (const client of clients) {
       // Check if client already has a default project
-      const hasDefault = client.projects.some(p => p.isDefault);
+      const hasDefault = client.projects.some((p: any) => p.isDefault);
       
       if (hasDefault) {
         console.log(`⏭️  ${client.name} - Already has default project, skipping`);
