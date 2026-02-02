@@ -9,6 +9,7 @@ import ClientResources from "./client-resources";
 import TeamManager from "./team-manager";
 import AgenciesManager from "./agencies-manager";
 import DeleteClientButton from "./delete-client-button";
+import ClientCalendar from "./client-calendar";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 type ClientDetailTabsProps = {
@@ -69,6 +70,7 @@ export default function ClientDetailTabs({
       count: onboarding.filter(i => !i.isCompleted).length,
       highlight: client.status === "ONBOARDING" || client.status === "LEAD"
     },
+    { id: "calendar", label: "Calendar", icon: "📅" },
     { id: "team", label: "Team", icon: "👥", count: team.length },
     { id: "resources", label: "Resources", icon: "📎", count: resources.length },
   ];
@@ -503,10 +505,14 @@ export default function ClientDetailTabs({
         )}
 
         {activeTab === "resources" && (
-          <ClientResources 
-            clientId={client.id} 
-            initialResources={resources} 
+          <ClientResources
+            clientId={client.id}
+            initialResources={resources}
           />
+        )}
+
+        {activeTab === "calendar" && (
+          <ClientCalendar clientId={client.id} />
         )}
       </main>
     </div>
