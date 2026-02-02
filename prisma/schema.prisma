@@ -29,9 +29,10 @@ model User {
   createdFolders    MediaFolder[]   @relation("FolderCreator")
   watchedTasks      TaskWatcher[]
   timeEntries       TimeEntry[]
-  assignedTasks     ClientTask[]  @relation("AssignedTasks")
-  createdNotes      Note[]        @relation("NoteCreator")
-  noteShares        NoteShare[]   @relation("NoteShareUser")
+  assignedTasks     ClientTask[]         @relation("AssignedTasks")
+  teamMemberships   ClientTeamMember[]   @relation("UserTeamMemberships")
+  createdNotes      Note[]               @relation("NoteCreator")
+  noteShares        NoteShare[]          @relation("NoteShareUser")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -64,6 +65,7 @@ model Client {
   mediaFolders     MediaFolder[]
   projects         Project[]     @relation("ClientProjects")
   tasks            ClientTask[]  @relation("ClientTasks")
+  teamMembers      ClientTeamMember[] @relation("ClientTeamMembers")
   timeEntries      TimeEntry[]
   notes            Note[]        @relation("ClientNotes")
   noteShares       NoteShare[]   @relation("NoteShareClient")
@@ -436,6 +438,10 @@ model ClientTeamMember {
   clientId   String
   userId     String
   assignedAt DateTime? @default(now()) @db.Timestamp(6)
+
+  // Relations
+  client Client @relation("ClientTeamMembers", fields: [clientId], references: [id], onDelete: Cascade)
+  user   User   @relation("UserTeamMemberships", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([clientId, userId])
   @@map("client_team_members")
