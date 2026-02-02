@@ -93,7 +93,7 @@ export default function StageTemplatesPage() {
   // Also include any templates with service types not in the active list
   const unmappedTemplates = templates.filter(t => !SERVICE_TYPE_SLUGS.includes(t.serviceType));
   if (unmappedTemplates.length > 0) {
-    const unmappedTypes = [...new Set(unmappedTemplates.map(t => t.serviceType))];
+    const unmappedTypes = Array.from(new Set(unmappedTemplates.map(t => t.serviceType)));
     unmappedTypes.forEach(type => {
       if (!groupedTemplates[type]) {
         groupedTemplates[type] = unmappedTemplates.filter(t => t.serviceType === type).sort((a, b) => a.order - b.order);
