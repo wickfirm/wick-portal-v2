@@ -83,6 +83,11 @@ export default function TasksManager({
   const [quickAddClient, setQuickAddClient] = useState("");
   const [clients, setClients] = useState<any[]>([]);
   
+  // Watch state
+  const [watchedTaskIds, setWatchedTaskIds] = useState<Set<string>>(new Set());
+  const [filterWatched, setFilterWatched] = useState(false);
+  const [taskWatchers, setTaskWatchers] = useState<any[]>([]);
+
   // Dynamic status and priority options from API
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<string[]>([]);
@@ -226,6 +231,9 @@ export default function TasksManager({
           setProjects(projectData ? [projectData] : []);
         }
 
+        // Fetch watched task IDs
+        fetchWatchedTasks();
+
         setLoading(false);
       } catch (err) {
         console.error("Failed to load data:", err);
@@ -243,6 +251,50 @@ export default function TasksManager({
     const res = await fetch(getTasksEndpoint());
     const data = await res.json();
     setTasks(Array.isArray(data) ? data : data.tasks || []);
+  }
+
+  async function fetchWatchedTasks() {
+    try {
+      const res = await fetch("/api/tasks/watched");
+      if (res.ok) {
+        const data = await res.json();
+        setWatchedTaskIds(new Set(data.taskIds));
+      }
+    } catch (error) {
+      console.error("Error fetching watched tasks:", error);
+    }
+  }
+
+  async function toggleWatch(taskId: string) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/watchers`, { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        setWatchedTaskIds(prev => {
+          const next = new Set(prev);
+          if (data.watching) {
+            next.add(taskId);
+          } else {
+            next.delete(taskId);
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Error toggling watch:", error);
+    }
+  }
+
+  async function fetchTaskWatchers(taskId: string) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}/watchers`);
+      if (res.ok) {
+        const data = await res.json();
+        setTaskWatchers(data.watchers || []);
+      }
+    } catch (error) {
+      console.error("Error fetching task watchers:", error);
+    }
   }
 
   async function updateTaskField(taskId: string, field: string, value: any) {
@@ -331,6 +383,8 @@ export default function TasksManager({
 
   function openTaskPanel(task: Task) {
     setSelectedTask(task);
+    setTaskWatchers([]); // Reset
+    fetchTaskWatchers(task.id); // Load watchers for this task
     setEditForm({
       name: task.name,
       status: task.status,
@@ -404,6 +458,7 @@ export default function TasksManager({
     if (filterOwner !== "ALL" && task.ownerType !== filterOwner) return false;
     if (filterAssignee !== "ALL" && task.assignee?.id !== filterAssignee) return false;
     if (filterClient !== "ALL" && task.client?.id !== filterClient) return false;
+    if (filterWatched && !watchedTaskIds.has(task.id)) return false;
     return true;
   };
 
@@ -432,6 +487,7 @@ export default function TasksManager({
     filterAssignee !== "ALL",
     filterClient !== "ALL",
     !hideCompleted,
+    filterWatched,
   ].filter(Boolean).length;
 
   // Clear all filters
@@ -442,6 +498,7 @@ export default function TasksManager({
     setFilterAssignee("ALL");
     setFilterClient("ALL");
     setHideCompleted(true);
+    setFilterWatched(false);
   };
 
   const inputStyle: React.CSSProperties = {
@@ -684,6 +741,34 @@ export default function TasksManager({
             🔗
           </a>
         )}
+      </td>
+
+      {/* Watch */}
+      <td style={{ padding: "10px 12px", textAlign: "center" }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); toggleWatch(task.id); }}
+          title={watchedTaskIds.has(task.id) ? "Unwatch task" : "Watch task"}
+          style={{
+            background: "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: watchedTaskIds.has(task.id) ? theme.colors.primary : theme.colors.textMuted,
+            opacity: watchedTaskIds.has(task.id) ? 1 : 0.4,
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = watchedTaskIds.has(task.id) ? "1" : "0.4")}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill={watchedTaskIds.has(task.id) ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+        </button>
       </td>
 
       {/* Actions */}
@@ -932,6 +1017,12 @@ export default function TasksManager({
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
                     </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
+                    </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
                       Actions
                     </th>
@@ -1030,6 +1121,12 @@ export default function TasksManager({
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
+                      </svg>
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
                       Actions
@@ -1334,6 +1431,30 @@ export default function TasksManager({
             </label>
           </div>
 
+          <button
+            onClick={() => setFilterWatched(!filterWatched)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 20,
+              border: filterWatched ? "none" : "1px solid " + theme.colors.borderLight,
+              background: filterWatched ? theme.colors.primary : "transparent",
+              color: filterWatched ? "white" : theme.colors.textSecondary,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              transition: "all 0.15s",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill={filterWatched ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+            Watched
+          </button>
+
           {activeFilterCount > 0 && (
             <>
               <div style={{ marginLeft: "auto", fontSize: 13, color: theme.colors.textMuted }}>
@@ -1552,6 +1673,78 @@ export default function TasksManager({
                   placeholder="Internal"
                   style={inputStyle}
                 />
+              </div>
+
+              {/* Watchers Section */}
+              <div style={{
+                background: theme.colors.bgTertiary,
+                borderRadius: 10,
+                padding: 16,
+              }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    Watchers ({taskWatchers.length})
+                  </label>
+                  {selectedTask && (
+                    <button
+                      onClick={() => toggleWatch(selectedTask.id)}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: watchedTaskIds.has(selectedTask.id) ? theme.colors.bgSecondary : theme.colors.primary,
+                        color: watchedTaskIds.has(selectedTask.id) ? theme.colors.textSecondary : "white",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {watchedTaskIds.has(selectedTask.id) ? "Unwatch" : "Watch"}
+                    </button>
+                  )}
+                </div>
+                {taskWatchers.length === 0 ? (
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
+                    No one is watching this task
+                  </div>
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {taskWatchers.map((w: any) => (
+                      <div key={w.userId} style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "6px 10px",
+                        background: theme.colors.bgSecondary,
+                        borderRadius: 6,
+                      }}>
+                        <div style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: "50%",
+                          background: theme.colors.primary,
+                          color: "white",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          flexShrink: 0,
+                        }}>
+                          {(w.name || w.email || "?").charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 500 }}>{w.name || "Unknown"}</div>
+                          <div style={{ fontSize: 11, color: theme.colors.textMuted }}>{w.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div style={{ display: "flex", gap: 12, marginTop: 12 }}>

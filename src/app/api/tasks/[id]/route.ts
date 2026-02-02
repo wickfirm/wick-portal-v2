@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { createNotification } from "@/lib/notifications";
+import { createNotification, createBulkNotifications } from "@/lib/notifications";
 
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -19,6 +19,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         status: true,
         priority: true,
         name: true,
+        dueDate: true,
       },
     });
 
@@ -102,6 +103,76 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         link: `/tasks?taskId=${task.id}`,
         metadata: { taskId: task.id, changedBy: session.user.id },
       });
+    }
+
+    // 4. WATCHER NOTIFICATIONS — notify watchers (excluding the person making the change)
+    try {
+      const watchers = await prisma.taskWatcher.findMany({
+        where: { taskId: params.id, userId: { not: (session.user as any).id } },
+        select: { userId: true },
+      });
+      const watcherIds = watchers.map((w) => w.userId);
+
+      if (watcherIds.length > 0) {
+        // Status change
+        if (data.status !== undefined && data.status !== oldTask?.status) {
+          await createBulkNotifications(watcherIds, {
+            type: "TASK_STATUS_CHANGED",
+            category: "TASK",
+            priority: "NORMAL",
+            title: "Watched Task Updated",
+            message: `"${task.name}" status changed to ${data.status.replace(/_/g, " ")}`,
+            link: `/tasks?taskId=${task.id}`,
+            metadata: { taskId: task.id, changeType: "status" },
+          });
+        }
+
+        // Priority change
+        if (data.priority !== undefined && data.priority !== oldTask?.priority) {
+          await createBulkNotifications(watcherIds, {
+            type: "TASK_STATUS_CHANGED",
+            category: "TASK",
+            priority: data.priority === "URGENT" ? "HIGH" : "NORMAL",
+            title: "Watched Task Priority Changed",
+            message: `"${task.name}" priority changed to ${data.priority}`,
+            link: `/tasks?taskId=${task.id}`,
+            metadata: { taskId: task.id, changeType: "priority" },
+          });
+        }
+
+        // Due date change
+        if (data.dueDate !== undefined) {
+          const oldDue = oldTask?.dueDate ? new Date(oldTask.dueDate).toISOString().split("T")[0] : null;
+          const newDue = data.dueDate ? new Date(data.dueDate).toISOString().split("T")[0] : null;
+          if (oldDue !== newDue) {
+            await createBulkNotifications(watcherIds, {
+              type: "TASK_STATUS_CHANGED",
+              category: "TASK",
+              priority: "NORMAL",
+              title: "Watched Task Due Date Changed",
+              message: `"${task.name}" due date was updated`,
+              link: `/tasks?taskId=${task.id}`,
+              metadata: { taskId: task.id, changeType: "dueDate" },
+            });
+          }
+        }
+
+        // Completion
+        if (data.status === "COMPLETED" && oldTask?.status !== "COMPLETED") {
+          await createBulkNotifications(watcherIds, {
+            type: "TASK_COMPLETED",
+            category: "TASK",
+            priority: "NORMAL",
+            title: "Watched Task Completed",
+            message: `"${task.name}" was marked as completed`,
+            link: `/tasks?taskId=${task.id}`,
+            metadata: { taskId: task.id },
+          });
+        }
+      }
+    } catch (watcherError) {
+      console.error("Error notifying watchers:", watcherError);
+      // Don't fail the update if watcher notifications fail
     }
 
     return NextResponse.json(task);

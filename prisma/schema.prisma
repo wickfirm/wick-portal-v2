@@ -63,6 +63,9 @@ createdNoteReminders      NoteReminder[]    @relation("CreatedNoteReminders")
   notifications           Notification[]
   notificationPreferences NotificationPreference?
 
+  // Task Watch System
+  watchedTasks            TaskWatcher[]
+
   @@map("users")
 }
 
@@ -292,6 +295,7 @@ model ClientTask {
   dailyTasks          DailyTask[]
   modifications       TaskModification[]
   stickyNotes         Note[]
+  watchers            TaskWatcher[]
   createdAt         DateTime     @default(now())
   updatedAt         DateTime     @updatedAt
 
@@ -303,6 +307,20 @@ model ClientTask {
   @@index([createdAt])           // For ordering by creation date
   @@index([projectId])           // For filtering by project
   @@map("client_tasks")
+}
+
+model TaskWatcher {
+  id        String     @id @default(cuid())
+  userId    String
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskId    String
+  task      ClientTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  watchedAt DateTime   @default(now()) @map("watched_at")
+
+  @@unique([userId, taskId])
+  @@index([userId])
+  @@index([taskId])
+  @@map("task_watchers")
 }
 
 model ClientMetrics {
