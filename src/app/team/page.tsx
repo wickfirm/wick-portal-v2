@@ -18,7 +18,7 @@ type ClientAssignment = {
     id: string;
     name: string;
     nickname: string | null;
-  };
+  } | null;
 };
 
 type User = {
@@ -183,10 +183,10 @@ export default function TeamPage() {
       name: user.name || "",
       role: user.role,
       agencyId: user.agencyId || "",
-      clientIds: user.clientAssignments?.map(ca => ca.client.id) || [],
+      clientIds: user.clientAssignments?.filter(ca => ca.client).map(ca => ca.client!.id) || [],
       projectIds: [],
     });
-    
+
     // Fetch user's project assignments
     try {
       const res = await fetch(`/api/users/${user.id}/project-assignments`);
@@ -202,7 +202,7 @@ export default function TeamPage() {
     }
     
     // Fetch projects for assigned clients
-    const clientIds = user.clientAssignments?.map(ca => ca.client.id) || [];
+    const clientIds = user.clientAssignments?.filter(ca => ca.client).map(ca => ca.client!.id) || [];
     if (clientIds.length > 0) {
       setLoadingProjects(true);
       const clientIdsParam = clientIds.map(id => `clientId=${id}`).join('&');
@@ -700,12 +700,12 @@ export default function TeamPage() {
   )}
 </td>
                     <td style={{ padding: 16 }}>
-                      {user.clientAssignments && user.clientAssignments.length > 0 ? (
+                      {user.clientAssignments && user.clientAssignments.filter((ca: ClientAssignment) => ca.client).length > 0 ? (
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                          {user.clientAssignments.slice(0, 3).map((ca: ClientAssignment) => (
-                            <Link 
+                          {user.clientAssignments.filter((ca: ClientAssignment) => ca.client).slice(0, 3).map((ca: ClientAssignment) => (
+                            <Link
                               key={ca.id}
-                              href={`/clients/${ca.client.id}`}
+                              href={`/clients/${ca.client!.id}`}
                               onClick={(e) => e.stopPropagation()}
                               style={{
                                 padding: "3px 8px",
@@ -720,7 +720,7 @@ export default function TeamPage() {
                               onMouseEnter={(e) => e.currentTarget.style.opacity = "0.8"}
                               onMouseLeave={(e) => e.currentTarget.style.opacity = "1"}
                             >
-                              {ca.client.nickname || ca.client.name}
+                              {ca.client!.nickname || ca.client!.name}
                             </Link>
                           ))}
                           {user.clientAssignments.length > 3 && (

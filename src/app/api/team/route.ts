@@ -45,7 +45,10 @@ export async function GET() {
         }
       });
 
-      return NextResponse.json(teamMembers.map(tm => tm.user));
+      return NextResponse.json(teamMembers.map(tm => ({
+        ...tm.user,
+        clientAssignments: tm.user?.clientAssignments?.filter((ca: any) => ca.client !== null) || [],
+      })));
     }
 
     return NextResponse.json([]);
@@ -89,7 +92,13 @@ export async function GET() {
     }
   });
 
-  return NextResponse.json(users);
+  // Filter out orphaned client assignments (where client was deleted from DB)
+  const cleanedUsers = users.map(u => ({
+    ...u,
+    clientAssignments: u.clientAssignments?.filter((ca: any) => ca.client !== null) || [],
+  }));
+
+  return NextResponse.json(cleanedUsers);
 }
 
 export async function POST(req: NextRequest) {
