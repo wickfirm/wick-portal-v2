@@ -3,7 +3,7 @@
  * Manages notification state with automatic polling
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface Notification {
   id: string;
@@ -143,6 +143,16 @@ export function useNotifications(options?: {
   useEffect(() => {
     refresh();
   }, [refresh]);
+
+  // Refetch notifications when unread count changes (e.g. timer check-in)
+  const prevUnreadCount = useRef(unreadCount);
+  useEffect(() => {
+    if (unreadCount > prevUnreadCount.current) {
+      // New notification arrived, refresh the list
+      fetchNotifications();
+    }
+    prevUnreadCount.current = unreadCount;
+  }, [unreadCount, fetchNotifications]);
 
   // Setup polling
   useEffect(() => {

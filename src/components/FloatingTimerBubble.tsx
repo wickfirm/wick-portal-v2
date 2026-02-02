@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { theme } from "@/lib/theme";
 
 interface TimerData {
@@ -12,6 +12,9 @@ interface TimerData {
   task: { id: string; name: string } | null;
 }
 
+// Check-in interval: 30 minutes in milliseconds
+const CHECKIN_INTERVAL = 30 * 60 * 1000;
+
 export default function FloatingTimerBubble() {
   const [timer, setTimer] = useState<TimerData | null>(null);
   const [elapsed, setElapsed] = useState(0);
@@ -19,6 +22,22 @@ export default function FloatingTimerBubble() {
   const [expanded, setExpanded] = useState(false);
   const [isStopping, setIsStopping] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
+  const originalTitle = useRef<string>("");
+  const checkinInterval = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notificationPermission = useRef<NotificationPermission>("default");
+
+  // Store original page title on mount
+  useEffect(() => {
+    originalTitle.current = document.title;
+    // Check existing notification permission
+    if ("Notification" in window) {
+      notificationPermission.current = Notification.permission;
+    }
+    return () => {
+      // Restore title on unmount
+      document.title = originalTitle.current;
+    };
+  }, []);
 
   // Fetch current timer
   const fetchTimer = useCallback(async () => {
@@ -40,15 +59,115 @@ export default function FloatingTimerBubble() {
     return () => clearInterval(poll);
   }, [fetchTimer]);
 
-  // Update elapsed every second
+  // Request browser notification permission when timer starts
+  useEffect(() => {
+    if (timer && "Notification" in window && Notification.permission === "default") {
+      Notification.requestPermission().then((permission) => {
+        notificationPermission.current = permission;
+      });
+    }
+  }, [timer]);
+
+  // Format time helper
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
+  // Send browser notification
+  const sendBrowserNotification = useCallback((taskName: string, timeStr: string) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      try {
+        const notification = new Notification(`⏱ Timer: ${timeStr}`, {
+          body: `Still working on "${taskName}"? Click to check in.`,
+          icon: "/favicon.ico",
+          tag: "timer-checkin", // Replaces previous notification
+          requireInteraction: true, // Stays until dismissed
+        });
+
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+
+        // Auto-close after 60 seconds
+        setTimeout(() => notification.close(), 60000);
+      } catch (e) {
+        console.log("Browser notification not supported:", e);
+      }
+    }
+  }, []);
+
+  // Send platform notification (bell icon)
+  const sendPlatformCheckin = useCallback(async () => {
+    try {
+      await fetch("/api/timer/checkin", { method: "POST" });
+    } catch (error) {
+      console.error("Error sending timer check-in:", error);
+    }
+  }, []);
+
+  // 30-minute check-in: browser notification + platform notification
+  useEffect(() => {
+    if (!timer) {
+      // Clear interval when timer stops
+      if (checkinInterval.current) {
+        clearInterval(checkinInterval.current);
+        checkinInterval.current = null;
+      }
+      return;
+    }
+
+    const taskName = timer.task?.name || "Task";
+
+    // Calculate time until next 30-min mark from timer start
+    const startTime = new Date(timer.startedAt).getTime();
+    const elapsedMs = Date.now() - startTime;
+    const nextCheckinMs = CHECKIN_INTERVAL - (elapsedMs % CHECKIN_INTERVAL);
+
+    // Set first check-in at next 30-min boundary
+    const firstTimeout = setTimeout(() => {
+      const currentElapsed = Math.floor((Date.now() - startTime) / 1000);
+      const timeStr = formatTime(currentElapsed);
+      sendBrowserNotification(taskName, timeStr);
+      sendPlatformCheckin();
+
+      // Then repeat every 30 minutes
+      checkinInterval.current = setInterval(() => {
+        const nowElapsed = Math.floor((Date.now() - startTime) / 1000);
+        const nowTimeStr = formatTime(nowElapsed);
+        sendBrowserNotification(taskName, nowTimeStr);
+        sendPlatformCheckin();
+      }, CHECKIN_INTERVAL);
+    }, nextCheckinMs);
+
+    return () => {
+      clearTimeout(firstTimeout);
+      if (checkinInterval.current) {
+        clearInterval(checkinInterval.current);
+        checkinInterval.current = null;
+      }
+    };
+  }, [timer, sendBrowserNotification, sendPlatformCheckin]);
+
+  // Update elapsed every second + update browser tab title
   useEffect(() => {
     if (!timer) {
       setElapsed(0);
+      // Restore original title when timer stops
+      document.title = originalTitle.current;
       return;
     }
     const startTime = new Date(timer.startedAt).getTime();
+    const taskName = timer.task?.name || "Task";
+
     const updateElapsed = () => {
-      setElapsed(Math.floor((Date.now() - startTime) / 1000));
+      const secs = Math.floor((Date.now() - startTime) / 1000);
+      setElapsed(secs);
+      // Update browser tab title with timer
+      document.title = `⏱ ${formatTime(secs)} — ${taskName}`;
     };
     updateElapsed();
     const interval = setInterval(updateElapsed, 1000);
@@ -64,6 +183,8 @@ export default function FloatingTimerBubble() {
       setTimer(null);
       setExpanded(false);
       setShowStopConfirm(false);
+      // Restore original title
+      document.title = originalTitle.current;
     };
     window.addEventListener("timer-started", handleTimerStart as EventListener);
     window.addEventListener("timer-stopped", handleTimerStop as EventListener);
@@ -72,13 +193,6 @@ export default function FloatingTimerBubble() {
       window.removeEventListener("timer-stopped", handleTimerStop as EventListener);
     };
   }, []);
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
 
   const stopTimer = async () => {
     setIsStopping(true);
@@ -96,6 +210,8 @@ export default function FloatingTimerBubble() {
       setTimer(null);
       setExpanded(false);
       setShowStopConfirm(false);
+      // Restore original title
+      document.title = originalTitle.current;
       // Notify other components
       window.dispatchEvent(new CustomEvent("timer-stopped"));
     } catch (error) {
