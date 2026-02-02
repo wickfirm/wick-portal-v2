@@ -20,6 +20,7 @@ interface HRSettings {
 export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFormProps) {
   const [submitting, setSubmitting] = useState(false);
   const [hrSettings, setHRSettings] = useState<HRSettings | null>(null);
+  const [leaveType, setLeaveType] = useState("ANNUAL");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [coveragePerson, setCoveragePerson] = useState("");
@@ -63,6 +64,19 @@ export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFor
       return null;
     }
 
+    // Sick leave is exempt from minimum notice periods
+    if (leaveType === "SICK") {
+      return {
+        policyType: "Sick Leave",
+        requiredDays: 0,
+        noticeDays,
+        leaveDays,
+        meetsRequirement: true,
+        status: "ok" as const,
+        isSickLeave: true,
+      };
+    }
+
     let policyType = "";
     let requiredDays = 0;
     let meetsRequirement = false;
@@ -97,6 +111,7 @@ export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFor
       leaveDays,
       meetsRequirement,
       status,
+      isSickLeave: false,
     };
   };
 
@@ -200,6 +215,8 @@ export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFor
             <select
               name="leaveType"
               required
+              value={leaveType}
+              onChange={(e) => setLeaveType(e.target.value)}
               style={{
                 width: "100%",
                 padding: "0.75rem",
@@ -224,7 +241,7 @@ export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFor
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
                 required
-                min={new Date().toISOString().split("T")[0]}
+                min={leaveType === "SICK" ? undefined : new Date().toISOString().split("T")[0]}
                 style={{
                   width: "100%",
                   padding: "0.75rem",
@@ -298,12 +315,18 @@ export default function LeaveRequestForm({ onClose, onSuccess }: LeaveRequestFor
               </div>
               <div style={{ fontSize: "0.875rem", color: theme.colors.textSecondary }}>
                 <div>• <strong>{policyInfo.policyType}</strong> applies ({policyInfo.leaveDays} days requested)</div>
-                <div>• Required notice: <strong>{policyInfo.requiredDays} days</strong></div>
-                <div>• Your notice: <strong>{policyInfo.noticeDays} days</strong></div>
-                {!policyInfo.meetsRequirement && (
-                  <div style={{ marginTop: "0.5rem", fontWeight: "500" }}>
-                    ⚡ This request may require manager approval due to short notice.
-                  </div>
+                {policyInfo.isSickLeave ? (
+                  <div>• No minimum notice period required for sick leave</div>
+                ) : (
+                  <>
+                    <div>• Required notice: <strong>{policyInfo.requiredDays} days</strong></div>
+                    <div>• Your notice: <strong>{policyInfo.noticeDays} days</strong></div>
+                    {!policyInfo.meetsRequirement && (
+                      <div style={{ marginTop: "0.5rem", fontWeight: "500" }}>
+                        ⚡ This request may require manager approval due to short notice.
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
