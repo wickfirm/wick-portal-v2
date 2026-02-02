@@ -24,10 +24,18 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     });
 
     const updateData: any = { updatedAt: new Date() };
-    
+
     if (data.name !== undefined) updateData.name = data.name;
-    if (data.categoryId !== undefined) updateData.categoryId = data.categoryId || null;
-    if (data.projectId !== undefined) updateData.projectId = data.projectId || null;
+    if (data.categoryId !== undefined) {
+      updateData.category = data.categoryId
+        ? { connect: { id: data.categoryId } }
+        : { disconnect: true };
+    }
+    if (data.projectId !== undefined) {
+      updateData.project = data.projectId
+        ? { connect: { id: data.projectId } }
+        : { disconnect: true };
+    }
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.status !== undefined) updateData.status = data.status;
@@ -38,7 +46,11 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.internalLink !== undefined) updateData.internalLink = data.internalLink;
     if (data.internalLinkLabel !== undefined) updateData.internalLinkLabel = data.internalLinkLabel;
     if (data.ownerType !== undefined) updateData.ownerType = data.ownerType;
-    if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId || null;
+    if (data.assigneeId !== undefined) {
+      updateData.assignee = data.assigneeId
+        ? { connect: { id: data.assigneeId } }
+        : { disconnect: true };
+    }
     if (data.order !== undefined) updateData.order = data.order;
 
     const task = await prisma.clientTask.update({
