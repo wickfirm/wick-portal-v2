@@ -573,11 +573,14 @@ export default function TasksManager({
   const inputStyle: React.CSSProperties = {
     width: "100%",
     padding: "10px 14px",
-    border: "1px solid " + theme.colors.borderMedium,
-    borderRadius: 8,
+    border: "1px solid " + theme.colors.borderLight,
+    borderRadius: 10,
     fontSize: 14,
     background: theme.colors.bgPrimary,
     color: theme.colors.textPrimary,
+    outline: "none",
+    transition: "border-color 0.15s ease",
+    boxSizing: "border-box" as const,
   };
 
   const renderTaskRow = (task: Task, index: number) => {
@@ -585,7 +588,12 @@ export default function TasksManager({
     
     return (
       <>
-      <tr key={task.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
+      <tr
+        key={task.id}
+        style={{ borderBottom: "1px solid " + theme.colors.bgTertiary, transition: "background 0.12s ease" }}
+        onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
+        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+      >
         {/* Task Number & Name */}
         <td style={{ padding: "10px 12px" }}>
           <div
@@ -901,17 +909,32 @@ export default function TasksManager({
         {canDelete && (
           <button
             onClick={() => deleteTask(task.id)}
+            title="Delete task"
             style={{
-              padding: "4px 8px",
-              fontSize: 11,
+              padding: 4,
               background: "transparent",
-              color: theme.colors.error,
-              border: "1px solid " + theme.colors.borderLight,
-              borderRadius: 4,
+              color: theme.colors.textMuted,
+              border: "none",
+              borderRadius: 6,
               cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.15s ease",
+              opacity: 0.5,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = theme.colors.error;
+              e.currentTarget.style.opacity = "1";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = theme.colors.textMuted;
+              e.currentTarget.style.opacity = "0.5";
             }}
           >
-            Delete
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            </svg>
           </button>
         )}
       </td>
@@ -933,24 +956,54 @@ export default function TasksManager({
     const isCollapsed = collapsedCategories.has(categoryId || "uncategorized");
 
     return (
-      <div key={categoryId || "uncategorized"} style={{ marginBottom: 32 }}>
+      <div key={categoryId || "uncategorized"} style={{ marginBottom: 28 }}>
         <div
           onClick={() => toggleCategoryCollapse(categoryId || "uncategorized")}
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            marginBottom: 16,
+            justifyContent: "space-between",
+            padding: "10px 16px",
+            marginBottom: 12,
             cursor: "pointer",
             userSelect: "none",
+            background: theme.colors.bgSecondary,
+            borderRadius: 10,
+            border: "1px solid " + theme.colors.borderLight,
+            transition: "all 0.15s ease",
           }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
+          onMouseLeave={(e) => (e.currentTarget.style.background = theme.colors.bgSecondary)}
         >
-          <div style={{
-            fontSize: 20,
-            fontWeight: 600,
-            color: theme.colors.textPrimary,
-          }}>
-            {isCollapsed ? "▶" : "▼"} {categoryName} ({categoryTasks.length})
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{
+              transition: "transform 200ms ease",
+              transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+              display: "inline-flex",
+              alignItems: "center",
+              color: theme.colors.textMuted,
+            }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            </span>
+            <div style={{
+              fontSize: 16,
+              fontWeight: 600,
+              color: theme.colors.textPrimary,
+            }}>
+              {categoryName}
+            </div>
+            <span style={{
+              fontSize: 12,
+              fontWeight: 500,
+              color: theme.colors.textMuted,
+              background: theme.colors.bgTertiary,
+              padding: "2px 8px",
+              borderRadius: 10,
+            }}>
+              {categoryTasks.length}
+            </span>
           </div>
           {canCreate && (
             <button
@@ -959,14 +1012,16 @@ export default function TasksManager({
                 setQuickAddCategory(categoryId);
               }}
               style={{
-                padding: "4px 12px",
+                padding: "5px 14px",
                 fontSize: 12,
-                background: theme.colors.primary,
+                background: theme.gradients.primary,
                 color: "white",
                 border: "none",
-                borderRadius: 6,
+                borderRadius: 8,
                 cursor: "pointer",
                 fontWeight: 500,
+                boxShadow: theme.shadows.button,
+                transition: "all 0.15s ease",
               }}
             >
               + Add Task
@@ -1197,24 +1252,54 @@ export default function TasksManager({
       const isCollapsed = collapsedClients.has(clientId);
 
       return (
-        <div key={clientId} style={{ marginBottom: 32 }}>
+        <div key={clientId} style={{ marginBottom: 28 }}>
           <div
             onClick={() => toggleClientCollapse(clientId)}
             style={{
               display: "flex",
               alignItems: "center",
-              gap: 8,
-              marginBottom: 16,
+              justifyContent: "space-between",
+              padding: "12px 16px",
+              marginBottom: 12,
               cursor: "pointer",
               userSelect: "none",
+              background: theme.colors.bgSecondary,
+              borderRadius: 10,
+              border: "1px solid " + theme.colors.borderLight,
+              transition: "all 0.15s ease",
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = theme.colors.bgSecondary)}
           >
-            <div style={{
-              fontSize: 24,
-              fontWeight: 600,
-              color: theme.colors.textPrimary,
-            }}>
-              {isCollapsed ? "▶" : "▼"} {clientName} ({clientTasks.length})
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{
+                transition: "transform 200ms ease",
+                transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+                display: "inline-flex",
+                alignItems: "center",
+                color: theme.colors.textMuted,
+              }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </span>
+              <div style={{
+                fontSize: 18,
+                fontWeight: 600,
+                color: theme.colors.textPrimary,
+              }}>
+                {clientName}
+              </div>
+              <span style={{
+                fontSize: 12,
+                fontWeight: 500,
+                color: theme.colors.textMuted,
+                background: theme.colors.bgTertiary,
+                padding: "2px 8px",
+                borderRadius: 10,
+              }}>
+                {clientTasks.length}
+              </span>
             </div>
           </div>
 
@@ -1297,18 +1382,19 @@ export default function TasksManager({
                 setQuickAddName("");
               }}
               style={{
-                padding: "10px 20px",
-                fontSize: 14,
-                background: theme.colors.primary,
-                color: "white",
+                padding: "10px 22px",
+                fontSize: 13,
+                background: quickAddCategory === "GLOBAL" ? theme.colors.bgTertiary : theme.gradients.primary,
+                color: quickAddCategory === "GLOBAL" ? theme.colors.textSecondary : "white",
                 border: "none",
-                borderRadius: 8,
+                borderRadius: 10,
                 cursor: "pointer",
                 fontWeight: 500,
-                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                boxShadow: quickAddCategory === "GLOBAL" ? "none" : theme.shadows.button,
+                transition: "all 0.15s ease",
               }}
             >
-              {quickAddCategory === "GLOBAL" ? "✕ Cancel" : "+ Create Task"}
+              {quickAddCategory === "GLOBAL" ? "Cancel" : "+ Create Task"}
             </button>
           </div>
 
@@ -1317,8 +1403,8 @@ export default function TasksManager({
             <div style={{
               background: theme.colors.bgSecondary,
               border: "1px solid " + theme.colors.borderLight,
-              borderRadius: 8,
-              padding: 16,
+              borderRadius: 14,
+              padding: 20,
               marginBottom: 8,
             }}>
               <div style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
@@ -1411,14 +1497,16 @@ export default function TasksManager({
                   onClick={() => addQuickTask(null)}
                   disabled={!quickAddName.trim() || !quickAddProject}
                   style={{
-                    padding: "8px 16px",
-                    background: (!quickAddName.trim() || !quickAddProject) ? theme.colors.bgTertiary : theme.colors.primary,
+                    padding: "8px 18px",
+                    background: (!quickAddName.trim() || !quickAddProject) ? theme.colors.bgTertiary : theme.gradients.primary,
                     color: (!quickAddName.trim() || !quickAddProject) ? theme.colors.textMuted : "white",
                     border: "none",
-                    borderRadius: 6,
+                    borderRadius: 10,
                     cursor: (!quickAddName.trim() || !quickAddProject) ? "not-allowed" : "pointer",
                     fontWeight: 500,
-                    whiteSpace: "nowrap",
+                    whiteSpace: "nowrap" as const,
+                    boxShadow: (!quickAddName.trim() || !quickAddProject) ? "none" : theme.shadows.button,
+                    transition: "all 0.15s ease",
                   }}
                 >
                   Add Task
@@ -1450,98 +1538,59 @@ export default function TasksManager({
       <div style={{
         background: theme.colors.bgSecondary,
         border: "1px solid " + theme.colors.borderLight,
-        borderRadius: theme.borderRadius.lg,
-        padding: 20,
+        borderRadius: 14,
+        padding: "16px 20px",
         marginBottom: 24,
       }}>
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Status:</label>
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid " + theme.colors.borderLight,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              <option value="ALL">All</option>
-              {statusOptions.map(s => <option key={s} value={s}>{s.replace(/_/g, " ")}</option>)}
-            </select>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Priority:</label>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid " + theme.colors.borderLight,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              <option value="ALL">All</option>
-              {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
-            </select>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Owner:</label>
-            <select
-              value={filterOwner}
-              onChange={(e) => setFilterOwner(e.target.value)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid " + theme.colors.borderLight,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              <option value="ALL">All</option>
-              <option value="AGENCY">Agency</option>
-              <option value="CLIENT">Client</option>
-            </select>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Assignee:</label>
-            <select
-              value={filterAssignee}
-              onChange={(e) => setFilterAssignee(e.target.value)}
-              style={{
-                padding: "6px 12px",
-                borderRadius: 6,
-                border: "1px solid " + theme.colors.borderLight,
-                fontSize: 13,
-                cursor: "pointer",
-              }}
-            >
-              <option value="ALL">All</option>
-              {users.map(user => (
-                <option key={user.id} value={user.id}>{user.name || user.email}</option>
-              ))}
-            </select>
-          </div>
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
+          {/* Filter dropdowns with consistent styling */}
+          {[
+            { label: "Status", value: filterStatus, setter: setFilterStatus, options: statusOptions.map(s => ({ value: s, label: s.replace(/_/g, " ") })) },
+            { label: "Priority", value: filterPriority, setter: setFilterPriority, options: priorityOptions.map(p => ({ value: p, label: p })) },
+            { label: "Owner", value: filterOwner, setter: setFilterOwner, options: [{ value: "AGENCY", label: "Agency" }, { value: "CLIENT", label: "Client" }] },
+            { label: "Assignee", value: filterAssignee, setter: setFilterAssignee, options: users.map(u => ({ value: u.id, label: u.name || u.email })) },
+          ].map(({ label, value, setter, options }) => (
+            <div key={label} style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.03em" }}>{label}</label>
+              <select
+                value={value}
+                onChange={(e) => setter(e.target.value)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "1px solid " + (value !== "ALL" ? theme.colors.primary : theme.colors.borderLight),
+                  background: value !== "ALL" ? `${theme.colors.primary}08` : theme.colors.bgPrimary,
+                  fontSize: 13,
+                  fontWeight: value !== "ALL" ? 500 : 400,
+                  color: value !== "ALL" ? theme.colors.primary : theme.colors.textSecondary,
+                  cursor: "pointer",
+                  outline: "none",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <option value="ALL">All</option>
+                {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          ))}
 
           {context === "general" && (
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <label style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary }}>Client:</label>
+            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.03em" }}>Client</label>
               <select
                 value={filterClient}
                 onChange={(e) => setFilterClient(e.target.value)}
                 style={{
                   padding: "6px 12px",
-                  borderRadius: 6,
-                  border: "1px solid " + theme.colors.borderLight,
+                  borderRadius: 8,
+                  border: "1px solid " + (filterClient !== "ALL" ? theme.colors.primary : theme.colors.borderLight),
+                  background: filterClient !== "ALL" ? `${theme.colors.primary}08` : theme.colors.bgPrimary,
                   fontSize: 13,
+                  fontWeight: filterClient !== "ALL" ? 500 : 400,
+                  color: filterClient !== "ALL" ? theme.colors.primary : theme.colors.textSecondary,
                   cursor: "pointer",
+                  outline: "none",
+                  transition: "all 0.15s ease",
                 }}
               >
                 <option value="ALL">All</option>
@@ -1554,18 +1603,30 @@ export default function TasksManager({
             </div>
           )}
 
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              type="checkbox"
-              id="hideCompleted"
-              checked={hideCompleted}
-              onChange={(e) => setHideCompleted(e.target.checked)}
-              style={{ cursor: "pointer" }}
-            />
-            <label htmlFor="hideCompleted" style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textSecondary, cursor: "pointer" }}>
-              Hide Completed
-            </label>
-          </div>
+          <div style={{ width: 1, height: 24, background: theme.colors.borderLight, margin: "0 2px" }} />
+
+          <button
+            onClick={() => setHideCompleted(!hideCompleted)}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 20,
+              border: hideCompleted ? "none" : "1px solid " + theme.colors.borderLight,
+              background: hideCompleted ? theme.gradients.primary : "transparent",
+              color: hideCompleted ? "white" : theme.colors.textSecondary,
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              gap: 5,
+              transition: "all 0.15s",
+            }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Hide Done
+          </button>
 
           <button
             onClick={() => setFilterWatched(!filterWatched)}
@@ -1573,7 +1634,7 @@ export default function TasksManager({
               padding: "6px 14px",
               borderRadius: 20,
               border: filterWatched ? "none" : "1px solid " + theme.colors.borderLight,
-              background: filterWatched ? theme.colors.primary : "transparent",
+              background: filterWatched ? theme.gradients.primary : "transparent",
               color: filterWatched ? "white" : theme.colors.textSecondary,
               fontSize: 12,
               fontWeight: 500,
@@ -1593,23 +1654,24 @@ export default function TasksManager({
 
           {activeFilterCount > 0 && (
             <>
-              <div style={{ marginLeft: "auto", fontSize: 13, color: theme.colors.textMuted }}>
-                {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""} active
+              <div style={{ marginLeft: "auto", fontSize: 12, color: theme.colors.textMuted, fontWeight: 500 }}>
+                {activeFilterCount} filter{activeFilterCount > 1 ? "s" : ""}
               </div>
               <button
                 onClick={clearFilters}
                 style={{
                   padding: "6px 16px",
-                  borderRadius: 6,
-                  border: "1px solid " + theme.colors.borderMedium,
-                  background: theme.colors.bgPrimary,
-                  color: theme.colors.primary,
-                  fontSize: 13,
+                  borderRadius: 20,
+                  border: "none",
+                  background: theme.colors.errorBg,
+                  color: theme.colors.error,
+                  fontSize: 12,
                   fontWeight: 500,
                   cursor: "pointer",
+                  transition: "all 0.15s ease",
                 }}
               >
-                Clear Filters
+                Clear
               </button>
             </>
           )}
@@ -1633,11 +1695,9 @@ export default function TasksManager({
             onClick={closeTaskPanel}
             style={{
               position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              inset: 0,
               background: "rgba(0,0,0,0.5)",
+              backdropFilter: "blur(4px)",
               zIndex: 999,
             }}
           />
@@ -1647,15 +1707,17 @@ export default function TasksManager({
             right: 0,
             bottom: 0,
             width: "min(600px, 90vw)",
-            background: theme.colors.bgPrimary,
-            boxShadow: "-4px 0 24px rgba(0,0,0,0.1)",
+            background: theme.colors.bgSecondary,
+            boxShadow: theme.shadows.lg,
             zIndex: 1000,
             overflowY: "auto",
             padding: 32,
+            borderTopLeftRadius: 16,
+            borderBottomLeftRadius: 16,
           }}>
             <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Edit Task</h2>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400, margin: 0, color: theme.colors.textPrimary }}>Edit Task</h2>
                 {selectedTask && selectedTask.client?.id && selectedTask.projectId && selectedTask.status !== "COMPLETED" && (
                   activeTimerTaskId === selectedTask.id ? (
                     <span
@@ -1708,11 +1770,26 @@ export default function TasksManager({
               <button
                 onClick={closeTaskPanel}
                 style={{
-                  background: "none",
+                  background: theme.colors.bgTertiary,
                   border: "none",
-                  fontSize: 24,
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                   cursor: "pointer",
                   color: theme.colors.textMuted,
+                  fontSize: 18,
+                  transition: "all 0.15s ease",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = theme.colors.errorBg;
+                  e.currentTarget.style.color = theme.colors.error;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = theme.colors.bgTertiary;
+                  e.currentTarget.style.color = theme.colors.textMuted;
                 }}
               >
                 ×
@@ -1955,36 +2032,41 @@ export default function TasksManager({
                 )}
               </div>
 
-              <div style={{ display: "flex", gap: 12, marginTop: 12 }}>
+              <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
+                <button
+                  onClick={closeTaskPanel}
+                  style={{
+                    padding: "10px 22px",
+                    background: theme.colors.bgPrimary,
+                    color: theme.colors.textSecondary,
+                    border: "1px solid " + theme.colors.borderLight,
+                    borderRadius: 10,
+                    fontWeight: 500,
+                    fontSize: 13,
+                    cursor: "pointer",
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Cancel
+                </button>
                 <button
                   onClick={saveTask}
                   disabled={saving}
                   style={{
                     flex: 1,
-                    padding: "12px 24px",
-                    background: saving ? theme.colors.bgTertiary : theme.colors.primary,
+                    padding: "10px 24px",
+                    background: saving ? theme.colors.bgTertiary : theme.gradients.primary,
                     color: saving ? theme.colors.textMuted : "white",
                     border: "none",
-                    borderRadius: 8,
+                    borderRadius: 10,
                     fontWeight: 500,
+                    fontSize: 13,
                     cursor: saving ? "not-allowed" : "pointer",
+                    boxShadow: saving ? "none" : theme.shadows.button,
+                    transition: "all 0.15s ease",
                   }}
                 >
                   {saving ? "Saving..." : "Save Changes"}
-                </button>
-                <button
-                  onClick={closeTaskPanel}
-                  style={{
-                    padding: "12px 24px",
-                    background: theme.colors.bgTertiary,
-                    color: theme.colors.textSecondary,
-                    border: "none",
-                    borderRadius: 8,
-                    fontWeight: 500,
-                    cursor: "pointer",
-                  }}
-                >
-                  Cancel
                 </button>
               </div>
             </div>

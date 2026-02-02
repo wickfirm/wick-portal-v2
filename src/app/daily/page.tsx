@@ -52,7 +52,7 @@ export default function DailyPage() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"sod" | "eod">("sod");
   const [today] = useState(new Date().toISOString().split("T")[0]);
-  
+
   const [summary, setSummary] = useState<DailySummary | null>(null);
   const [suggestions, setSuggestions] = useState<TaskSuggestion[]>([]);
   const [dailyTasks, setDailyTasks] = useState<DailyTask[]>([]);
@@ -60,6 +60,15 @@ export default function DailyPage() {
   const [showStartModal, setShowStartModal] = useState(false);
   const [showAllTasks, setShowAllTasks] = useState(false);
   const [allTasks, setAllTasks] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  const anim = (delay: number) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateY(${mounted ? 0 : 16}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
 
   useEffect(() => {
     loadData();
@@ -232,9 +241,16 @@ export default function DailyPage() {
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
         <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
-            Loading your day...
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ height: 32, width: 200, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+            <div style={{ height: 16, width: 260, background: theme.colors.bgSecondary, borderRadius: 6 }} />
           </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
+            {[0, 1, 2].map(i => (
+              <div key={i} style={{ height: 90, background: theme.colors.bgSecondary, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}` }} />
+            ))}
+          </div>
+          <div style={{ height: 300, background: theme.colors.bgSecondary, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}` }} />
         </main>
       </div>
     );
@@ -256,7 +272,7 @@ export default function DailyPage() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
         {/* Header */}
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 32, ...anim(0.05) }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
             <div>
               <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
@@ -303,7 +319,7 @@ export default function DailyPage() {
 
         {/* SOD View */}
         {view === "sod" && (
-          <div>
+          <div style={anim(0.1)}>
             {!hasStarted ? (
               <div style={{
                 padding: 32,
@@ -351,7 +367,7 @@ export default function DailyPage() {
                     border: "1px solid " + theme.colors.borderLight,
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Total Tasks</div>
-                    <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>
+                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>
                       {liveTotal}
                     </div>
                   </div>
@@ -363,7 +379,7 @@ export default function DailyPage() {
                     border: "1px solid " + theme.colors.borderLight,
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Completed</div>
-                    <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.success }}>
+                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.success }}>
                       {liveCompleted}
                     </div>
                   </div>
@@ -375,7 +391,7 @@ export default function DailyPage() {
                     border: "1px solid " + theme.colors.borderLight,
                   }}>
                     <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>Completion Rate</div>
-                    <div style={{ fontSize: 28, fontWeight: 600, color: theme.colors.textPrimary }}>
+                    <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary }}>
                       {liveRate}%
                     </div>
                   </div>
@@ -635,7 +651,7 @@ export default function DailyPage() {
 
         {/* EOD View */}
         {view === "eod" && (
-          <div>
+          <div style={anim(0.1)}>
             <div style={{
               background: theme.colors.bgSecondary,
               borderRadius: theme.borderRadius.lg,
@@ -649,19 +665,19 @@ export default function DailyPage() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>Completed</div>
-                  <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.success }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, fontWeight: 700, color: theme.colors.success }}>
                     {liveCompleted}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>In Progress</div>
-                  <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.warning }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, fontWeight: 700, color: theme.colors.warning }}>
                     {liveInProgress}
                   </div>
                 </div>
                 <div>
                   <div style={{ fontSize: 13, color: theme.colors.textMuted }}>Not Started</div>
-                  <div style={{ fontSize: 24, fontWeight: 600, color: theme.colors.textSecondary }}>
+                  <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 24, fontWeight: 700, color: theme.colors.textSecondary }}>
                     {liveNotStarted}
                   </div>
                 </div>
@@ -726,26 +742,25 @@ export default function DailyPage() {
         {showStartModal && (
           <div style={{
             position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            inset: 0,
             background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
           }}>
             <div style={{
-              background: theme.colors.bgPrimary,
-              borderRadius: theme.borderRadius.lg,
+              background: theme.colors.bgSecondary,
+              borderRadius: 16,
               padding: 32,
               maxWidth: 600,
               width: "90%",
               maxHeight: "80vh",
               overflow: "auto",
+              boxShadow: theme.shadows.lg,
             }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 16, color: theme.colors.textPrimary }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400, marginBottom: 16, color: theme.colors.textPrimary }}>
                 🌅 Start Your Day
               </h2>
               
@@ -760,12 +775,18 @@ export default function DailyPage() {
                   placeholder="e.g., Complete Baladna project deliverables"
                   style={{
                     width: "100%",
-                    padding: "12px",
-                    border: `1px solid ${theme.colors.borderMedium}`,
-                    borderRadius: theme.borderRadius.md,
+                    padding: "10px 14px",
+                    border: `1px solid ${theme.colors.borderLight}`,
+                    borderRadius: 10,
                     fontSize: 14,
-                    boxSizing: "border-box",
+                    boxSizing: "border-box" as const,
+                    color: theme.colors.textPrimary,
+                    background: theme.colors.bgPrimary,
+                    outline: "none",
+                    transition: "border-color 0.15s",
                   }}
+                  onFocus={e => e.currentTarget.style.borderColor = theme.colors.primary}
+                  onBlur={e => e.currentTarget.style.borderColor = theme.colors.borderLight}
                 />
               </div>
 
@@ -795,38 +816,39 @@ export default function DailyPage() {
                 </div>
               </div>
 
-              <div style={{ display: "flex", gap: 12 }}>
-                <button
-                  onClick={handleStartDay}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    background: theme.colors.primary,
-                    border: "none",
-                    borderRadius: theme.borderRadius.md,
-                    color: "white",
-                    fontSize: 14,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                  }}
-                >
-                  Start Day
-                </button>
+              <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
                 <button
                   onClick={() => setShowStartModal(false)}
                   style={{
-                    flex: 1,
-                    padding: "12px",
-                    background: "transparent",
-                    border: `1px solid ${theme.colors.borderMedium}`,
-                    borderRadius: theme.borderRadius.md,
+                    padding: "10px 22px",
+                    background: theme.colors.bgSecondary,
+                    border: `1px solid ${theme.colors.borderLight}`,
+                    borderRadius: 10,
                     color: theme.colors.textSecondary,
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 500,
                     cursor: "pointer",
+                    transition: "all 0.15s ease",
                   }}
                 >
                   Later
+                </button>
+                <button
+                  onClick={handleStartDay}
+                  style={{
+                    padding: "10px 22px",
+                    background: theme.gradients.primary,
+                    border: "none",
+                    borderRadius: 10,
+                    color: "white",
+                    fontSize: 13,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    boxShadow: theme.shadows.button,
+                    transition: "all 0.15s ease",
+                  }}
+                >
+                  Start Day
                 </button>
               </div>
             </div>
@@ -837,27 +859,26 @@ export default function DailyPage() {
         {showAllTasks && (
           <div style={{
             position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
+            inset: 0,
             background: "rgba(0,0,0,0.5)",
+            backdropFilter: "blur(4px)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             zIndex: 1000,
           }}>
             <div style={{
-              background: theme.colors.bgPrimary,
-              borderRadius: theme.borderRadius.lg,
+              background: theme.colors.bgSecondary,
+              borderRadius: 16,
               padding: 32,
               maxWidth: 800,
               width: "90%",
               maxHeight: "80vh",
               overflow: "auto",
+              boxShadow: theme.shadows.lg,
             }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-                <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                <h2 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 22, fontWeight: 400, color: theme.colors.textPrimary, margin: 0 }}>
                   📋 All Your Tasks ({allTasks.length})
                 </h2>
                 <button
