@@ -30,10 +30,16 @@ model User {
   watchedTasks      TaskWatcher[]
   timeEntries       TimeEntry[]
   agency            Agency?              @relation("AgencyUsers", fields: [agencyId], references: [id])
-  assignedTasks     ClientTask[]         @relation("AssignedTasks")
-  teamMemberships   ClientTeamMember[]   @relation("UserTeamMemberships")
-  createdNotes      Note[]               @relation("NoteCreator")
-  noteShares        NoteShare[]          @relation("NoteShareUser")
+  assignedTasks        ClientTask[]         @relation("AssignedTasks")
+  clientAssignments    ClientTeamMember[]   @relation("UserTeamMemberships")
+  projectAssignments   ProjectAssignment[]  @relation("UserProjectAssignments")
+  employeeProfile      EmployeeProfile?     @relation("UserEmployeeProfile")
+  dailyTasks           DailyTask[]          @relation("UserDailyTasks")
+  dailySummaries       DailySummary[]       @relation("UserDailySummaries")
+  teamActivities       TeamActivity[]       @relation("UserTeamActivities")
+  activityReactions    ActivityReaction[]   @relation("UserActivityReactions")
+  createdNotes         Note[]               @relation("NoteCreator")
+  noteShares           NoteShare[]          @relation("NoteShareUser")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -67,6 +73,7 @@ model Client {
   projects         Project[]     @relation("ClientProjects")
   tasks            ClientTask[]  @relation("ClientTasks")
   teamMembers      ClientTeamMember[] @relation("ClientTeamMembers")
+  agencies         ClientAgency[]    @relation("ClientAgencies")
   timeEntries      TimeEntry[]
   notes            Note[]        @relation("ClientNotes")
   noteShares       NoteShare[]   @relation("NoteShareClient")
@@ -109,10 +116,12 @@ model Project {
   pricingModel   PricingModel?  @default(TIME_AND_MATERIALS) @map("pricing_model")
   fixedFeeAmount Decimal?       @map("fixed_fee_amount") @db.Decimal(10, 2)
   client         Client         @relation("ClientProjects", fields: [clientId], references: [id])
-  mediaFolders   MediaFolder[]
-  tasks          ClientTask[]  @relation("ProjectTasks")
-  timeEntries    TimeEntry[]
-  notes          Note[]        @relation("ProjectNotes")
+  stages              ProjectStage[]      @relation("ProjectStages")
+  projectAssignments  ProjectAssignment[] @relation("ProjectAssignments")
+  mediaFolders        MediaFolder[]
+  tasks               ClientTask[]        @relation("ProjectTasks")
+  timeEntries         TimeEntry[]
+  notes               Note[]              @relation("ProjectNotes")
 
   @@index([status])
   @@index([clientId])
@@ -133,6 +142,8 @@ model ProjectStage {
   projectId   String
   createdAt   DateTime? @default(now()) @db.Timestamp(6)
   updatedAt   DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+
+  project Project @relation("ProjectStages", fields: [projectId], references: [id], onDelete: Cascade)
 
   @@map("project_stages")
 }
@@ -267,6 +278,7 @@ model ClientTask {
   assignee          User?         @relation("AssignedTasks", fields: [assigneeId], references: [id])
   project           Project?      @relation("ProjectTasks", fields: [projectId], references: [id])
   watchers          TaskWatcher[]
+  dailyTasks        DailyTask[]   @relation("TaskDailyTasks")
   timeEntries       TimeEntry[]
   notes             Note[]        @relation("TaskNotes")
 
@@ -417,6 +429,9 @@ model ClientAgency {
   agencyId  String    @map("agency_id")
   createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
+  client Client @relation("ClientAgencies", fields: [clientId], references: [id], onDelete: Cascade)
+  agency Agency @relation("AgencyClients", fields: [agencyId], references: [id], onDelete: Cascade)
+
   @@unique([clientId, agencyId])
   @@map("client_agencies")
 }
@@ -504,6 +519,7 @@ model Agency {
   createdAt     DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt     DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
   users         User[]          @relation("AgencyUsers")
+  clients       ClientAgency[]  @relation("AgencyClients")
   mediaActivity MediaActivity[]
   mediaFiles    MediaFile[]
   mediaFolders  MediaFolder[]
@@ -629,6 +645,9 @@ model ProjectAssignment {
   userId         String
   createdAt      DateTime? @default(now()) @db.Timestamp(6)
 
+  project Project @relation("ProjectAssignments", fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation("UserProjectAssignments", fields: [userId], references: [id])
+
   @@unique([projectId, userId])
   @@index([projectId], map: "idx_project_assignments_project")
   @@index([userId], map: "idx_project_assignments_user")
@@ -657,6 +676,9 @@ model EmployeeProfile {
   updatedAt                DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   weeklyCapacity           Decimal        @default(40) @map("weekly_capacity") @db.Decimal(5, 2)
 
+  user         User           @relation("UserEmployeeProfile", fields: [userId], references: [id])
+  leaveRequests LeaveRequest[] @relation("EmployeeLeaveRequests")
+
   @@index([agencyId], map: "idx_employee_profiles_agency")
   @@index([userId], map: "idx_employee_profiles_user")
   @@map("employee_profiles")
@@ -678,6 +700,8 @@ model LeaveRequest {
   agencyId    String      @map("agencyId")
   createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  employee EmployeeProfile @relation("EmployeeLeaveRequests", fields: [employeeId], references: [id])
 
   @@index([agencyId], map: "idx_leave_requests_agency")
   @@index([employeeId], map: "idx_leave_requests_employee")
@@ -846,6 +870,8 @@ model DailySummary {
   createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
 
+  user User @relation("UserDailySummaries", fields: [userId], references: [id])
+
   @@unique([userId, date])
   @@index([date], map: "idx_daily_summaries_date")
   @@index([userId, date], map: "idx_daily_summaries_user_date")
@@ -865,6 +891,9 @@ model DailyTask {
   deferredTo  DateTime? @map("deferred_to") @db.Date
   createdAt   DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt   DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  task ClientTask @relation("TaskDailyTasks", fields: [taskId], references: [id])
+  user User       @relation("UserDailyTasks", fields: [userId], references: [id])
 
   @@index([date], map: "idx_daily_tasks_date")
   @@index([taskId], map: "idx_daily_tasks_task")
@@ -899,6 +928,9 @@ model TeamActivity {
   visibleTo    String?   @default("everyone") @map("visible_to")
   createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
+  user      User               @relation("UserTeamActivities", fields: [userId], references: [id])
+  reactions ActivityReaction[]  @relation("ActivityReactions")
+
   @@index([createdAt(sort: Desc)], map: "idx_team_activities_created")
   @@index([activityType], map: "idx_team_activities_type")
   @@index([userId], map: "idx_team_activities_user")
@@ -911,6 +943,9 @@ model ActivityReaction {
   userId     String    @map("user_id")
   reaction   String
   createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+
+  activity TeamActivity @relation("ActivityReactions", fields: [activityId], references: [id], onDelete: Cascade)
+  user     User         @relation("UserActivityReactions", fields: [userId], references: [id])
 
   @@unique([activityId, userId, reaction])
   @@index([activityId], map: "idx_activity_reactions_activity")
