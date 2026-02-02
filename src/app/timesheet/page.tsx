@@ -549,68 +549,94 @@ export default function TimesheetPage() {
         {/* Navigation Bar */}
         <div style={{
           display: "flex",
-          justifyContent: "center",
+          justifyContent: "space-between",
           alignItems: "center",
-          gap: 10,
-          marginBottom: 20,
+          marginBottom: 16,
+          background: theme.colors.bgSecondary,
+          borderRadius: 12,
+          border: "1px solid " + theme.colors.borderLight,
+          padding: "8px 12px",
         }}>
-          <button
-            onClick={viewMode === "month" ? goToPreviousMonth : goToPreviousWeek}
-            style={{
-              padding: "7px 12px",
-              borderRadius: theme.borderRadius.sm,
-              border: "1px solid " + theme.colors.borderLight,
-              background: theme.colors.bgPrimary,
-              color: theme.colors.textSecondary,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            ←
-          </button>
+          {/* Left: Prev / Date / Next */}
+          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <button
+              onClick={viewMode === "month" ? goToPreviousMonth : goToPreviousWeek}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: theme.colors.textSecondary,
+                fontSize: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background 150ms, color 150ms",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme.colors.bgTertiary; e.currentTarget.style.color = theme.colors.textPrimary; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textSecondary; }}
+              title={viewMode === "month" ? "Previous month" : "Previous week"}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15,18 9,12 15,6"/></svg>
+            </button>
 
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            padding: "7px 16px",
-            background: theme.colors.bgTertiary,
-            borderRadius: theme.borderRadius.md,
-            minWidth: 180,
-            justifyContent: "center",
-          }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
-              {viewMode === "month" ? formatMonthLabel() : formatWeekRange(startDate, endDate)}
-            </span>
+            <div style={{
+              padding: "6px 16px",
+              minWidth: 200,
+              textAlign: "center",
+            }}>
+              <div style={{
+                fontSize: 15,
+                fontWeight: 600,
+                color: theme.colors.textPrimary,
+                lineHeight: 1.2,
+              }}>
+                {viewMode === "month" ? formatMonthLabel() : formatWeekRange(startDate, endDate)}
+              </div>
+            </div>
+
+            <button
+              onClick={viewMode === "month" ? goToNextMonth : goToNextWeek}
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 8,
+                border: "none",
+                background: "transparent",
+                color: theme.colors.textSecondary,
+                fontSize: 16,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "background 150ms, color 150ms",
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = theme.colors.bgTertiary; e.currentTarget.style.color = theme.colors.textPrimary; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textSecondary; }}
+              title={viewMode === "month" ? "Next month" : "Next week"}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9,18 15,12 9,6"/></svg>
+            </button>
           </div>
 
-          <button
-            onClick={viewMode === "month" ? goToNextMonth : goToNextWeek}
-            style={{
-              padding: "7px 12px",
-              borderRadius: theme.borderRadius.sm,
-              border: "1px solid " + theme.colors.borderLight,
-              background: theme.colors.bgPrimary,
-              color: theme.colors.textSecondary,
-              fontSize: 13,
-              cursor: "pointer",
-            }}
-          >
-            →
-          </button>
-
+          {/* Right: Today button */}
           <button
             onClick={viewMode === "month" ? goToCurrentMonth : goToCurrentWeek}
             style={{
-              padding: "7px 14px",
-              borderRadius: theme.borderRadius.sm,
-              background: theme.colors.infoBg,
-              color: theme.colors.info,
-              border: "none",
-              fontSize: 12,
-              fontWeight: 500,
+              padding: "6px 16px",
+              borderRadius: 8,
+              background: theme.colors.primary + "12",
+              color: theme.colors.primary,
+              border: "1px solid " + theme.colors.primary + "25",
+              fontSize: 13,
+              fontWeight: 600,
               cursor: "pointer",
+              transition: "background 150ms",
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = theme.colors.primary + "20"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = theme.colors.primary + "12"; }}
           >
             Today
           </button>
