@@ -26,6 +26,9 @@ export default function StageTemplatesPage() {
   const [loading, setLoading] = useState(true);
   const [newTemplate, setNewTemplate] = useState({ serviceType: "", name: "" });
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -71,6 +74,24 @@ export default function StageTemplatesPage() {
       fetchTemplates();
     }
     setAdding(false);
+  }
+
+  function startEdit(template: StageTemplate) {
+    setEditingId(template.id);
+    setEditName(template.name);
+  }
+
+  async function saveEdit(id: string) {
+    if (!editName.trim()) return;
+    setSaving(true);
+    await fetch("/api/stage-templates/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName }),
+    });
+    setEditingId(null);
+    fetchTemplates();
+    setSaving(false);
   }
 
   async function deleteTemplate(id: string) {
@@ -209,38 +230,73 @@ export default function StageTemplatesPage() {
                       justifyContent: "space-between",
                       alignItems: "center"
                     }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <span style={{
-                          width: 24,
-                          height: 24,
-                          borderRadius: 12,
-                          background: theme.colors.bgTertiary,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 12,
-                          fontWeight: 500,
-                          color: theme.colors.textSecondary
-                        }}>
-                          {template.order}
-                        </span>
-                        <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{template.name}</span>
-                      </div>
-                      <button
-                        onClick={() => deleteTemplate(template.id)}
-                        style={{
-                          padding: "6px 12px",
-                          background: theme.colors.errorBg,
-                          color: theme.colors.error,
-                          border: "none",
-                          borderRadius: 6,
-                          fontSize: 12,
-                          fontWeight: 500,
-                          cursor: "pointer"
-                        }}
-                      >
-                        Delete
-                      </button>
+                      {editingId === template.id ? (
+                        <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                          <span style={{
+                            width: 24, height: 24, borderRadius: 12,
+                            background: theme.colors.bgTertiary, display: "flex",
+                            alignItems: "center", justifyContent: "center",
+                            fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary
+                          }}>
+                            {template.order}
+                          </span>
+                          <input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveEdit(template.id); if (e.key === "Escape") setEditingId(null); }}
+                            style={{ ...inputStyle, flex: 1 }}
+                            autoFocus
+                          />
+                          <button onClick={() => saveEdit(template.id)} disabled={saving} style={{ padding: "8px 16px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{saving ? "..." : "Save"}</button>
+                          <button onClick={() => setEditingId(null)} style={{ padding: "8px 16px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                            <span style={{
+                              width: 24, height: 24, borderRadius: 12,
+                              background: theme.colors.bgTertiary, display: "flex",
+                              alignItems: "center", justifyContent: "center",
+                              fontSize: 12, fontWeight: 500, color: theme.colors.textSecondary
+                            }}>
+                              {template.order}
+                            </span>
+                            <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{template.name}</span>
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button
+                              onClick={() => startEdit(template)}
+                              style={{
+                                padding: "6px 12px",
+                                background: theme.colors.infoBg || theme.colors.bgTertiary,
+                                color: theme.colors.info,
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: "pointer"
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteTemplate(template.id)}
+                              style={{
+                                padding: "6px 12px",
+                                background: theme.colors.errorBg,
+                                color: theme.colors.error,
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: "pointer"
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -15,6 +15,9 @@ export default function TaskCategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [newCategory, setNewCategory] = useState({ name: "" });
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchCategories();
@@ -43,6 +46,24 @@ export default function TaskCategoriesPage() {
       fetchCategories();
     }
     setAdding(false);
+  }
+
+  function startEdit(category: TaskCategory) {
+    setEditingId(category.id);
+    setEditName(category.name);
+  }
+
+  async function saveEdit(id: string) {
+    if (!editName.trim()) return;
+    setSaving(true);
+    await fetch("/api/task-categories/" + id, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: editName }),
+    });
+    setEditingId(null);
+    fetchCategories();
+    setSaving(false);
   }
 
   async function deleteCategory(id: string) {
@@ -127,30 +148,59 @@ export default function TaskCategoriesPage() {
                   justifyContent: "space-between",
                   alignItems: "center"
                 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <div style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: 4,
-                      background: theme.colors.info
-                    }} />
-                    <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{category.name}</span>
-                  </div>
-                  <button
-                    onClick={() => deleteCategory(category.id)}
-                    style={{
-                      padding: "6px 12px",
-                      background: theme.colors.errorBg,
-                      color: theme.colors.error,
-                      border: "none",
-                      borderRadius: 6,
-                      fontSize: 12,
-                      fontWeight: 500,
-                      cursor: "pointer"
-                    }}
-                  >
-                    Delete
-                  </button>
+                  {editingId === category.id ? (
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, background: theme.colors.info }} />
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") saveEdit(category.id); if (e.key === "Escape") setEditingId(null); }}
+                        style={{ ...inputStyle, flex: 1 }}
+                        autoFocus
+                      />
+                      <button onClick={() => saveEdit(category.id)} disabled={saving} style={{ padding: "8px 16px", background: theme.colors.primary, color: "white", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>{saving ? "..." : "Save"}</button>
+                      <button onClick={() => setEditingId(null)} style={{ padding: "8px 16px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 6, fontSize: 13, fontWeight: 500, cursor: "pointer" }}>Cancel</button>
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 16, height: 16, borderRadius: 4, background: theme.colors.info }} />
+                        <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{category.name}</span>
+                      </div>
+                      <div style={{ display: "flex", gap: 8 }}>
+                        <button
+                          onClick={() => startEdit(category)}
+                          style={{
+                            padding: "6px 12px",
+                            background: theme.colors.infoBg || theme.colors.bgTertiary,
+                            color: theme.colors.info,
+                            border: "none",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => deleteCategory(category.id)}
+                          style={{
+                            padding: "6px 12px",
+                            background: theme.colors.errorBg,
+                            color: theme.colors.error,
+                            border: "none",
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 500,
+                            cursor: "pointer"
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
