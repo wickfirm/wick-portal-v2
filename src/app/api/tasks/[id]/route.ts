@@ -35,6 +35,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       updateData.project = data.projectId
         ? { connect: { id: data.projectId } }
         : { disconnect: true };
+
+      // When moving to a new project, also update the clientId to match
+      if (data.projectId) {
+        const targetProject = await prisma.project.findUnique({
+          where: { id: data.projectId },
+          select: { clientId: true },
+        });
+        if (targetProject) {
+          updateData.client = { connect: { id: targetProject.clientId } };
+        }
+      }
     }
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority !== undefined) updateData.priority = data.priority;

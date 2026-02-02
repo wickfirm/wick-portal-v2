@@ -59,6 +59,7 @@ export default function TasksManager({
   const [categories, setCategories] = useState<TaskCategory[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [allProjects, setAllProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
@@ -234,6 +235,13 @@ export default function TasksManager({
           const projectData = results[3];
           setProjects(projectData ? [projectData] : []);
         }
+
+        // Fetch all projects for the "Move to Project" dropdown in edit panel
+        try {
+          const allProjectsRes = await fetch("/api/projects");
+          const allProjectsData = await allProjectsRes.json();
+          setAllProjects(Array.isArray(allProjectsData) ? allProjectsData : []);
+        } catch { setAllProjects([]); }
 
         // Fetch watched task IDs + active timer
         fetchWatchedTasks();
@@ -1771,27 +1779,49 @@ export default function TasksManager({
                 </select>
               </div>
 
-              {context !== "project" && (
-                <div>
-                  <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
-                    Project <span style={{ color: theme.colors.error }}>*</span>
-                  </label>
-                  <select 
-                    value={editForm.projectId || ""} 
-                    onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value })} 
-                    style={inputStyle}
-                    required
-                  >
-                    <option value="">Select Project...</option>
-                    {projects.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                        {p.isDefault && " (Default)"}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
+                  Project <span style={{ color: theme.colors.error }}>*</span>
+                </label>
+                <select
+                  value={editForm.projectId || ""}
+                  onChange={(e) => setEditForm({ ...editForm, projectId: e.target.value })}
+                  style={inputStyle}
+                  required
+                >
+                  <option value="">Select Project...</option>
+                  {(() => {
+                    // Group all projects by client for easy navigation
+                    const projectList = allProjects.length > 0 ? allProjects : projects;
+                    const grouped: Record<string, { clientName: string; projects: any[] }> = {};
+                    projectList.forEach((p: any) => {
+                      const cName = p.client?.nickname || p.client?.name || "No Client";
+                      const cId = p.client?.id || p.clientId || "none";
+                      if (!grouped[cId]) grouped[cId] = { clientName: cName, projects: [] };
+                      grouped[cId].projects.push(p);
+                    });
+                    const entries = Object.entries(grouped);
+                    if (entries.length <= 1) {
+                      // Single client — flat list
+                      return projectList.map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}{p.isDefault ? " (Default)" : ""}
+                        </option>
+                      ));
+                    }
+                    // Multiple clients — grouped
+                    return entries.map(([cId, group]) => (
+                      <optgroup key={cId} label={group.clientName}>
+                        {group.projects.map((p: any) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}{p.isDefault ? " (Default)" : ""}
+                          </option>
+                        ))}
+                      </optgroup>
+                    ));
+                  })()}
+                </select>
+              </div>
 
               <div>
                 <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Notes</label>
