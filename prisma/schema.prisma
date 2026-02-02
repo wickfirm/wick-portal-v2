@@ -43,6 +43,8 @@ model User {
   noteShares           NoteShare[]          @relation("NoteShareUser")
   noteAttachments      NoteAttachment[]     @relation("NoteAttachmentUploader")
   reviewedLeaves       LeaveRequest[]       @relation("LeaveReviewer")
+  client               Client?              @relation("UserClient", fields: [clientId], references: [id])
+  bookings             Booking[]            @relation("UserBookings")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -83,6 +85,8 @@ model Client {
   notes            Note[]        @relation("ClientNotes")
   noteShares       NoteShare[]   @relation("NoteShareClient")
   metrics          ClientMetrics[] @relation("ClientMetrics")
+  users            User[]          @relation("UserClient")
+  expenses         ProjectExpense[] @relation("ClientExpenses")
 
   @@index([status])
   @@index([createdAt])
@@ -125,11 +129,13 @@ model Project {
   fixedFeeAmount Decimal?       @map("fixed_fee_amount") @db.Decimal(10, 2)
   client         Client         @relation("ClientProjects", fields: [clientId], references: [id])
   stages              ProjectStage[]      @relation("ProjectStages")
-  projectAssignments  ProjectAssignment[] @relation("ProjectAssignments")
+  assignments         ProjectAssignment[] @relation("ProjectAssignments")
   mediaFolders        MediaFolder[]
   tasks               ClientTask[]        @relation("ProjectTasks")
   timeEntries         TimeEntry[]
   notes               Note[]              @relation("ProjectNotes")
+  resources           ProjectResource[]   @relation("ProjectResources")
+  expenses            ProjectExpense[]    @relation("ProjectExpenses")
 
   @@index([status])
   @@index([clientId])
@@ -166,6 +172,8 @@ model ProjectResource {
   createdAt DateTime? @default(now()) @db.Timestamp(6)
   updatedAt DateTime? @default(now()) @updatedAt @db.Timestamp(6)
 
+  project Project @relation("ProjectResources", fields: [projectId], references: [id], onDelete: Cascade)
+
   @@index([projectId], map: "idx_project_resources_project")
   @@map("project_resources")
 }
@@ -191,6 +199,8 @@ model OnboardingTemplate {
   serviceType String?   @default("GENERAL")
   isActive    Boolean?  @default(true)
 
+  items OnboardingTemplateItem[] @relation("TemplateItems")
+
   @@map("onboarding_templates")
 }
 
@@ -208,6 +218,8 @@ model OnboardingTemplateItem {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
   taskPriority   String?
+
+  template OnboardingTemplate @relation("TemplateItems", fields: [templateId], references: [id], onDelete: Cascade)
 
   @@map("onboarding_template_items")
 }
@@ -535,6 +547,7 @@ model Agency {
   mediaActivity MediaActivity[]
   mediaFiles    MediaFile[]
   mediaFolders  MediaFolder[]
+  conversations Conversation[]  @relation("ConversationAgency")
 
   @@index([slug])
   @@index([slug], map: "idx_agencies_slug")
@@ -577,6 +590,10 @@ model Conversation {
   createdAt    DateTime           @default(now()) @map("created_at")
   updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at")
 
+  messages Message[]  @relation("ConversationMessages")
+  agency   Agency?    @relation("ConversationAgency", fields: [agencyId], references: [id])
+  lead     Lead?      @relation("ConversationLead")
+
   @@index([agencyId, createdAt])
   @@map("conversations")
 }
@@ -588,6 +605,8 @@ model Message {
   content         String
   timestamp       DateTime    @default(now())
   aiConfigVersion Int?        @map("ai_config_version")
+
+  conversation Conversation @relation("ConversationMessages", fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@index([conversationId, timestamp])
   @@map("messages")
@@ -614,6 +633,9 @@ model Lead {
   createdAt          DateTime  @default(now()) @map("created_at")
   qualifiedAt        DateTime? @map("qualified_at")
 
+  conversation Conversation @relation("ConversationLead", fields: [conversationId], references: [id])
+  bookings     Booking[]    @relation("LeadBookings")
+
   @@index([agencyId, createdAt])
   @@map("leads")
 }
@@ -629,6 +651,9 @@ model Booking {
   meetingType     String        @default("discovery_call") @map("meeting_type")
   notes           String?
   createdAt       DateTime      @default(now()) @map("created_at")
+
+  lead Lead @relation("LeadBookings", fields: [leadId], references: [id])
+  user User @relation("UserBookings", fields: [userId], references: [id])
 
   @@index([agencyId, scheduledTime])
   @@map("bookings")
@@ -1012,6 +1037,9 @@ model ProjectExpense {
   updatedAt        DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   invoiceNumber    String?         @map("invoice_number")
   notes            String?
+
+  project Project @relation("ProjectExpenses", fields: [projectId], references: [id], onDelete: Cascade)
+  client  Client  @relation("ClientExpenses", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("project_expenses")
 }
