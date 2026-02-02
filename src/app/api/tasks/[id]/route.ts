@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     if (data.dueDate !== undefined) updateData.dueDate = data.dueDate ? new Date(data.dueDate) : null;
     if (data.priority !== undefined) updateData.priority = data.priority;
     if (data.status !== undefined) updateData.status = data.status;
-    if (data.notes !== undefined) updateData.notes = data.notes;
+    if (data.notes !== undefined) updateData.internalNotes = data.notes;
     if (data.nextSteps !== undefined) updateData.nextSteps = data.nextSteps;
     if (data.externalLink !== undefined) updateData.externalLink = data.externalLink;
     if (data.externalLinkLabel !== undefined) updateData.externalLinkLabel = data.externalLinkLabel;
