@@ -23,21 +23,76 @@ export default function FloatingTimerBubble() {
   const [isStopping, setIsStopping] = useState(false);
   const [showStopConfirm, setShowStopConfirm] = useState(false);
   const originalTitle = useRef<string>("");
+  const originalFavicon = useRef<string>("");
   const checkinInterval = useRef<ReturnType<typeof setInterval> | null>(null);
   const notificationPermission = useRef<NotificationPermission>("default");
+  const faviconAnimFrame = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Store original page title on mount
+  // Generate a timer favicon using canvas (red recording dot)
+  const generateTimerFavicon = useCallback((pulse: boolean) => {
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 32;
+      canvas.height = 32;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return null;
+
+      // Dark background circle
+      ctx.beginPath();
+      ctx.arc(16, 16, 16, 0, Math.PI * 2);
+      ctx.fillStyle = "#1a1a2e";
+      ctx.fill();
+
+      // Red recording dot (pulsing size)
+      const dotRadius = pulse ? 7 : 9;
+      ctx.beginPath();
+      ctx.arc(16, 16, dotRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#ef4444";
+      ctx.fill();
+
+      // Subtle glow
+      ctx.beginPath();
+      ctx.arc(16, 16, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(239, 68, 68, 0.3)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      return canvas.toDataURL("image/png");
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // Set favicon
+  const setFavicon = useCallback((href: string) => {
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "icon";
+      document.head.appendChild(link);
+    }
+    link.href = href;
+  }, []);
+
+  // Store original page title and favicon on mount
   useEffect(() => {
     originalTitle.current = document.title;
+    // Store original favicon
+    const existingFavicon = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+    originalFavicon.current = existingFavicon?.href || "/favicon.ico";
     // Check existing notification permission
     if ("Notification" in window) {
       notificationPermission.current = Notification.permission;
     }
     return () => {
-      // Restore title on unmount
+      // Restore title and favicon on unmount
       document.title = originalTitle.current;
+      setFavicon(originalFavicon.current);
+      if (faviconAnimFrame.current) {
+        clearInterval(faviconAnimFrame.current);
+      }
     };
-  }, []);
+  }, [setFavicon]);
 
   // Fetch current timer
   const fetchTimer = useCallback(async () => {
@@ -152,6 +207,36 @@ export default function FloatingTimerBubble() {
     };
   }, [timer, sendBrowserNotification, sendPlatformCheckin]);
 
+  // Animated favicon when timer is running
+  useEffect(() => {
+    if (!timer) {
+      // Restore original favicon
+      setFavicon(originalFavicon.current);
+      if (faviconAnimFrame.current) {
+        clearInterval(faviconAnimFrame.current);
+        faviconAnimFrame.current = null;
+      }
+      return;
+    }
+
+    // Alternate between pulse states for favicon animation
+    let pulseState = false;
+    const updateFavicon = () => {
+      const icon = generateTimerFavicon(pulseState);
+      if (icon) setFavicon(icon);
+      pulseState = !pulseState;
+    };
+    updateFavicon();
+    faviconAnimFrame.current = setInterval(updateFavicon, 1500);
+
+    return () => {
+      if (faviconAnimFrame.current) {
+        clearInterval(faviconAnimFrame.current);
+        faviconAnimFrame.current = null;
+      }
+    };
+  }, [timer, generateTimerFavicon, setFavicon]);
+
   // Update elapsed every second + update browser tab title
   useEffect(() => {
     if (!timer) {
@@ -183,8 +268,9 @@ export default function FloatingTimerBubble() {
       setTimer(null);
       setExpanded(false);
       setShowStopConfirm(false);
-      // Restore original title
+      // Restore original title and favicon
       document.title = originalTitle.current;
+      setFavicon(originalFavicon.current);
     };
     window.addEventListener("timer-started", handleTimerStart as EventListener);
     window.addEventListener("timer-stopped", handleTimerStop as EventListener);
@@ -210,8 +296,9 @@ export default function FloatingTimerBubble() {
       setTimer(null);
       setExpanded(false);
       setShowStopConfirm(false);
-      // Restore original title
+      // Restore original title and favicon
       document.title = originalTitle.current;
+      setFavicon(originalFavicon.current);
       // Notify other components
       window.dispatchEvent(new CustomEvent("timer-stopped"));
     } catch (error) {

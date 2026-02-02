@@ -10,10 +10,20 @@ const FloatingTimerBubble = dynamic(() => import("./FloatingTimerBubble"), {
   ssr: false,
 });
 
+const FloatingPinnedNotes = dynamic(() => import("./FloatingPinnedNotes"), {
+  ssr: false,
+});
+
 function AuthenticatedFloatingTimer() {
   const { status } = useSession();
   if (status !== "authenticated") return null;
   return <FloatingTimerBubble />;
+}
+
+function AuthenticatedFloatingNotes() {
+  const { status } = useSession();
+  if (status !== "authenticated") return null;
+  return <FloatingPinnedNotes />;
 }
 
 export function Providers({
@@ -29,6 +39,7 @@ export function Providers({
         <QueryProvider>
           {children}
           <AuthenticatedFloatingTimer />
+          <AuthenticatedFloatingNotes />
         </QueryProvider>
       </TenantProvider>
     </SessionProvider>
