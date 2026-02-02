@@ -14,6 +14,7 @@ export default function NewProjectPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [clients, setClients] = useState<any[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
 
   useEffect(() => {
     fetch("/api/clients")
@@ -31,6 +32,15 @@ export default function NewProjectPage() {
         console.error("Failed to load clients:", err);
         setClients([]);
       });
+
+    fetch("/api/service-types")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setServiceTypes(data.filter((st: any) => st.isActive));
+        }
+      })
+      .catch(err => console.error("Failed to load service types:", err));
   }, []);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -122,14 +132,10 @@ export default function NewProjectPage() {
               <div>
                 <label style={labelStyle}>Service Type *</label>
                 <select name="serviceType" required style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="SEO">SEO</option>
-                  <option value="AEO">AEO</option>
-                  <option value="WEB_DEVELOPMENT">Web Development</option>
-                  <option value="PAID_MEDIA">Paid Media</option>
-                  <option value="SOCIAL_MEDIA">Social Media</option>
-                  <option value="CONTENT">Content</option>
-                  <option value="BRANDING">Branding</option>
-                  <option value="CONSULTING">Consulting</option>
+                  <option value="">Select a service type</option>
+                  {serviceTypes.map(st => (
+                    <option key={st.id} value={st.slug}>{st.icon ? st.icon + " " : ""}{st.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

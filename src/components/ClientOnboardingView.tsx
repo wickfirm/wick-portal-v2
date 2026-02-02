@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
+import { fetchServiceTypes, buildServiceTypeMap, getServiceTypeName, getServiceTypeIcon } from "@/lib/service-types";
 
 interface OnboardingItem {
   id: string;
@@ -53,29 +54,7 @@ interface ClientOnboardingViewProps {
   hasItems: boolean;
 }
 
-const SERVICE_TYPE_LABELS: Record<string, string> = {
-  GENERAL: "General Setup",
-  SEO: "SEO",
-  AEO: "AEO (AI Engine Optimization)",
-  PAID_MEDIA: "Paid Media",
-  WEB_DEVELOPMENT: "Web Development",
-  SOCIAL_MEDIA: "Social Media",
-  CONTENT: "Content Marketing",
-  BRANDING: "Branding",
-  CONSULTING: "Consulting",
-};
-
-const SERVICE_TYPE_ICONS: Record<string, string> = {
-  GENERAL: "⚙️",
-  SEO: "🔍",
-  AEO: "🤖",
-  PAID_MEDIA: "📢",
-  WEB_DEVELOPMENT: "💻",
-  SOCIAL_MEDIA: "📱",
-  CONTENT: "✍️",
-  BRANDING: "🎨",
-  CONSULTING: "💼",
-};
+// Service type labels and icons are now loaded dynamically from the database
 
 export default function ClientOnboardingView({
   client,
@@ -89,6 +68,11 @@ export default function ClientOnboardingView({
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ GENERAL: true });
   const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [stMap, setStMap] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetchServiceTypes().then(types => setStMap(buildServiceTypeMap(types)));
+  }, []);
 
   const serviceTypes = Object.keys(groupedItems);
 
@@ -203,8 +187,8 @@ export default function ClientOnboardingView({
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                      <span style={{ fontSize: 24 }}>{SERVICE_TYPE_ICONS[serviceType] || "📋"}</span>
-                      <span style={{ fontWeight: 600, fontSize: 16 }}>{SERVICE_TYPE_LABELS[serviceType] || serviceType}</span>
+                      <span style={{ fontSize: 24 }}>{getServiceTypeIcon(serviceType, stMap)}</span>
+                      <span style={{ fontWeight: 600, fontSize: 16 }}>{getServiceTypeName(serviceType, stMap)}</span>
                       {isSelected && (
                         <span style={{ marginLeft: "auto", color: theme.colors.primary, fontWeight: 600 }}>✓</span>
                       )}
@@ -336,10 +320,10 @@ export default function ClientOnboardingView({
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <span style={{ fontSize: 20 }}>{SERVICE_TYPE_ICONS[serviceType] || "📋"}</span>
+                    <span style={{ fontSize: 20 }}>{getServiceTypeIcon(serviceType, stMap)}</span>
                     <div>
                       <div style={{ fontWeight: 600, fontSize: 15 }}>
-                        {SERVICE_TYPE_LABELS[serviceType] || serviceType}
+                        {getServiceTypeName(serviceType, stMap)}
                       </div>
                       <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
                         {sectionCompleted} of {sectionTotal} completed

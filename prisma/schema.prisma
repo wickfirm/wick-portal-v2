@@ -269,6 +269,20 @@ model TaskCategory {
   @@map("task_categories")
 }
 
+model ServiceTypeOption {
+  id        String   @id @default(cuid())
+  name      String   @unique  // Display name: "SEO", "AEO", "Web Development"
+  slug      String   @unique  // Enum-compatible key: "SEO", "AEO", "WEB_DEVELOPMENT"
+  icon      String   @default("")  // Emoji icon: "🔍", "🤖", "💻"
+  color     String   @default("#6B7280")  // Hex color for UI
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("service_type_options")
+}
+
 model ClientTask {
   id                String       @id @default(cuid())
   name              String

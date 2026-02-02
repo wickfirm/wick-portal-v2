@@ -16,12 +16,14 @@ export default function EditProjectPage() {
   const [error, setError] = useState("");
   const [project, setProject] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<any[]>([]);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/projects/" + projectId).then(res => res.json()),
       fetch("/api/clients").then(res => res.json()),
-    ]).then(([projectData, clientsData]) => {
+      fetch("/api/service-types").then(res => res.json()),
+    ]).then(([projectData, clientsData, serviceTypesData]) => {
       setProject(projectData);
       // Handle both response formats: { clients: [...] } or [...]
       if (clientsData && clientsData.clients && Array.isArray(clientsData.clients)) {
@@ -30,6 +32,9 @@ export default function EditProjectPage() {
         setClients(clientsData);
       } else {
         setClients([]);
+      }
+      if (Array.isArray(serviceTypesData)) {
+        setServiceTypes(serviceTypesData.filter((st: any) => st.isActive));
       }
       setLoading(false);
     }).catch(err => {
@@ -131,14 +136,9 @@ export default function EditProjectPage() {
               <div>
                 <label style={labelStyle}>Service Type *</label>
                 <select name="serviceType" required defaultValue={project.serviceType} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="SEO">SEO</option>
-                  <option value="AEO">AEO</option>
-                  <option value="WEB_DEVELOPMENT">Web Development</option>
-                  <option value="PAID_MEDIA">Paid Media</option>
-                  <option value="SOCIAL_MEDIA">Social Media</option>
-                  <option value="CONTENT">Content</option>
-                  <option value="BRANDING">Branding</option>
-                  <option value="CONSULTING">Consulting</option>
+                  {serviceTypes.map(st => (
+                    <option key={st.id} value={st.slug}>{st.icon ? st.icon + " " : ""}{st.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

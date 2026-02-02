@@ -49,6 +49,11 @@ const settingsIcons: Record<string, JSX.Element> = {
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
     </svg>
   ),
+  "Service Types": (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
+    </svg>
+  ),
 };
 
 // Loading skeleton
@@ -103,6 +108,7 @@ export default function SettingsPage() {
     { title: "Stage Templates", description: "Configure default project stages for each service type", href: "/settings/stage-templates", color: theme.colors.primary, roles: ["SUPER_ADMIN", "ADMIN"] },
     { title: "Onboarding Templates", description: "Set up default onboarding checklists for new clients", href: "/settings/onboarding", color: theme.colors.info, roles: ["SUPER_ADMIN", "ADMIN"] },
     { title: "Task Categories", description: "Manage categories for client tasks", href: "/settings/tasks", color: theme.colors.warning, roles: ["SUPER_ADMIN", "ADMIN"] },
+    { title: "Service Types", description: "Manage the services your agency offers (SEO, Paid Media, etc.)", href: "/settings/service-types", color: "#6366F1", roles: ["SUPER_ADMIN", "ADMIN"] },
   ];
 
   const visibleItems = settingsItems.filter(item => item.roles.includes(user.role));

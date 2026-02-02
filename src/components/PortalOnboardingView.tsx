@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { theme } from "@/lib/theme";
+import { fetchServiceTypes, buildServiceTypeMap, getServiceTypeName, getServiceTypeIcon } from "@/lib/service-types";
 
 interface OnboardingItem {
   id: string;
@@ -38,28 +39,11 @@ interface PortalOnboardingViewProps {
   progress: Progress;
 }
 
-const SERVICE_TYPE_LABELS: Record<string, string> = {
-  GENERAL: "Getting Started",
-  SEO: "SEO Setup",
-  AEO: "AI Engine Optimization",
-  PAID_MEDIA: "Paid Advertising",
-  WEB_DEVELOPMENT: "Website Development",
-  SOCIAL_MEDIA: "Social Media",
-  CONTENT: "Content Marketing",
-  BRANDING: "Branding",
-  CONSULTING: "Consulting",
-};
-
-const SERVICE_TYPE_ICONS: Record<string, string> = {
-  GENERAL: "🚀",
-  SEO: "🔍",
-  AEO: "🤖",
-  PAID_MEDIA: "📢",
-  WEB_DEVELOPMENT: "💻",
-  SOCIAL_MEDIA: "📱",
-  CONTENT: "✍️",
-  BRANDING: "🎨",
-  CONSULTING: "💼",
+// Service type labels and icons are now loaded dynamically from the database
+// GENERAL fallback kept for the "Getting Started" section
+const GENERAL_DEFAULTS: Record<string, string> = {
+  GENERAL_LABEL: "Getting Started",
+  GENERAL_ICON: "🚀",
 };
 
 export default function PortalOnboardingView({
@@ -70,6 +54,21 @@ export default function PortalOnboardingView({
   const router = useRouter();
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({ GENERAL: true });
   const [savingItem, setSavingItem] = useState<string | null>(null);
+  const [stMap, setStMap] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    fetchServiceTypes().then(types => setStMap(buildServiceTypeMap(types)));
+  }, []);
+
+  const getLabel = (slug: string) => {
+    if (slug === "GENERAL") return GENERAL_DEFAULTS.GENERAL_LABEL;
+    return getServiceTypeName(slug, stMap);
+  };
+
+  const getIcon = (slug: string) => {
+    if (slug === "GENERAL") return GENERAL_DEFAULTS.GENERAL_ICON;
+    return getServiceTypeIcon(slug, stMap);
+  };
 
   const serviceTypes = Object.keys(groupedItems);
 
@@ -219,11 +218,11 @@ export default function PortalOnboardingView({
                     justifyContent: "center",
                     fontSize: 24,
                   }}>
-                    {isComplete ? "✓" : SERVICE_TYPE_ICONS[serviceType] || "📋"}
+                    {isComplete ? "✓" : getIcon(serviceType)}
                   </div>
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 2 }}>
-                      {SERVICE_TYPE_LABELS[serviceType] || serviceType}
+                      {getLabel(serviceType)}
                     </div>
                     <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
                       {sectionCompleted} of {sectionTotal} completed

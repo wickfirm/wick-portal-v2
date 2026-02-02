@@ -12,26 +12,47 @@ type StageTemplate = {
   order: number;
 };
 
-const SERVICE_TYPES = [
-  "SEO", "AEO", "WEB_DEVELOPMENT", "PAID_MEDIA",
-  "SOCIAL_MEDIA", "CONTENT", "BRANDING", "CONSULTING"
-];
+type ServiceTypeOption = {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string;
+  isActive: boolean;
+};
 
 export default function StageTemplatesPage() {
   const [templates, setTemplates] = useState<StageTemplate[]>([]);
+  const [serviceTypes, setServiceTypes] = useState<ServiceTypeOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newTemplate, setNewTemplate] = useState({ serviceType: "SEO", name: "" });
+  const [newTemplate, setNewTemplate] = useState({ serviceType: "", name: "" });
   const [adding, setAdding] = useState(false);
 
   useEffect(() => {
-    fetchTemplates();
+    fetchData();
   }, []);
+
+  async function fetchData() {
+    const [templatesRes, typesRes] = await Promise.all([
+      fetch("/api/stage-templates"),
+      fetch("/api/service-types"),
+    ]);
+    const [templatesData, typesData] = await Promise.all([
+      templatesRes.json(),
+      typesRes.json(),
+    ]);
+    setTemplates(templatesData);
+    const activeTypes = Array.isArray(typesData) ? typesData.filter((t: any) => t.isActive) : [];
+    setServiceTypes(activeTypes);
+    if (activeTypes.length > 0 && !newTemplate.serviceType) {
+      setNewTemplate(prev => ({ ...prev, serviceType: activeTypes[0].slug }));
+    }
+    setLoading(false);
+  }
 
   async function fetchTemplates() {
     const res = await fetch("/api/stage-templates");
     const data = await res.json();
     setTemplates(data);
-    setLoading(false);
   }
 
   async function addTemplate(e: React.FormEvent) {
@@ -58,10 +79,28 @@ export default function StageTemplatesPage() {
     fetchTemplates();
   }
 
-  const groupedTemplates = SERVICE_TYPES.reduce((acc, type) => {
+  const SERVICE_TYPE_SLUGS = serviceTypes.map(t => t.slug);
+  const serviceTypeMap = serviceTypes.reduce((acc, t) => {
+    acc[t.slug] = t;
+    return acc;
+  }, {} as Record<string, ServiceTypeOption>);
+
+  const groupedTemplates = SERVICE_TYPE_SLUGS.reduce((acc, type) => {
     acc[type] = templates.filter(t => t.serviceType === type).sort((a, b) => a.order - b.order);
     return acc;
   }, {} as Record<string, StageTemplate[]>);
+
+  // Also include any templates with service types not in the active list
+  const unmappedTemplates = templates.filter(t => !SERVICE_TYPE_SLUGS.includes(t.serviceType));
+  if (unmappedTemplates.length > 0) {
+    const unmappedTypes = [...new Set(unmappedTemplates.map(t => t.serviceType))];
+    unmappedTypes.forEach(type => {
+      if (!groupedTemplates[type]) {
+        groupedTemplates[type] = unmappedTemplates.filter(t => t.serviceType === type).sort((a, b) => a.order - b.order);
+        SERVICE_TYPE_SLUGS.push(type);
+      }
+    });
+  }
 
   const inputStyle = {
     padding: "12px 16px",
@@ -100,8 +139,8 @@ export default function StageTemplatesPage() {
                 onChange={(e) => setNewTemplate({ ...newTemplate, serviceType: e.target.value })}
                 style={{ ...inputStyle, width: "100%", cursor: "pointer" }}
               >
-                {SERVICE_TYPES.map(type => (
-                  <option key={type} value={type}>{type.replace("_", " ")}</option>
+                {serviceTypes.map(type => (
+                  <option key={type.slug} value={type.slug}>{type.icon ? type.icon + " " : ""}{type.name}</option>
                 ))}
               </select>
             </div>
@@ -131,7 +170,7 @@ export default function StageTemplatesPage() {
 
         {/* Templates by Service Type */}
         <div style={{ display: "grid", gap: 20 }}>
-          {SERVICE_TYPES.map(type => (
+          {SERVICE_TYPE_SLUGS.map(type => (
             <div key={type} style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
               <div style={{
                 padding: "16px 20px",
@@ -142,7 +181,7 @@ export default function StageTemplatesPage() {
                 alignItems: "center"
               }}>
                 <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
-                  {type.replace("_", " ")}
+                  {serviceTypeMap[type] ? (serviceTypeMap[type].icon ? serviceTypeMap[type].icon + " " : "") + serviceTypeMap[type].name : type.replace(/_/g, " ")}
                 </h3>
                 <span style={{
                   padding: "4px 10px",

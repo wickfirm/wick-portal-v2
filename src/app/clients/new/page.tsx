@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
+import { fetchServiceTypes, buildServiceTypeMap, getServiceTypeName, getServiceTypeIcon } from "@/lib/service-types";
 
 type Agency = {
   id: string;
@@ -22,6 +23,7 @@ export default function NewClientPage() {
   const [selectedAgencyId, setSelectedAgencyId] = useState<string>("");
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
+  const [stMap, setStMap] = useState<Record<string, any>>({});
 
   const userRole = (session?.user as any)?.role;
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole);
@@ -38,7 +40,8 @@ export default function NewClientPage() {
     Promise.all([
       fetch("/api/partner-agencies").then(res => res.json()),
       fetch("/api/onboarding-templates").then(res => res.json()),
-    ]).then(([agenciesData, templatesData]) => {
+      fetchServiceTypes(),
+    ]).then(([agenciesData, templatesData, serviceTypesData]) => {
       if (Array.isArray(agenciesData)) {
         setAgencies(agenciesData);
         const defaultAgency = agenciesData.find((a: Agency) => a.isDefault);
@@ -52,6 +55,9 @@ export default function NewClientPage() {
       if (Array.isArray(templatesData)) {
         const activeTemplates = templatesData.filter((t: any) => t.isActive);
         setTemplates(activeTemplates);
+      }
+      if (Array.isArray(serviceTypesData)) {
+        setStMap(buildServiceTypeMap(serviceTypesData));
       }
     });
   }, []);
@@ -228,14 +234,7 @@ export default function NewClientPage() {
                   {Array.from(new Set(templates.map((t: any) => t.serviceType))).map((serviceType: any) => {
                     const template = templates.find((t: any) => t.serviceType === serviceType);
                     const isSelected = selectedServices.includes(serviceType);
-                    const SERVICE_ICONS: Record<string, string> = {
-                      SEO: "🔍", AEO: "🤖", PAID_MEDIA: "📢", WEB_DEVELOPMENT: "💻",
-                      SOCIAL_MEDIA: "📱", CONTENT: "✍️", BRANDING: "🎨", CONSULTING: "💼"
-                    };
-                    const SERVICE_LABELS: Record<string, string> = {
-                      SEO: "SEO", AEO: "AEO", PAID_MEDIA: "Paid Media", WEB_DEVELOPMENT: "Web Dev",
-                      SOCIAL_MEDIA: "Social Media", CONTENT: "Content", BRANDING: "Branding", CONSULTING: "Consulting"
-                    };
+                    // Service type labels and icons loaded dynamically from database
                     
                     if (serviceType === "GENERAL") return null;
                     
@@ -259,8 +258,8 @@ export default function NewClientPage() {
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontSize: 20 }}>{SERVICE_ICONS[serviceType] || "📋"}</span>
-                          <span style={{ fontWeight: 600, fontSize: 14 }}>{SERVICE_LABELS[serviceType] || serviceType}</span>
+                          <span style={{ fontSize: 20 }}>{getServiceTypeIcon(serviceType, stMap)}</span>
+                          <span style={{ fontWeight: 600, fontSize: 14 }}>{getServiceTypeName(serviceType, stMap)}</span>
                           {isSelected && <span style={{ marginLeft: "auto", color: theme.colors.primary }}>✓</span>}
                         </div>
                         <div style={{ fontSize: 11, color: theme.colors.textMuted }}>

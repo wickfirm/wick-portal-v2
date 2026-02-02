@@ -27,32 +27,23 @@ type OnboardingTemplate = {
   items: TemplateItem[];
 };
 
-const SERVICE_TYPE_LABELS: Record<string, string> = {
+// Default fallbacks for GENERAL and any unmatched types
+const DEFAULT_LABELS: Record<string, string> = {
   GENERAL: "General Setup",
-  SEO: "SEO",
-  AEO: "AEO (AI Engine Optimization)",
-  PAID_MEDIA: "Paid Media",
-  WEB_DEVELOPMENT: "Web Development",
-  SOCIAL_MEDIA: "Social Media",
-  CONTENT: "Content Marketing",
-  BRANDING: "Branding",
-  CONSULTING: "Consulting",
 };
 
-const SERVICE_TYPE_ICONS: Record<string, string> = {
+const DEFAULT_ICONS: Record<string, string> = {
   GENERAL: "⚙️",
-  SEO: "🔍",
-  AEO: "🤖",
-  PAID_MEDIA: "📢",
-  WEB_DEVELOPMENT: "💻",
-  SOCIAL_MEDIA: "📱",
-  CONTENT: "✍️",
-  BRANDING: "🎨",
-  CONSULTING: "💼",
 };
 
 const ITEM_TYPES = ["TEXT_INPUT", "URL_INPUT"];
 const PRIORITIES = ["HIGH", "MEDIUM", "LOW"];
+
+type ServiceTypeInfo = {
+  slug: string;
+  name: string;
+  icon: string;
+};
 
 export default function OnboardingSettingsPage() {
   const [templates, setTemplates] = useState<OnboardingTemplate[]>([]);
@@ -61,16 +52,46 @@ export default function OnboardingSettingsPage() {
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TemplateItem>>({});
   const [saving, setSaving] = useState(false);
+  const [serviceTypeMap, setServiceTypeMap] = useState<Record<string, ServiceTypeInfo>>({});
 
   useEffect(() => {
-    fetchTemplates();
+    fetchData();
   }, []);
+
+  async function fetchData() {
+    const [templatesRes, typesRes] = await Promise.all([
+      fetch("/api/onboarding-templates"),
+      fetch("/api/service-types"),
+    ]);
+    const [templatesData, typesData] = await Promise.all([
+      templatesRes.json(),
+      typesRes.json(),
+    ]);
+    setTemplates(templatesData);
+    if (Array.isArray(typesData)) {
+      const map: Record<string, ServiceTypeInfo> = {};
+      typesData.forEach((t: any) => {
+        map[t.slug] = { slug: t.slug, name: t.name, icon: t.icon };
+      });
+      setServiceTypeMap(map);
+    }
+    setLoading(false);
+  }
 
   async function fetchTemplates() {
     const res = await fetch("/api/onboarding-templates");
     const data = await res.json();
     setTemplates(data);
-    setLoading(false);
+  }
+
+  function getServiceLabel(slug: string): string {
+    if (serviceTypeMap[slug]) return serviceTypeMap[slug].name;
+    return DEFAULT_LABELS[slug] || slug.replace(/_/g, " ");
+  }
+
+  function getServiceIcon(slug: string): string {
+    if (serviceTypeMap[slug]) return serviceTypeMap[slug].icon || "📋";
+    return DEFAULT_ICONS[slug] || "📋";
   }
 
   async function toggleActive(template: OnboardingTemplate) {
@@ -172,7 +193,7 @@ export default function OnboardingSettingsPage() {
                   }}
                 >
                   <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <span style={{ fontSize: 28 }}>{SERVICE_TYPE_ICONS[template.serviceType] || "📋"}</span>
+                    <span style={{ fontSize: 28 }}>{getServiceIcon(template.serviceType)}</span>
                     <div>
                       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                         <span style={{ fontWeight: 600, fontSize: 16 }}>{template.name}</span>
