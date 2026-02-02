@@ -34,6 +34,7 @@ model User {
   clientAssignments    ClientTeamMember[]   @relation("UserTeamMemberships")
   projectAssignments   ProjectAssignment[]  @relation("UserProjectAssignments")
   employeeProfile      EmployeeProfile?     @relation("UserEmployeeProfile")
+  managedEmployees     EmployeeProfile[]    @relation("EmployeeManager")
   dailyTasks           DailyTask[]          @relation("UserDailyTasks")
   dailySummaries       DailySummary[]       @relation("UserDailySummaries")
   teamActivities       TeamActivity[]       @relation("UserTeamActivities")
@@ -683,7 +684,8 @@ model EmployeeProfile {
   updatedAt                DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
   weeklyCapacity           Decimal        @default(40) @map("weekly_capacity") @db.Decimal(5, 2)
 
-  user         User           @relation("UserEmployeeProfile", fields: [userId], references: [id])
+  user          User           @relation("UserEmployeeProfile", fields: [userId], references: [id])
+  manager       User?          @relation("EmployeeManager", fields: [managerId], references: [id])
   leaveRequests LeaveRequest[] @relation("EmployeeLeaveRequests")
 
   @@index([agencyId], map: "idx_employee_profiles_agency")
