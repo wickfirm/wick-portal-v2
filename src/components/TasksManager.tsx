@@ -92,6 +92,10 @@ export default function TasksManager({
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<string[]>([]);
 
+  // Timer state
+  const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
+  const [startingTimerFor, setStartingTimerFor] = useState<string | null>(null);
+
   // Permission checks
   const canCreate = true; // Everyone can create tasks
   const canDelete = currentUserRole === "ADMIN" || currentUserRole === "SUPER_ADMIN";
@@ -231,8 +235,9 @@ export default function TasksManager({
           setProjects(projectData ? [projectData] : []);
         }
 
-        // Fetch watched task IDs
+        // Fetch watched task IDs + active timer
         fetchWatchedTasks();
+        fetchActiveTimer();
 
         setLoading(false);
       } catch (err) {
@@ -245,6 +250,19 @@ export default function TasksManager({
     };
 
     fetchData();
+
+    // Listen for timer events from FloatingTimerBubble/TimerWidget
+    const onTimerStarted = (e: any) => {
+      const detail = e.detail;
+      setActiveTimerTaskId(detail?.task?.id || null);
+    };
+    const onTimerStopped = () => setActiveTimerTaskId(null);
+    window.addEventListener("timer-started", onTimerStarted);
+    window.addEventListener("timer-stopped", onTimerStopped);
+    return () => {
+      window.removeEventListener("timer-started", onTimerStarted);
+      window.removeEventListener("timer-stopped", onTimerStopped);
+    };
   }, [context, clientId, projectId]);
 
   async function fetchTasks() {
@@ -295,6 +313,49 @@ export default function TasksManager({
     } catch (error) {
       console.error("Error fetching task watchers:", error);
     }
+  }
+
+  // Timer: fetch current active timer on mount
+  async function fetchActiveTimer() {
+    try {
+      const res = await fetch("/api/timer");
+      if (res.ok) {
+        const data = await res.json();
+        setActiveTimerTaskId(data.timer?.task?.id || null);
+      }
+    } catch {}
+  }
+
+  // Timer: start timer for a task (one-click from task row)
+  async function startTimerForTask(task: Task) {
+    if (!task.client?.id || !task.projectId) return;
+    setStartingTimerFor(task.id);
+    try {
+      const res = await fetch("/api/timer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: task.client.id,
+          projectId: task.projectId,
+          taskId: task.id,
+          description: task.name,
+        }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setActiveTimerTaskId(task.id);
+        // Notify FloatingTimerBubble + TimerWidget
+        window.dispatchEvent(new CustomEvent("timer-started", { detail: data.timer || data }));
+      } else {
+        const err = await res.json();
+        if (err.error?.includes("already")) {
+          alert("You already have an active timer. Stop it first before starting a new one.");
+        }
+      }
+    } catch (error) {
+      console.error("Error starting timer:", error);
+    }
+    setStartingTimerFor(null);
   }
 
   async function updateTaskField(taskId: string, field: string, value: any) {
@@ -743,6 +804,62 @@ export default function TasksManager({
         )}
       </td>
 
+      {/* Timer */}
+      <td style={{ padding: "10px 12px", textAlign: "center" }}>
+        {task.client?.id && task.projectId && task.status !== "COMPLETED" ? (
+          activeTimerTaskId === task.id ? (
+            <span
+              title="Timer running on this task"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                background: "#fee2e2",
+                animation: "timerPulse 1.5s ease-in-out infinite",
+              }}
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444" stroke="none">
+                <rect x="4" y="4" width="16" height="16" rx="2" />
+              </svg>
+            </span>
+          ) : (
+            <button
+              onClick={(e) => { e.stopPropagation(); startTimerForTask(task); }}
+              disabled={startingTimerFor === task.id || activeTimerTaskId !== null}
+              title={activeTimerTaskId ? "Stop current timer first" : "Start timer for this task"}
+              style={{
+                background: "transparent",
+                border: "none",
+                cursor: activeTimerTaskId ? "not-allowed" : "pointer",
+                padding: 4,
+                borderRadius: 6,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: activeTimerTaskId ? theme.colors.textMuted : theme.colors.success,
+                opacity: startingTimerFor === task.id ? 0.5 : activeTimerTaskId ? 0.25 : 0.5,
+                transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!activeTimerTaskId) e.currentTarget.style.opacity = "1";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = startingTimerFor === task.id ? "0.5" : activeTimerTaskId ? "0.25" : "0.5";
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <polygon points="6,3 20,12 6,21" />
+              </svg>
+            </button>
+          )
+        ) : (
+          <span style={{ color: theme.colors.textMuted, opacity: 0.2, fontSize: 11 }}>—</span>
+        )}
+      </td>
+
       {/* Watch */}
       <td style={{ padding: "10px 12px", textAlign: "center" }}>
         <button
@@ -1017,6 +1134,11 @@ export default function TasksManager({
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
                     </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 40 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1122,6 +1244,11 @@ export default function TasksManager({
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       Link
                     </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 40 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1150,6 +1277,7 @@ export default function TasksManager({
 
   return (
     <>
+      <style>{`@keyframes timerPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }`}</style>
       {/* Global Create Task Button & Quick Add */}
       {canCreate && (
         <div style={{ marginBottom: 24 }}>
@@ -1518,7 +1646,57 @@ export default function TasksManager({
             padding: 32,
           }}>
             <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Edit Task</h2>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>Edit Task</h2>
+                {selectedTask && selectedTask.client?.id && selectedTask.projectId && selectedTask.status !== "COMPLETED" && (
+                  activeTimerTaskId === selectedTask.id ? (
+                    <span
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "5px 12px",
+                        borderRadius: 20,
+                        background: "#fee2e2",
+                        color: "#ef4444",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        animation: "timerPulse 1.5s ease-in-out infinite",
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="#ef4444" stroke="none">
+                        <rect x="4" y="4" width="16" height="16" rx="2" />
+                      </svg>
+                      Timer Running
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => startTimerForTask(selectedTask)}
+                      disabled={activeTimerTaskId !== null || startingTimerFor === selectedTask.id}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "5px 14px",
+                        borderRadius: 20,
+                        border: "none",
+                        background: activeTimerTaskId ? theme.colors.bgTertiary : theme.colors.success,
+                        color: activeTimerTaskId ? theme.colors.textMuted : "white",
+                        fontSize: 11,
+                        fontWeight: 600,
+                        cursor: activeTimerTaskId ? "not-allowed" : "pointer",
+                        transition: "all 0.15s",
+                        opacity: activeTimerTaskId ? 0.5 : 1,
+                      }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                        <polygon points="6,3 20,12 6,21" />
+                      </svg>
+                      {startingTimerFor === selectedTask.id ? "Starting..." : activeTimerTaskId ? "Timer Active" : "Start Timer"}
+                    </button>
+                  )
+                )}
+              </div>
               <button
                 onClick={closeTaskPanel}
                 style={{

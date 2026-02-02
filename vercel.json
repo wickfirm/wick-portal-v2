@@ -11,11 +11,19 @@
     "app/api/timer/route.ts": {
       "memory": 512,
       "maxDuration": 10
+    },
+    "app/api/tasks/reminders/route.ts": {
+      "memory": 512,
+      "maxDuration": 10
     }
   },
   "crons": [
     {
       "path": "/api/cron/warm",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/tasks/reminders",
       "schedule": "*/5 * * * *"
     }
   ],
