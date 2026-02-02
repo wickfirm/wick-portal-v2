@@ -187,6 +187,13 @@ export default function ClientsPage() {
   const router = useRouter();
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  const anim = (delay: number) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateY(${mounted ? 0 : 16}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -203,6 +210,8 @@ export default function ClientsPage() {
     },
     enabled: status === "authenticated",
   });
+
+  useEffect(() => { setMounted(true); }, []);
 
   const userRole = (session?.user as any)?.role;
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(userRole);
@@ -237,7 +246,7 @@ export default function ClientsPage() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px 48px" }}>
         {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, ...anim(0.05) }}>
           <div>
             <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: "0 0 4px 0" }}>
               Clients
@@ -267,7 +276,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28, ...anim(0.1) }}>
           {statCards.map((card) => (
             <div
               key={card.label}
@@ -301,7 +310,7 @@ export default function ClientsPage() {
                 }}>
                   {card.icon}
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
                   {card.value}
                 </div>
               </div>
@@ -311,7 +320,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Filters and Search */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", ...anim(0.15) }}>
           <div style={{ flex: 1, position: "relative" }}>
             <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: theme.colors.textMuted, display: "flex", alignItems: "center" }}>
               {icons.search}
@@ -361,6 +370,7 @@ export default function ClientsPage() {
         </div>
 
         {/* Clients List */}
+        <div style={anim(0.2)}>
         {filteredClients.length === 0 ? (
           <div style={{
             background: theme.colors.bgSecondary,
@@ -491,6 +501,7 @@ export default function ClientsPage() {
             })}
           </div>
         )}
+        </div>
       </main>
     </div>
   );

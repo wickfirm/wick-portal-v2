@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -164,6 +164,15 @@ function ProjectsError({ error, retry }: { error: Error; retry: () => void }) {
 export default function ProjectsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
+  const anim = (delay: number) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateY(${mounted ? 0 : 16}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -202,7 +211,7 @@ export default function ProjectsPage() {
 
       <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px 48px" }}>
         {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, ...anim(0.05) }}>
           <div>
             <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: "0 0 4px 0" }}>
               Projects
@@ -232,7 +241,7 @@ export default function ProjectsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28, ...anim(0.1) }}>
           {statCards.map((card) => (
             <div
               key={card.label}
@@ -266,7 +275,7 @@ export default function ProjectsPage() {
                 }}>
                   {card.icon}
                 </div>
-                <div style={{ fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
                   {card.value}
                 </div>
               </div>
@@ -276,7 +285,9 @@ export default function ProjectsPage() {
         </div>
 
         {/* Projects List */}
-        <ProjectsList projects={projects} isAdmin={isAdmin} />
+        <div style={anim(0.15)}>
+          <ProjectsList projects={projects} isAdmin={isAdmin} />
+        </div>
       </main>
     </div>
   );

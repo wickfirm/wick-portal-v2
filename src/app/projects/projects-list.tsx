@@ -22,55 +22,43 @@ interface Props {
   isAdmin: boolean;
 }
 
+const avatarColors = ["#76527c", "#5f4263", "#3d6b73", "#8a6030", "#34a853"];
+
 export default function ProjectsList({ projects, isAdmin }: Props) {
-  // Group projects by client
   const projectsByClient = projects.reduce((acc, project) => {
     const clientId = project.client.id;
     if (!acc[clientId]) {
-      acc[clientId] = {
-        client: project.client,
-        projects: [],
-      };
+      acc[clientId] = { client: project.client, projects: [] };
     }
     acc[clientId].projects.push(project);
     return acc;
-  }, {} as Record<string, { client: Project['client']; projects: Project[] }>);
+  }, {} as Record<string, { client: Project["client"]; projects: Project[] }>);
 
   const clientGroups = Object.values(projectsByClient);
-
-  // State for expanded clients (all collapsed by default)
   const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
 
   const toggleClient = (clientId: string) => {
-    setExpandedClients(prev => ({ ...prev, [clientId]: !prev[clientId] }));
+    setExpandedClients((prev) => ({ ...prev, [clientId]: !prev[clientId] }));
   };
 
   if (projects.length === 0) {
     return (
-      <div style={{ 
-        background: theme.colors.bgSecondary, 
-        borderRadius: theme.borderRadius.lg, 
-        border: "1px solid " + theme.colors.borderLight, 
-        overflow: "hidden",
-        padding: 64,
-        textAlign: "center"
+      <div style={{
+        background: theme.colors.bgSecondary, borderRadius: 16,
+        border: `1px solid ${theme.colors.borderLight}`, padding: 64, textAlign: "center",
       }}>
         <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
             <polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" />
           </svg>
         </div>
-        <div style={{ fontSize: 18, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects yet</div>
-        <div style={{ color: theme.colors.textSecondary, marginBottom: 24 }}>Get started by creating your first project</div>
+        <div style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects yet</div>
+        <div style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 24 }}>Get started by creating your first project</div>
         {isAdmin && (
           <Link href="/projects/new" style={{
-            background: theme.colors.primary,
-            color: "white",
-            padding: "10px 20px",
-            borderRadius: 6,
-            textDecoration: "none",
-            fontWeight: 500,
-            fontSize: 14
+            background: theme.gradients.primary, color: "white", padding: "10px 22px",
+            borderRadius: 10, textDecoration: "none", fontWeight: 500, fontSize: 14,
+            boxShadow: theme.shadows.button,
           }}>
             Create Project
           </Link>
@@ -80,136 +68,129 @@ export default function ProjectsList({ projects, isAdmin }: Props) {
   }
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {clientGroups.map(({ client, projects: clientProjects }) => {
         const isExpanded = expandedClients[client.id];
-        const completedCount = clientProjects.filter(p => p.status === "COMPLETED").length;
-        const inProgressCount = clientProjects.filter(p => p.status === "IN_PROGRESS").length;
+        const completedCount = clientProjects.filter((p) => p.status === "COMPLETED").length;
+        const inProgressCount = clientProjects.filter((p) => p.status === "IN_PROGRESS").length;
+        const avatarColor = avatarColors[client.name.charCodeAt(0) % avatarColors.length];
 
         return (
-          <div key={client.id} style={{ 
-            background: theme.colors.bgSecondary, 
-            borderRadius: theme.borderRadius.lg, 
-            border: "1px solid " + theme.colors.borderLight,
-            overflow: "hidden"
+          <div key={client.id} style={{
+            background: theme.colors.bgSecondary, borderRadius: 14,
+            border: `1px solid ${theme.colors.borderLight}`, overflow: "hidden",
           }}>
             {/* Client Header */}
             <div
               onClick={() => toggleClient(client.id)}
               style={{
-                padding: "16px 20px",
-                background: theme.colors.bgTertiary,
-                cursor: "pointer",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                borderBottom: isExpanded ? "1px solid " + theme.colors.borderLight : "none",
+                padding: "14px 20px", cursor: "pointer",
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                transition: "background 0.12s",
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
+              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{
-                  transition: "transform 200ms",
+                  transition: "transform 200ms ease",
                   transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  color: theme.colors.textMuted,
+                  display: "inline-flex", alignItems: "center", color: theme.colors.textMuted,
                 }}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none">
                     <path d="M8 5v14l11-7z" />
                   </svg>
                 </span>
+                <div style={{
+                  width: 36, height: 36, borderRadius: 10, background: avatarColor,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  color: "white", fontWeight: 600, fontSize: 14, flexShrink: 0,
+                }}>
+                  {(client.nickname || client.name).charAt(0).toUpperCase()}
+                </div>
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: 16, color: theme.colors.textPrimary }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, color: theme.colors.textPrimary }}>
                     {client.nickname || client.name}
                   </div>
-                  <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 }}>
-                    {clientProjects.length} project{clientProjects.length !== 1 ? 's' : ''}
-                    {inProgressCount > 0 && ` • ${inProgressCount} in progress`}
-                    {completedCount > 0 && ` • ${completedCount} completed`}
+                  <div style={{ fontSize: 12, color: theme.colors.textMuted, marginTop: 1 }}>
+                    {clientProjects.length} project{clientProjects.length !== 1 ? "s" : ""}
+                    {inProgressCount > 0 && <span style={{ color: theme.colors.info }}> &middot; {inProgressCount} active</span>}
+                    {completedCount > 0 && <span style={{ color: theme.colors.success }}> &middot; {completedCount} done</span>}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Projects Table */}
+            {/* Projects */}
             {isExpanded && (
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: theme.colors.bgPrimary }}>
-                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Project</th>
-                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Type</th>
-                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Status</th>
-                    <th style={{ padding: 16, textAlign: "left", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Progress</th>
-                    <th style={{ padding: 16, textAlign: "right", fontWeight: 600, fontSize: 12, color: theme.colors.textSecondary, textTransform: "uppercase", letterSpacing: "0.5px" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {clientProjects.map((project) => {
-                    const completed = project.stages.filter(s => s.isCompleted).length;
-                    const total = project.stages.length;
-                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+              <div style={{ borderTop: `1px solid ${theme.colors.bgTertiary}` }}>
+                {clientProjects.map((project, idx) => {
+                  const completed = project.stages.filter((s) => s.isCompleted).length;
+                  const total = project.stages.length;
+                  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
-                    return (
-                      <tr key={project.id} style={{ borderBottom: "1px solid " + theme.colors.bgTertiary }}>
-                        <td style={{ padding: 16 }}>
-                          <Link href={"/projects/" + project.id} style={{ textDecoration: "none" }}>
-                            <div style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{project.name}</div>
-                          </Link>
-                        </td>
-                        <td style={{ padding: 16, color: theme.colors.textSecondary, fontSize: 13 }}>
-                          {project.serviceType.replace("_", " ")}
-                        </td>
-                        <td style={{ padding: 16 }}>
-                          <span style={{
-                            padding: "4px 12px",
-                            borderRadius: 20,
-                            fontSize: 12,
-                            fontWeight: 500,
-                            background: STATUS_STYLES[project.status]?.bg || theme.colors.bgTertiary,
-                            color: STATUS_STYLES[project.status]?.color || theme.colors.textSecondary
-                          }}>
-                            {project.status.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td style={{ padding: 16 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 12, minWidth: 120 }}>
-                            <div style={{ flex: 1, height: 6, background: theme.colors.bgTertiary, borderRadius: 3 }}>
-                              <div style={{
-                                height: "100%",
-                                width: pct + "%",
-                                background: theme.gradients.progress,
-                                borderRadius: 3
-                              }} />
-                            </div>
-                            <span style={{ fontSize: 12, color: theme.colors.textSecondary, fontWeight: 500, minWidth: 32 }}>{pct}%</span>
+                  return (
+                    <div
+                      key={project.id}
+                      style={{
+                        padding: "14px 20px 14px 68px",
+                        borderBottom: idx < clientProjects.length - 1 ? `1px solid ${theme.colors.bgTertiary}` : "none",
+                        display: "flex", alignItems: "center", gap: 16,
+                        transition: "background 0.12s",
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                    >
+                      {/* Project Info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <Link href={"/projects/" + project.id} style={{ textDecoration: "none" }}>
+                          <div style={{ fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary, marginBottom: 3 }}>
+                            {project.name}
                           </div>
-                        </td>
-                        <td style={{ padding: 16, textAlign: "right" }}>
-                          <Link href={"/projects/" + project.id} style={{
-                            color: theme.colors.primary,
-                            textDecoration: "none",
-                            fontWeight: 500,
-                            fontSize: 13,
-                            marginRight: isAdmin ? 16 : 0
-                          }}>
-                            View
-                          </Link>
-                          {isAdmin && (
-                            <Link href={"/projects/" + project.id + "/edit"} style={{
-                              color: theme.colors.textSecondary,
-                              textDecoration: "none",
-                              fontWeight: 500,
-                              fontSize: 13
-                            }}>
-                              Edit
-                            </Link>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                        </Link>
+                        <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
+                          {project.serviceType.replace(/_/g, " ")}
+                        </div>
+                      </div>
+
+                      {/* Status Badge */}
+                      <span style={{
+                        fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, flexShrink: 0,
+                        background: STATUS_STYLES[project.status]?.bg || theme.colors.bgTertiary,
+                        color: STATUS_STYLES[project.status]?.color || theme.colors.textSecondary,
+                      }}>
+                        {project.status.replace(/_/g, " ")}
+                      </span>
+
+                      {/* Progress */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 110, flexShrink: 0 }}>
+                        <div style={{ flex: 1, height: 5, background: theme.colors.bgTertiary, borderRadius: 3 }}>
+                          <div style={{
+                            height: "100%", width: pct + "%", borderRadius: 3,
+                            background: pct === 100 ? theme.colors.success : theme.gradients.progress,
+                            transition: "width 0.3s ease",
+                          }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 500, minWidth: 28 }}>{pct}%</span>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                        <Link href={"/projects/" + project.id} style={{
+                          color: theme.colors.primary, textDecoration: "none", fontWeight: 500, fontSize: 12,
+                          padding: "4px 10px", borderRadius: 6, transition: "background 0.12s",
+                        }}>View</Link>
+                        {isAdmin && (
+                          <Link href={"/projects/" + project.id + "/edit"} style={{
+                            color: theme.colors.textMuted, textDecoration: "none", fontWeight: 500, fontSize: 12,
+                            padding: "4px 10px", borderRadius: 6, transition: "background 0.12s",
+                          }}>Edit</Link>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
         );

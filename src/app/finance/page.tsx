@@ -46,6 +46,13 @@ type ProjectProfitability = {
   };
 };
 
+const financeIcons = {
+  revenue: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>),
+  costs: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18" /><polyline points="17 6 23 6 23 12" /></svg>),
+  profit: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>),
+  percent: (<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="5" x2="5" y2="19" /><circle cx="6.5" cy="6.5" r="2.5" /><circle cx="17.5" cy="17.5" r="2.5" /></svg>),
+};
+
 export default function FinancePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -54,11 +61,20 @@ export default function FinancePage() {
   const [clients, setClients] = useState<any[]>([]);
   const [profitability, setProfitability] = useState<Record<string, ProjectProfitability>>({});
   const [collapsedClients, setCollapsedClients] = useState<Set<string>>(new Set());
+  const [mounted, setMounted] = useState(false);
+
+  const anim = (delay: number) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateY(${mounted ? 0 : 16}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
 
   // Filter state
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterPricingModel, setFilterPricingModel] = useState<string>("ALL");
   const [filterProfitability, setFilterProfitability] = useState<string>("ALL");
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -129,59 +145,37 @@ export default function FinancePage() {
     return (
       <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
         <Header />
-        <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ marginBottom: 32 }}>
-            <div style={{ width: 300, height: 32, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 8 }} />
-            <div style={{ width: 400, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+        <main style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 24px" }}>
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ width: 220, height: 32, background: theme.colors.bgSecondary, borderRadius: 8, marginBottom: 8 }} />
+            <div style={{ width: 340, height: 18, background: theme.colors.bgSecondary, borderRadius: 6 }} />
           </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 20,
-            marginBottom: 24,
-          }}>
-            <div style={{ display: "flex", gap: 16 }}>
-              {[1, 2, 3].map((i) => (
-                <div key={i} style={{ width: 150, height: 36, background: theme.colors.bgTertiary, borderRadius: 6 }} />
-              ))}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} style={{ background: theme.colors.bgSecondary, padding: 20, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+                  <div style={{ width: 42, height: 42, borderRadius: 11, background: theme.colors.bgTertiary }} />
+                  <div style={{ width: 80, height: 28, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+                </div>
+                <div style={{ width: 100, height: 14, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ background: theme.colors.bgSecondary, borderRadius: 14, padding: 20, border: `1px solid ${theme.colors.borderLight}`, marginBottom: 24 }}>
+            <div style={{ display: "flex", gap: 14 }}>
+              {[1, 2, 3].map(i => <div key={i} style={{ width: 160, height: 44, background: theme.colors.bgTertiary, borderRadius: 10 }} />)}
             </div>
           </div>
-
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
-            gap: 24, 
-            marginBottom: 32 
-          }}>
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} style={{
-                background: theme.colors.bgSecondary,
-                border: `1px solid ${theme.colors.borderLight}`,
-                borderRadius: theme.borderRadius.lg,
-                padding: 24,
-                height: 120,
-              }}>
-                <div style={{ width: 100, height: 16, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 12 }} />
-                <div style={{ width: 140, height: 32, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+          {[1, 2].map(i => (
+            <div key={i} style={{ background: theme.colors.bgSecondary, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}`, marginBottom: 14, overflow: "hidden" }}>
+              <div style={{ padding: "18px 22px", display: "flex", justifyContent: "space-between" }}>
+                <div style={{ width: 180, height: 22, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+                <div style={{ display: "flex", gap: 24 }}>
+                  {[1, 2, 3].map(j => <div key={j} style={{ width: 70, height: 20, background: theme.colors.bgTertiary, borderRadius: 4 }} />)}
+                </div>
               </div>
-            ))}
-          </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            overflow: "hidden",
-          }}>
-            {[1, 2, 3].map((i) => (
-              <div key={i} style={{ padding: 24, borderBottom: i < 3 ? `1px solid ${theme.colors.borderLight}` : "none" }}>
-                <div style={{ width: 200, height: 20, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 16 }} />
-                <div style={{ width: "100%", height: 100, background: theme.colors.bgTertiary, borderRadius: 4 }} />
-              </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </main>
       </div>
     );
@@ -260,204 +254,93 @@ export default function FinancePage() {
     <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
       <Header />
 
-      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-        <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
+      <main style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 24px 48px" }}>
+        {/* Page Header */}
+        <div style={{ marginBottom: 28, ...anim(0.05) }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: "0 0 4px 0" }}>
             Finance Dashboard
           </h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
+          <p style={{ color: theme.colors.textMuted, fontSize: 14, margin: 0 }}>
             Monitor profitability, costs, and financial performance
           </p>
         </div>
 
-        <div style={{
-          background: theme.colors.bgSecondary,
-          border: `1px solid ${theme.colors.borderLight}`,
-          borderRadius: theme.borderRadius.lg,
-          padding: 20,
-          marginBottom: 24,
-        }}>
-          <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "center" }}>
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
-                Client
-              </label>
-              <select
-                value={filterClient}
-                onChange={(e) => setFilterClient(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  border: `1px solid ${theme.colors.borderLight}`,
-                  borderRadius: 6,
-                  background: theme.colors.bgPrimary,
-                  color: theme.colors.textPrimary,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  minWidth: 150,
-                }}
-              >
-                <option value="ALL">All Clients</option>
-                {clients.map((client) => (
-                  <option key={client.id} value={client.id}>
-                    {client.nickname || client.name}
-                  </option>
-                ))}
-              </select>
+        {/* Stat Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28, ...anim(0.1) }}>
+          {[
+            { label: "Total Revenue", value: `$${totals.revenue.toLocaleString()}`, icon: financeIcons.revenue, color: theme.colors.success, bg: theme.colors.successBg },
+            { label: "Total Costs", value: `$${totals.cost.toLocaleString()}`, icon: financeIcons.costs, color: theme.colors.error, bg: theme.colors.errorBg },
+            { label: "Total Profit", value: `$${totalProfit.toLocaleString()}`, icon: financeIcons.profit, color: totalProfit >= 0 ? theme.colors.success : theme.colors.error, bg: totalProfit >= 0 ? theme.colors.successBg : theme.colors.errorBg },
+            { label: "Profit Margin", value: `${overallMargin.toFixed(1)}%`, icon: financeIcons.percent, color: overallMargin >= 20 ? theme.colors.success : theme.colors.warning, bg: overallMargin >= 20 ? theme.colors.successBg : theme.colors.warningBg },
+          ].map(card => (
+            <div key={card.label} style={{
+              background: theme.colors.bgSecondary, padding: "20px 22px", borderRadius: 14,
+              border: `1px solid ${theme.colors.borderLight}`, transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
+                <div style={{ width: 42, height: 42, borderRadius: 11, background: card.bg, display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
+                  {card.icon}
+                </div>
+                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: card.color, lineHeight: 1 }}>
+                  {card.value}
+                </div>
+              </div>
+              <div style={{ fontSize: 13, color: theme.colors.textSecondary, fontWeight: 500 }}>{card.label}</div>
             </div>
-
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
-                Pricing Model
-              </label>
-              <select
-                value={filterPricingModel}
-                onChange={(e) => setFilterPricingModel(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  border: `1px solid ${theme.colors.borderLight}`,
-                  borderRadius: 6,
-                  background: theme.colors.bgPrimary,
-                  color: theme.colors.textPrimary,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  minWidth: 150,
-                }}
-              >
-                <option value="ALL">All Models</option>
-                <option value="FIXED_FEE">Fixed Fee</option>
-                <option value="TIME_AND_MATERIALS">Time & Materials</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 6, display: "block" }}>
-                Status
-              </label>
-              <select
-                value={filterProfitability}
-                onChange={(e) => setFilterProfitability(e.target.value)}
-                style={{
-                  padding: "8px 12px",
-                  border: `1px solid ${theme.colors.borderLight}`,
-                  borderRadius: 6,
-                  background: theme.colors.bgPrimary,
-                  color: theme.colors.textPrimary,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  minWidth: 150,
-                }}
-              >
-                <option value="ALL">All Projects</option>
-                <option value="PROFITABLE">Profitable</option>
-                <option value="LOSS">Loss</option>
-              </select>
-            </div>
-
-            {activeFilterCount > 0 && (
-              <button
-                onClick={clearFilters}
-                style={{
-                  padding: "8px 16px",
-                  marginTop: 20,
-                  background: "transparent",
-                  border: `1px solid ${theme.colors.borderLight}`,
-                  borderRadius: 6,
-                  color: theme.colors.textSecondary,
-                  fontSize: 14,
-                  cursor: "pointer",
-                  fontWeight: 500,
-                }}
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
+          ))}
         </div>
 
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", 
-          gap: 24, 
-          marginBottom: 32 
-        }}>
+        {/* Filters */}
+        <div style={{ ...anim(0.15), marginBottom: 24 }}>
           <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 24,
+            background: theme.colors.bgSecondary, border: `1px solid ${theme.colors.borderLight}`,
+            borderRadius: 14, padding: "16px 20px",
           }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-              Total Revenue
-            </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.success }}>
-              ${totals.revenue.toLocaleString()}
-            </div>
-          </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 24,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-              Total Costs
-            </div>
-            <div style={{ fontSize: 32, fontWeight: 700, color: theme.colors.error }}>
-              ${totals.cost.toLocaleString()}
-            </div>
-          </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 24,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-              Total Profit
-            </div>
-            <div style={{ 
-              fontSize: 32, 
-              fontWeight: 700, 
-              color: totalProfit >= 0 ? theme.colors.success : theme.colors.error 
-            }}>
-              ${totalProfit.toLocaleString()}
-            </div>
-          </div>
-
-          <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 24,
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-              Profit Margin
-            </div>
-            <div style={{ 
-              fontSize: 32, 
-              fontWeight: 700, 
-              color: overallMargin >= 20 
-                ? theme.colors.success 
-                : theme.colors.warning 
-            }}>
-              {overallMargin.toFixed(1)}%
+            <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
+              {[
+                { label: "Client", value: filterClient, onChange: (v: string) => setFilterClient(v), options: [{ v: "ALL", l: "All Clients" }, ...clients.map((c: any) => ({ v: c.id, l: c.nickname || c.name }))] },
+                { label: "Pricing Model", value: filterPricingModel, onChange: (v: string) => setFilterPricingModel(v), options: [{ v: "ALL", l: "All Models" }, { v: "FIXED_FEE", l: "Fixed Fee" }, { v: "TIME_AND_MATERIALS", l: "Time & Materials" }] },
+                { label: "Status", value: filterProfitability, onChange: (v: string) => setFilterProfitability(v), options: [{ v: "ALL", l: "All Projects" }, { v: "PROFITABLE", l: "Profitable" }, { v: "LOSS", l: "Loss" }] },
+              ].map(f => (
+                <div key={f.label}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: theme.colors.textMuted, marginBottom: 6, display: "block", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{f.label}</label>
+                  <select value={f.value} onChange={e => f.onChange(e.target.value)} style={{
+                    padding: "9px 14px", border: `1px solid ${theme.colors.borderLight}`, borderRadius: 10,
+                    background: theme.colors.bgPrimary, color: theme.colors.textPrimary, fontSize: 13, cursor: "pointer", minWidth: 155, outline: "none",
+                    transition: "border-color 0.15s",
+                  }}
+                    onFocus={(e: any) => e.currentTarget.style.borderColor = theme.colors.primary}
+                    onBlur={(e: any) => e.currentTarget.style.borderColor = theme.colors.borderLight}
+                  >
+                    {f.options.map(o => <option key={o.v} value={o.v}>{o.l}</option>)}
+                  </select>
+                </div>
+              ))}
+              {activeFilterCount > 0 && (
+                <button onClick={clearFilters} style={{
+                  padding: "9px 18px", background: "transparent", border: `1px solid ${theme.colors.borderLight}`,
+                  borderRadius: 10, color: theme.colors.textSecondary, fontSize: 13, cursor: "pointer", fontWeight: 500,
+                  transition: "all 0.15s ease",
+                }}>Clear Filters</button>
+              )}
             </div>
           </div>
         </div>
 
+        <div style={anim(0.2)}>
         {Object.keys(projectsByClient).length === 0 ? (
           <div style={{
-            background: theme.colors.bgSecondary,
-            border: `1px solid ${theme.colors.borderLight}`,
-            borderRadius: theme.borderRadius.lg,
-            padding: 48,
-            textAlign: "center",
+            background: theme.colors.bgSecondary, border: `1px solid ${theme.colors.borderLight}`,
+            borderRadius: 16, padding: 64, textAlign: "center",
           }}>
-            <p style={{ fontSize: 16, color: theme.colors.textSecondary, margin: 0 }}>
-              No projects found matching the current filters.
-            </p>
+            <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>No projects found</div>
+            <div style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Try adjusting your filters</div>
           </div>
         ) : (
           Object.entries(projectsByClient).map(([clientId, clientProjects]) => {
@@ -491,86 +374,56 @@ export default function FinancePage() {
             );
 
             return (
-              <div
-                key={clientId}
-                style={{
-                  background: theme.colors.bgSecondary,
-                  border: `1px solid ${theme.colors.borderLight}`,
-                  borderRadius: theme.borderRadius.lg,
-                  marginBottom: 24,
-                  overflow: "hidden",
-                }}
-              >
-                <div style={{
-                  padding: "20px 24px",
-                  borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.borderLight}`,
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                    <span 
-                      onClick={() => toggleClientCollapse(clientId)}
-                      style={{ 
-                        fontSize: 20, 
-                        color: theme.colors.textSecondary,
-                        cursor: "pointer",
-                        userSelect: "none",
-                      }}
-                    >
-                      {isCollapsed ? "▶" : "▼"}
+              <div key={clientId} style={{
+                background: theme.colors.bgSecondary, border: `1px solid ${theme.colors.borderLight}`,
+                borderRadius: 14, marginBottom: 14, overflow: "hidden",
+              }}>
+                <div
+                  onClick={() => toggleClientCollapse(clientId)}
+                  style={{
+                    padding: "16px 22px",
+                    borderBottom: isCollapsed ? "none" : `1px solid ${theme.colors.bgTertiary}`,
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    cursor: "pointer", transition: "background 0.12s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = theme.colors.bgPrimary}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <span style={{
+                      transition: "transform 200ms ease",
+                      transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+                      display: "inline-flex", alignItems: "center", color: theme.colors.textMuted,
+                    }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M8 5v14l11-7z" /></svg>
                     </span>
                     <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <h2 style={{ fontSize: 20, fontWeight: 600, color: theme.colors.textPrimary, margin: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 2 }}>
+                        <span style={{ fontSize: 16, fontWeight: 600, color: theme.colors.textPrimary }}>
                           {client.nickname || client.name}
-                        </h2>
-                        <Link
-                          href={`/finance/clients/${clientId}`}
-                          style={{
-                            padding: "4px 10px",
-                            fontSize: 11,
-                            background: theme.colors.primary,
-                            color: "white",
-                            border: "none",
-                            borderRadius: 4,
-                            cursor: "pointer",
-                            textDecoration: "none",
-                            display: "inline-block",
-                            fontWeight: 500,
-                          }}
-                        >
-                          Client Details
-                        </Link>
+                        </span>
+                        <Link href={`/finance/clients/${clientId}`} onClick={e => e.stopPropagation()} style={{
+                          padding: "3px 10px", fontSize: 11, background: "rgba(118,82,124,0.08)", color: theme.colors.primary,
+                          borderRadius: 8, textDecoration: "none", fontWeight: 500,
+                        }}>Details</Link>
                       </div>
-                      <div style={{ fontSize: 13, color: theme.colors.textMuted, marginTop: 4 }}>
+                      <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
                         {clientProjects.length} project{clientProjects.length > 1 ? "s" : ""}
                       </div>
                     </div>
                   </div>
-
-                  <div style={{ display: "flex", gap: 32, alignItems: "center" }}>
-                    <div>
+                  <div style={{ display: "flex", gap: 24, alignItems: "center" }}>
+                    <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 2 }}>Revenue</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.success }}>
-                        ${clientTotals.revenue.toLocaleString()}
-                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: theme.colors.success }}>${clientTotals.revenue.toLocaleString()}</div>
                     </div>
-                    <div>
+                    <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 2 }}>Cost</div>
-                      <div style={{ fontSize: 16, fontWeight: 600, color: theme.colors.error }}>
-                        ${clientTotals.cost.toLocaleString()}
-                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: theme.colors.error }}>${clientTotals.cost.toLocaleString()}</div>
                     </div>
-                    <div>
+                    <div style={{ textAlign: "right" }}>
                       <div style={{ fontSize: 11, color: theme.colors.textMuted, marginBottom: 2 }}>Profit</div>
-                      <div style={{ 
-                        fontSize: 16, 
-                        fontWeight: 600, 
-                        color: clientTotals.profit >= 0 ? theme.colors.success : theme.colors.error 
-                      }}>
-                        ${clientTotals.profit.toLocaleString()}
-                      </div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: clientTotals.profit >= 0 ? theme.colors.success : theme.colors.error }}>${clientTotals.profit.toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
@@ -579,98 +432,45 @@ export default function FinancePage() {
                   <div style={{ overflowX: "auto" }}>
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                       <thead>
-                        <tr style={{ background: theme.colors.bgTertiary, borderBottom: `1px solid ${theme.colors.borderLight}` }}>
-                          <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Project
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Pricing Model
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Hours
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Revenue
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Costs
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Profit
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "right", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Margin
-                          </th>
-                          <th style={{ padding: "12px 16px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary }}>
-                            Actions
-                          </th>
+                        <tr>
+                          {["Project", "Model", "Hours", "Revenue", "Costs", "Profit", "Margin", ""].map((h, i) => (
+                            <th key={h || i} style={{
+                              padding: "10px 18px", textAlign: i >= 2 && i <= 6 ? "right" as const : "left" as const,
+                              fontSize: 11, fontWeight: 600, color: theme.colors.textMuted,
+                              textTransform: "uppercase" as const, letterSpacing: "0.5px",
+                              borderBottom: `1px solid ${theme.colors.bgTertiary}`,
+                            }}>{h}</th>
+                          ))}
                         </tr>
                       </thead>
                       <tbody>
-                        {clientProjects.map((project) => {
+                        {clientProjects.map((project: any, pIdx: number) => {
                           const data = profitability[project.id];
                           if (!data) return null;
-
                           return (
-                            <tr key={project.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
-                              <td style={{ padding: "12px 16px", fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>
-                                {project.name}
-                              </td>
-                              <td style={{ padding: "12px 16px", fontSize: 13 }}>
+                            <tr key={project.id}
+                              style={{ borderBottom: pIdx < clientProjects.length - 1 ? `1px solid ${theme.colors.bgTertiary}` : "none", transition: "background 0.12s" }}
+                              onMouseEnter={(e: any) => e.currentTarget.style.background = theme.colors.bgPrimary}
+                              onMouseLeave={(e: any) => e.currentTarget.style.background = "transparent"}
+                            >
+                              <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 500, color: theme.colors.textPrimary }}>{project.name}</td>
+                              <td style={{ padding: "12px 18px" }}>
                                 <span style={{
-                                  padding: "4px 8px",
-                                  borderRadius: 4,
-                                  fontSize: 11,
-                                  fontWeight: 600,
+                                  padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500,
                                   background: data.project.pricingModel === "FIXED_FEE" ? theme.colors.infoBg : theme.colors.warningBg,
                                   color: data.project.pricingModel === "FIXED_FEE" ? theme.colors.info : "#92400E",
-                                }}>
-                                  {data.project.pricingModel === "FIXED_FEE" ? "Fixed Fee" : "T&M"}
-                                </span>
+                                }}>{data.project.pricingModel === "FIXED_FEE" ? "Fixed Fee" : "T&M"}</span>
                               </td>
-                              <td style={{ padding: "12px 16px", fontSize: 14, color: theme.colors.textSecondary, textAlign: "right" }}>
-                                {data.hours.total.toFixed(1)}h
-                              </td>
-                              <td style={{ padding: "12px 16px", fontSize: 14, color: theme.colors.success, textAlign: "right", fontWeight: 500 }}>
-                                ${data.revenue.total.toLocaleString()}
-                              </td>
-                              <td style={{ padding: "12px 16px", fontSize: 14, color: theme.colors.error, textAlign: "right", fontWeight: 500 }}>
-                                ${data.costs.total.toLocaleString()}
-                              </td>
-                              <td style={{ 
-                                padding: "12px 16px", 
-                                fontSize: 14, 
-                                textAlign: "right", 
-                                fontWeight: 600,
-                                color: data.profit.amount >= 0 ? theme.colors.success : theme.colors.error 
-                              }}>
-                                ${data.profit.amount.toLocaleString()}
-                              </td>
-                              <td style={{ 
-                                padding: "12px 16px", 
-                                fontSize: 14, 
-                                textAlign: "right",
-                                color: data.profit.margin >= 20 ? theme.colors.success : data.profit.margin >= 10 ? theme.colors.warning : theme.colors.error
-                              }}>
-                                {data.profit.margin.toFixed(1)}%
-                              </td>
-                              <td style={{ padding: "12px 16px", textAlign: "center" }}>
-                                <Link
-                                  href={`/finance/projects/${project.id}`}
-                                  style={{
-                                    padding: "6px 12px",
-                                    fontSize: 12,
-                                    background: theme.colors.primary,
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: 6,
-                                    cursor: "pointer",
-                                    textDecoration: "none",
-                                    display: "inline-block",
-                                  }}
-                                >
-                                  View Details
-                                </Link>
+                              <td style={{ padding: "12px 18px", fontSize: 13, color: theme.colors.textSecondary, textAlign: "right" }}>{data.hours.total.toFixed(1)}h</td>
+                              <td style={{ padding: "12px 18px", fontSize: 13, color: theme.colors.success, textAlign: "right", fontWeight: 500 }}>${data.revenue.total.toLocaleString()}</td>
+                              <td style={{ padding: "12px 18px", fontSize: 13, color: theme.colors.error, textAlign: "right", fontWeight: 500 }}>${data.costs.total.toLocaleString()}</td>
+                              <td style={{ padding: "12px 18px", fontSize: 13, textAlign: "right", fontWeight: 600, color: data.profit.amount >= 0 ? theme.colors.success : theme.colors.error }}>${data.profit.amount.toLocaleString()}</td>
+                              <td style={{ padding: "12px 18px", fontSize: 13, textAlign: "right", fontWeight: 500, color: data.profit.margin >= 20 ? theme.colors.success : data.profit.margin >= 10 ? theme.colors.warning : theme.colors.error }}>{data.profit.margin.toFixed(1)}%</td>
+                              <td style={{ padding: "12px 18px", textAlign: "right" }}>
+                                <Link href={`/finance/projects/${project.id}`} style={{
+                                  padding: "5px 12px", fontSize: 12, color: theme.colors.primary,
+                                  borderRadius: 6, textDecoration: "none", fontWeight: 500,
+                                }}>View</Link>
                               </td>
                             </tr>
                           );
@@ -683,6 +483,7 @@ export default function FinancePage() {
             );
           })
         )}
+        </div>
       </main>
     </div>
   );
