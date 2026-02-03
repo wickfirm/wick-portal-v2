@@ -292,7 +292,9 @@ async function getAvailableSlots(
     return [];
   }
 
-  const date = new Date(dateStr);
+  // Parse date string as local date (not UTC)
+  const [year, month, day] = dateStr.split("-").map(Number);
+  const date = new Date(year, month - 1, day);
   const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 
   // Get agency availability
@@ -332,6 +334,12 @@ async function getAvailableSlots(
       endTime: true,
     },
   });
+
+  console.log("[getAvailableSlots] Existing appointments for date:", dateStr, existingAppointments.map(a => ({
+    host: a.hostUserId,
+    start: a.startTime,
+    end: a.endTime
+  })));
 
   // Generate available slots
   const slots: { time: string; hostId: string }[] = [];
