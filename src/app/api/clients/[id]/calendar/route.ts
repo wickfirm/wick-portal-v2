@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface CalendarEvent {
   id: string;
-  type: "task" | "timeEntry" | "project";
+  type: "task" | "timeEntry" | "project" | "keyDate";
   title: string;
   date: string;
   endDate?: string;
@@ -25,6 +25,15 @@ const EVENT_COLORS = {
   task: "#76527c",
   timeEntry: "#4285f4",
   project: "#34a853",
+  keyDate: "#f59e0b",
+};
+
+const KEY_DATE_CATEGORY_COLORS: Record<string, string> = {
+  HOLIDAY: "#f59e0b",
+  RELIGIOUS: "#8b5cf6",
+  CAMPAIGN: "#ec4899",
+  EVENT: "#06b6d4",
+  OTHER: "#6b7280",
 };
 
 export async function GET(
@@ -64,7 +73,7 @@ export async function GET(
     }
 
     // Run queries in parallel — all scoped to this client
-    const [tasks, timeEntries, projects] = await Promise.all([
+    const [tasks, timeEntries, projects, keyDates] = await Promise.all([
       // 1. Tasks with dueDate in range for this client
       prisma.clientTask.findMany({
         where: {
@@ -122,6 +131,23 @@ export async function GET(
           endDate: true,
           status: true,
           serviceType: true,
+        },
+      }),
+
+      // 4. Key dates for this client in range (including recurring dates from any year)
+      prisma.clientKeyDate.findMany({
+        where: {
+          clientId,
+        },
+        select: {
+          id: true,
+          name: true,
+          date: true,
+          endDate: true,
+          isRecurring: true,
+          category: true,
+          color: true,
+          notes: true,
         },
       }),
     ]);
@@ -189,6 +215,46 @@ export async function GET(
           serviceType: project.serviceType,
         },
       });
+    }
+
+    // Key dates — handle recurring dates by adjusting year
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+    for (const kd of keyDates) {
+      const originalDate = new Date(kd.date);
+      const yearsToCheck = kd.isRecurring
+        ? [startYear, endYear].filter((v, i, a) => a.indexOf(v) === i)
+        : [originalDate.getFullYear()];
+
+      for (const year of yearsToCheck) {
+        const adjustedDate = new Date(year, originalDate.getMonth(), originalDate.getDate());
+        const dateStr = adjustedDate.toISOString().split("T")[0];
+
+        // Check if this date falls within range
+        if (adjustedDate >= start && adjustedDate <= end) {
+          let endDateStr: string | undefined;
+          if (kd.endDate) {
+            const originalEnd = new Date(kd.endDate);
+            const adjustedEnd = new Date(year, originalEnd.getMonth(), originalEnd.getDate());
+            endDateStr = adjustedEnd.toISOString().split("T")[0];
+          }
+
+          events.push({
+            id: `keydate-${kd.id}-${year}`,
+            type: "keyDate",
+            title: kd.name,
+            date: dateStr,
+            endDate: endDateStr,
+            color: kd.color || KEY_DATE_CATEGORY_COLORS[kd.category] || EVENT_COLORS.keyDate,
+            metadata: {
+              keyDateId: kd.id,
+              category: kd.category,
+              isRecurring: kd.isRecurring,
+              notes: kd.notes,
+            },
+          });
+        }
+      }
     }
 
     return NextResponse.json({

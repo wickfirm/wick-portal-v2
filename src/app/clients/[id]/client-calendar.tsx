@@ -7,7 +7,7 @@ import { theme } from "@/lib/theme";
 
 interface CalendarEvent {
   id: string;
-  type: "task" | "timeEntry" | "project";
+  type: "task" | "timeEntry" | "project" | "keyDate";
   title: string;
   date: string;
   endDate?: string;
@@ -23,12 +23,14 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   task: "Tasks",
   timeEntry: "Time Entries",
   project: "Projects",
+  keyDate: "Key Dates",
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
   task: "#76527c",
   timeEntry: "#4285f4",
   project: "#34a853",
+  keyDate: "#f59e0b",
 };
 
 const STATUS_PILL_COLORS: Record<string, { bg: string; color: string }> = {
@@ -99,7 +101,7 @@ export default function ClientCalendar({ clientId }: { clientId: string }) {
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [activeTypes, setActiveTypes] = useState<Set<string>>(
-    new Set(["task", "timeEntry", "project"])
+    new Set(["task", "timeEntry", "project", "keyDate"])
   );
 
   // Date range
@@ -391,6 +393,30 @@ export default function ClientCalendar({ clientId }: { clientId: string }) {
                       <>
                         <span>{event.metadata.serviceType?.replace("_", " ")}</span>
                         {event.metadata.status && <span> · {event.metadata.status.replace("_", " ")}</span>}
+                      </>
+                    )}
+                    {event.type === "keyDate" && (
+                      <>
+                        <span
+                          style={{
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            background: `${event.color}20`,
+                            color: event.color,
+                          }}
+                        >
+                          {event.metadata.category}
+                        </span>
+                        {event.metadata.isRecurring && (
+                          <span style={{ marginLeft: 6, fontSize: 10 }}>🔄 Recurring</span>
+                        )}
+                        {event.metadata.notes && (
+                          <div style={{ marginTop: 3, fontStyle: "italic" }}>
+                            {event.metadata.notes}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

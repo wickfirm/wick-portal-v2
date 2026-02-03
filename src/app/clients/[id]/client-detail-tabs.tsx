@@ -10,6 +10,7 @@ import TeamManager from "./team-manager";
 import AgenciesManager from "./agencies-manager";
 import DeleteClientButton from "./delete-client-button";
 import ClientCalendar from "./client-calendar";
+import KeyDatesManager from "./key-dates-manager";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
 type ClientDetailTabsProps = {
@@ -66,11 +67,12 @@ export default function ClientDetailTabs({
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
     { id: "projects", label: "Projects", icon: "📁", count: projects.length },
-    { id: "onboarding", label: "Onboarding", icon: "✓", 
+    { id: "onboarding", label: "Onboarding", icon: "✓",
       count: onboarding.filter(i => !i.isCompleted).length,
       highlight: client.status === "ONBOARDING" || client.status === "LEAD"
     },
     { id: "calendar", label: "Calendar", icon: "📅" },
+    { id: "key-dates", label: "Key Dates", icon: "🎯" },
     { id: "team", label: "Team", icon: "👥", count: team.length },
     { id: "resources", label: "Resources", icon: "📎", count: resources.length },
   ];
@@ -513,6 +515,10 @@ export default function ClientDetailTabs({
 
         {activeTab === "calendar" && (
           <ClientCalendar clientId={client.id} />
+        )}
+
+        {activeTab === "key-dates" && (
+          <KeyDatesManager clientId={client.id} />
         )}
       </main>
     </div>

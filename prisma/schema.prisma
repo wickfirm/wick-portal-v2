@@ -87,6 +87,7 @@ model Client {
   metrics          ClientMetrics[] @relation("ClientMetrics")
   users            User[]          @relation("UserClient")
   expenses         ProjectExpense[] @relation("ClientExpenses")
+  keyDates         ClientKeyDate[]  @relation("ClientKeyDates")
 
   @@index([status])
   @@index([createdAt])
@@ -109,6 +110,40 @@ model ClientResource {
   client Client @relation("ClientResources", fields: [clientId], references: [id], onDelete: Cascade)
 
   @@map("client_resources")
+}
+
+model ClientKeyDate {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  clientId    String
+  name        String
+  date        DateTime  @db.Date
+  endDate     DateTime? @db.Date
+  isRecurring Boolean   @default(true)
+  category    String    @default("HOLIDAY")
+  color       String?
+  notes       String?
+  createdAt   DateTime? @default(now()) @db.Timestamp(6)
+  updatedAt   DateTime? @default(now()) @updatedAt @db.Timestamp(6)
+
+  client Client @relation("ClientKeyDates", fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([date])
+  @@map("client_key_dates")
+}
+
+model KeyDateTemplate {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  name        String
+  region      String
+  date        String
+  isRecurring Boolean   @default(true)
+  category    String    @default("HOLIDAY")
+  color       String?
+  createdAt   DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([region])
+  @@map("key_date_templates")
 }
 
 model Project {
