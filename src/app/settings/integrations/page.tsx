@@ -2,19 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  Calendar,
-  Video,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
-  Loader2,
-  RefreshCw,
-} from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import Link from "next/link";
+import Header from "@/components/Header";
+import { theme } from "@/lib/theme";
 
 interface UserIntegrations {
   calendarConnected: boolean;
@@ -26,8 +16,8 @@ export default function IntegrationsSettingsPage() {
   const [integrations, setIntegrations] = useState<UserIntegrations | null>(null);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const searchParams = useSearchParams();
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchIntegrations();
@@ -37,16 +27,10 @@ export default function IntegrationsSettingsPage() {
     const error = searchParams.get("error");
 
     if (success === "google_connected") {
-      toast({
-        title: "Google Calendar Connected",
-        description: "Your Google Calendar has been successfully connected.",
-      });
+      setMessage({ type: "success", text: "Google Calendar has been successfully connected!" });
       window.history.replaceState({}, "", "/settings/integrations");
     } else if (success === "zoom_connected") {
-      toast({
-        title: "Zoom Connected",
-        description: "Your Zoom account has been successfully connected.",
-      });
+      setMessage({ type: "success", text: "Zoom has been successfully connected!" });
       window.history.replaceState({}, "", "/settings/integrations");
     } else if (error) {
       const errorMessages: Record<string, string> = {
@@ -57,14 +41,10 @@ export default function IntegrationsSettingsPage() {
         save_failed: "Failed to save connection.",
         callback_failed: "Callback processing failed.",
       };
-      toast({
-        title: "Connection Failed",
-        description: errorMessages[error] || "An error occurred.",
-        variant: "destructive",
-      });
+      setMessage({ type: "error", text: errorMessages[error] || "An error occurred." });
       window.history.replaceState({}, "", "/settings/integrations");
     }
-  }, [searchParams, toast]);
+  }, [searchParams]);
 
   const fetchIntegrations = async () => {
     try {
@@ -82,113 +62,39 @@ export default function IntegrationsSettingsPage() {
 
   const connectGoogle = async () => {
     setConnecting("google");
+    setMessage(null);
     try {
       const res = await fetch("/api/integrations/google/auth");
       if (res.ok) {
         const { authUrl } = await res.json();
         window.location.href = authUrl;
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to initiate Google connection.",
-          variant: "destructive",
-        });
+        setMessage({ type: "error", text: "Failed to initiate Google connection." });
         setConnecting(null);
       }
     } catch (error) {
       console.error("Error connecting Google:", error);
-      toast({
-        title: "Error",
-        description: "Failed to connect to Google.",
-        variant: "destructive",
-      });
+      setMessage({ type: "error", text: "Failed to connect to Google." });
       setConnecting(null);
     }
   };
 
   const disconnectGoogle = async () => {
     setConnecting("google-disconnect");
+    setMessage(null);
     try {
       const res = await fetch("/api/integrations/google/disconnect", {
         method: "POST",
       });
       if (res.ok) {
-        toast({
-          title: "Disconnected",
-          description: "Google Calendar has been disconnected.",
-        });
+        setMessage({ type: "success", text: "Google Calendar has been disconnected." });
         fetchIntegrations();
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to disconnect Google Calendar.",
-          variant: "destructive",
-        });
+        setMessage({ type: "error", text: "Failed to disconnect Google Calendar." });
       }
     } catch (error) {
       console.error("Error disconnecting Google:", error);
-      toast({
-        title: "Error",
-        description: "Failed to disconnect Google Calendar.",
-        variant: "destructive",
-      });
-    } finally {
-      setConnecting(null);
-    }
-  };
-
-  const connectZoom = async () => {
-    setConnecting("zoom");
-    try {
-      const res = await fetch("/api/integrations/zoom/auth");
-      if (res.ok) {
-        const { authUrl } = await res.json();
-        window.location.href = authUrl;
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to initiate Zoom connection.",
-          variant: "destructive",
-        });
-        setConnecting(null);
-      }
-    } catch (error) {
-      console.error("Error connecting Zoom:", error);
-      toast({
-        title: "Error",
-        description: "Failed to connect to Zoom.",
-        variant: "destructive",
-      });
-      setConnecting(null);
-    }
-  };
-
-  const disconnectZoom = async () => {
-    setConnecting("zoom-disconnect");
-    try {
-      const res = await fetch("/api/integrations/zoom/disconnect", {
-        method: "POST",
-      });
-      if (res.ok) {
-        toast({
-          title: "Disconnected",
-          description: "Zoom has been disconnected.",
-        });
-        fetchIntegrations();
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to disconnect Zoom.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error disconnecting Zoom:", error);
-      toast({
-        title: "Error",
-        description: "Failed to disconnect Zoom.",
-        variant: "destructive",
-      });
+      setMessage({ type: "error", text: "Failed to disconnect Google Calendar." });
     } finally {
       setConnecting(null);
     }
@@ -196,182 +102,261 @@ export default function IntegrationsSettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ color: theme.colors.textMuted }}>Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Integrations</h1>
-        <p className="text-muted-foreground">
-          Connect external services to enhance your booking experience.
-        </p>
-      </div>
+    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <Header />
 
-      <div className="grid gap-6 md:grid-cols-2">
+      <main style={{ maxWidth: 700, margin: "0 auto", padding: "32px 24px" }}>
+        <div style={{ marginBottom: 24 }}>
+          <Link href="/settings" style={{ color: theme.colors.textSecondary, textDecoration: "none", fontSize: 14 }}>
+            ← Back to Settings
+          </Link>
+        </div>
+
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>
+            Integrations
+          </h1>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>
+            Connect external services to enhance your booking experience.
+          </p>
+        </div>
+
+        {message && (
+          <div style={{
+            padding: "12px 16px",
+            borderRadius: theme.borderRadius.md,
+            marginBottom: 24,
+            background: message.type === "success" ? theme.colors.successBg : theme.colors.errorBg,
+            color: message.type === "success" ? theme.colors.success : theme.colors.error,
+            fontSize: 14,
+          }}>
+            {message.text}
+          </div>
+        )}
+
         {/* Google Calendar */}
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                </div>
-                <span>Google Calendar</span>
-              </CardTitle>
-              <CardDescription>
-                Sync bookings with your Google Calendar and create Google Meet links automatically.
-              </CardDescription>
+        <div style={{
+          background: theme.colors.bgSecondary,
+          padding: 24,
+          borderRadius: theme.borderRadius.lg,
+          border: `1px solid ${theme.colors.borderLight}`,
+          marginBottom: 24,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: "#EFF6FF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+              }}>
+                📅
+              </div>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: theme.colors.textPrimary }}>
+                  Google Calendar
+                </h2>
+                <p style={{ fontSize: 14, color: theme.colors.textSecondary, margin: "4px 0 0" }}>
+                  Sync bookings and create Google Meet links
+                </p>
+              </div>
             </div>
-            {integrations?.calendarConnected ? (
-              <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                <CheckCircle2 className="mr-1 h-3 w-3" />
-                Connected
-              </Badge>
-            ) : (
-              <Badge variant="secondary">
-                <XCircle className="mr-1 h-3 w-3" />
-                Not connected
-              </Badge>
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Automatic calendar event creation
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Google Meet links for video calls
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Two-way sync for updates
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Calendar availability checking
-                </li>
-              </ul>
+            <span style={{
+              padding: "4px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 500,
+              background: integrations?.calendarConnected ? "#DCFCE7" : theme.colors.bgTertiary,
+              color: integrations?.calendarConnected ? "#166534" : theme.colors.textMuted,
+            }}>
+              {integrations?.calendarConnected ? "✓ Connected" : "Not connected"}
+            </span>
+          </div>
 
-              {integrations?.calendarConnected ? (
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={connectGoogle}
-                    disabled={connecting === "google"}
-                  >
-                    {connecting === "google" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                    )}
-                    Reconnect
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={disconnectGoogle}
-                    disabled={connecting === "google-disconnect"}
-                  >
-                    {connecting === "google-disconnect" ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Disconnect
-                  </Button>
-                </div>
-              ) : (
-                <Button onClick={connectGoogle} disabled={connecting === "google"}>
-                  {connecting === "google" ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                  )}
-                  Connect Google Calendar
-                </Button>
-              )}
+          <ul style={{
+            margin: "0 0 20px",
+            paddingLeft: 20,
+            color: theme.colors.textSecondary,
+            fontSize: 14,
+            lineHeight: 1.8,
+          }}>
+            <li>Automatic calendar event creation</li>
+            <li>Google Meet links for video calls</li>
+            <li>Sync updates when meetings are rescheduled</li>
+            <li>Delete events when meetings are cancelled</li>
+          </ul>
+
+          {integrations?.calendarConnected ? (
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={connectGoogle}
+                disabled={connecting === "google"}
+                style={{
+                  padding: "10px 20px",
+                  background: theme.colors.bgTertiary,
+                  color: theme.colors.textPrimary,
+                  border: `1px solid ${theme.colors.borderMedium}`,
+                  borderRadius: theme.borderRadius.md,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: connecting === "google" ? "not-allowed" : "pointer",
+                  opacity: connecting === "google" ? 0.7 : 1,
+                }}
+              >
+                {connecting === "google" ? "Connecting..." : "Reconnect"}
+              </button>
+              <button
+                onClick={disconnectGoogle}
+                disabled={connecting === "google-disconnect"}
+                style={{
+                  padding: "10px 20px",
+                  background: "transparent",
+                  color: theme.colors.error,
+                  border: "none",
+                  borderRadius: theme.borderRadius.md,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: connecting === "google-disconnect" ? "not-allowed" : "pointer",
+                  opacity: connecting === "google-disconnect" ? 0.7 : 1,
+                }}
+              >
+                {connecting === "google-disconnect" ? "Disconnecting..." : "Disconnect"}
+              </button>
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            <button
+              onClick={connectGoogle}
+              disabled={connecting === "google"}
+              style={{
+                padding: "12px 24px",
+                background: theme.colors.primary,
+                color: "white",
+                border: "none",
+                borderRadius: theme.borderRadius.md,
+                fontSize: 14,
+                fontWeight: 500,
+                cursor: connecting === "google" ? "not-allowed" : "pointer",
+                opacity: connecting === "google" ? 0.7 : 1,
+              }}
+            >
+              {connecting === "google" ? "Connecting..." : "Connect Google Calendar"}
+            </button>
+          )}
+        </div>
 
         {/* Zoom - Coming Soon */}
-        <Card className="opacity-60">
-          <CardHeader className="flex flex-row items-start justify-between space-y-0">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                  <Video className="h-5 w-5 text-blue-600" />
-                </div>
-                <span>Zoom</span>
-              </CardTitle>
-              <CardDescription>
-                Automatically create Zoom meeting links for your video bookings.
-              </CardDescription>
+        <div style={{
+          background: theme.colors.bgSecondary,
+          padding: 24,
+          borderRadius: theme.borderRadius.lg,
+          border: `1px solid ${theme.colors.borderLight}`,
+          marginBottom: 24,
+          opacity: 0.6,
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 16 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{
+                width: 48,
+                height: 48,
+                borderRadius: 12,
+                background: "#EFF6FF",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 24,
+              }}>
+                🎥
+              </div>
+              <div>
+                <h2 style={{ fontSize: 18, fontWeight: 600, margin: 0, color: theme.colors.textPrimary }}>
+                  Zoom
+                </h2>
+                <p style={{ fontSize: 14, color: theme.colors.textSecondary, margin: "4px 0 0" }}>
+                  Create Zoom meeting links for video bookings
+                </p>
+              </div>
             </div>
-            <Badge variant="secondary">Coming Soon</Badge>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Automatic Zoom meeting creation
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Unique meeting links per booking
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                  Meeting recordings (optional)
-                </li>
-              </ul>
+            <span style={{
+              padding: "4px 12px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 500,
+              background: theme.colors.bgTertiary,
+              color: theme.colors.textMuted,
+            }}>
+              Coming Soon
+            </span>
+          </div>
 
-              <Button disabled variant="outline">
-                Coming Soon
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          <ul style={{
+            margin: "0 0 20px",
+            paddingLeft: 20,
+            color: theme.colors.textSecondary,
+            fontSize: 14,
+            lineHeight: 1.8,
+          }}>
+            <li>Automatic Zoom meeting creation</li>
+            <li>Unique meeting links per booking</li>
+            <li>Meeting recordings (optional)</li>
+          </ul>
 
-      {/* Setup Instructions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Setup Instructions</CardTitle>
-          <CardDescription>
-            Follow these steps to enable Google Calendar integration.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ol className="list-decimal list-inside space-y-3 text-sm text-muted-foreground">
-            <li>
-              Go to the{" "}
-              <a
-                href="https://console.cloud.google.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline"
-              >
-                Google Cloud Console
-              </a>
-            </li>
-            <li>Create a new project or select an existing one</li>
-            <li>Enable the Google Calendar API</li>
-            <li>Go to "Credentials" and create an OAuth 2.0 Client ID</li>
-            <li>Set the authorized redirect URI to: <code className="bg-muted px-1.5 py-0.5 rounded text-xs">{process.env.NEXT_PUBLIC_APP_URL || 'https://your-domain.com'}/api/integrations/google/callback</code></li>
-            <li>Add the Client ID and Secret to your environment variables</li>
+          <button
+            disabled
+            style={{
+              padding: "12px 24px",
+              background: theme.colors.bgTertiary,
+              color: theme.colors.textMuted,
+              border: "none",
+              borderRadius: theme.borderRadius.md,
+              fontSize: 14,
+              fontWeight: 500,
+              cursor: "not-allowed",
+            }}
+          >
+            Coming Soon
+          </button>
+        </div>
+
+        {/* Setup Instructions */}
+        <div style={{
+          background: theme.colors.bgSecondary,
+          padding: 24,
+          borderRadius: theme.borderRadius.lg,
+          border: `1px solid ${theme.colors.borderLight}`,
+        }}>
+          <h2 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 8, color: theme.colors.textPrimary }}>
+            Setup Instructions
+          </h2>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 14, marginBottom: 16 }}>
+            To enable Google Calendar integration, an administrator needs to configure Google Cloud credentials.
+          </p>
+          <ol style={{
+            margin: 0,
+            paddingLeft: 20,
+            color: theme.colors.textSecondary,
+            fontSize: 14,
+            lineHeight: 2,
+          }}>
+            <li>Go to the <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: theme.colors.primary }}>Google Cloud Console</a></li>
+            <li>Create a project and enable the Google Calendar API</li>
+            <li>Create OAuth 2.0 credentials</li>
+            <li>Set redirect URI to: <code style={{ background: theme.colors.bgTertiary, padding: "2px 6px", borderRadius: 4, fontSize: 12 }}>https://wick.omnixia.ai/api/integrations/google/callback</code></li>
+            <li>Add credentials to environment variables</li>
             <li>Click "Connect Google Calendar" above</li>
           </ol>
-        </CardContent>
-      </Card>
+        </div>
+      </main>
     </div>
   );
 }
