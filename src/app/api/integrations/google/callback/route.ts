@@ -8,8 +8,8 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
-  // Base URL for redirects
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  // Base URL for redirects - use production URL as fallback
+  const baseUrl = process.env.NEXTAUTH_URL || "https://wick.omnixia.ai";
 
   if (error) {
     console.error("Google OAuth error:", error);
