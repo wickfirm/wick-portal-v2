@@ -34,12 +34,25 @@ export async function GET(
     });
 
     // Get host users info
-    const hostIds = bookingType.assignedUsers.map(au => au.userId);
-    const hosts = bookingType.specificUserId
-      ? [bookingType.specificUserId]
-      : hostIds.length > 0
-      ? hostIds
-      : [];
+    const assignedHostIds = bookingType.assignedUsers.map(au => au.userId);
+    let hosts: string[] = [];
+
+    if (bookingType.specificUserId) {
+      hosts = [bookingType.specificUserId];
+    } else if (assignedHostIds.length > 0) {
+      hosts = assignedHostIds;
+    } else {
+      // Fallback: use all active users from the agency as potential hosts
+      const agencyUsers = await prisma.user.findMany({
+        where: {
+          agencyId: bookingType.agencyId,
+          isActive: true,
+          role: { in: ["ADMIN", "SUPER_ADMIN", "MANAGER", "MEMBER"] },
+        },
+        select: { id: true },
+      });
+      hosts = agencyUsers.map(u => u.id);
+    }
 
     const hostUsers = await prisma.user.findMany({
       where: { id: { in: hosts } },
@@ -255,6 +268,12 @@ async function getAvailableSlots(
   hostIds: string[],
   dateStr: string
 ): Promise<{ time: string; hostId: string }[]> {
+  // If no hosts, no slots available
+  if (hostIds.length === 0) {
+    console.log("[getAvailableSlots] No hosts provided");
+    return [];
+  }
+
   const date = new Date(dateStr);
   const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 
@@ -263,8 +282,15 @@ async function getAvailableSlots(
     where: { agencyId: bookingType.agencyId },
   });
 
+  if (!agencyAvail) {
+    console.log("[getAvailableSlots] No agency availability found for agencyId:", bookingType.agencyId);
+    return [];
+  }
+
   const weeklySchedule = (agencyAvail?.weeklySchedule as any) || {};
   const daySchedule = weeklySchedule[dayOfWeek] || [];
+
+  console.log("[getAvailableSlots] Day:", dayOfWeek, "Schedule:", daySchedule, "Hosts:", hostIds.length);
 
   if (daySchedule.length === 0) {
     return [];
@@ -348,6 +374,11 @@ async function getAvailableDays(
   hostIds: string[],
   monthStr: string // YYYY-MM
 ): Promise<string[]> {
+  if (hostIds.length === 0) {
+    console.log("[getAvailableDays] No hosts provided");
+    return [];
+  }
+
   const [year, month] = monthStr.split("-").map(Number);
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0);
@@ -360,7 +391,14 @@ async function getAvailableDays(
   const agencyAvail = await prisma.agencyAvailability.findFirst({
     where: { agencyId: bookingType.agencyId },
   });
+
+  if (!agencyAvail) {
+    console.log("[getAvailableDays] No agency availability found for agencyId:", bookingType.agencyId);
+    return [];
+  }
+
   const weeklySchedule = (agencyAvail?.weeklySchedule as any) || {};
+  console.log("[getAvailableDays] Agency schedule keys:", Object.keys(weeklySchedule), "MinNotice:", bookingType.minNotice, "hours, MaxFuture:", bookingType.maxFutureDays, "days");
 
   const availableDays: string[] = [];
   const currentDate = new Date(startDate);
