@@ -256,7 +256,7 @@ async function getAvailableSlots(
   dateStr: string
 ): Promise<{ time: string; hostId: string }[]> {
   const date = new Date(dateStr);
-  const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "lowercase" }) as string;
+  const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 
   // Get agency availability
   const agencyAvail = await prisma.agencyAvailability.findFirst({
@@ -264,7 +264,7 @@ async function getAvailableSlots(
   });
 
   const weeklySchedule = (agencyAvail?.weeklySchedule as any) || {};
-  const daySchedule = weeklySchedule[dayOfWeek.toLowerCase()] || [];
+  const daySchedule = weeklySchedule[dayOfWeek] || [];
 
   if (daySchedule.length === 0) {
     return [];
