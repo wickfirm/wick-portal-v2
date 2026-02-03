@@ -686,9 +686,46 @@ export default function PublicBookingPage() {
                 </div>
               )}
             </div>
+
+            {/* Meeting Link */}
+            {confirmationData.meetingLink && (
+              <div style={{ marginTop: 20, textAlign: "center" }}>
+                <a
+                  href={confirmationData.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-block",
+                    padding: "12px 24px",
+                    background: brandColor,
+                    color: "white",
+                    borderRadius: 8,
+                    textDecoration: "none",
+                    fontWeight: 500,
+                    fontSize: 14,
+                  }}
+                >
+                  🔗 Join Meeting
+                </a>
+              </div>
+            )}
+
             <p style={styles.confirmationNote}>
               A confirmation email has been sent to <strong>{guestEmail}</strong>
             </p>
+
+            {/* Manage Booking Link */}
+            {confirmationData.cancelUrl && (
+              <p style={{ fontSize: 12, color: "#999", marginTop: 8 }}>
+                Need to make changes?{" "}
+                <a
+                  href={confirmationData.cancelUrl}
+                  style={{ color: brandColor }}
+                >
+                  Manage your booking
+                </a>
+              </p>
+            )}
           </div>
         )}
 

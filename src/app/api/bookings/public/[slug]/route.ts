@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { sendBookingConfirmation } from "@/lib/email";
 
 // GET - Get public booking type info and available slots (no auth required)
 export async function GET(
@@ -271,8 +272,47 @@ export async function POST(
       select: { name: true, email: true },
     });
 
-    // TODO: Send confirmation emails to guest and host
-    // TODO: Create calendar event
+    // Generate meeting link placeholder (will be replaced with real Zoom/Meet integration)
+    let meetingLink = null;
+    if (bookingType.autoCreateMeet && bookingType.locationType === "VIDEO") {
+      // For now, generate a Google Meet-style link as placeholder
+      // In production, integrate with Google Calendar API or Zoom API
+      meetingLink = `https://meet.google.com/${generateMeetingCode()}`;
+
+      // Update appointment with meeting link
+      await prisma.bookingAppointment.update({
+        where: { id: appointment.id },
+        data: { meetingLink },
+      });
+    }
+
+    // Get base URL for cancel/reschedule links
+    const baseUrl = req.headers.get("origin") || "https://wick.omnixia.ai";
+    const cancelUrl = `${baseUrl}/book/manage/${appointment.id}`;
+    const rescheduleUrl = `${baseUrl}/book/manage/${appointment.id}?action=reschedule`;
+
+    // Send confirmation emails
+    if (host?.email) {
+      try {
+        await sendBookingConfirmation({
+          guestName: data.guestName,
+          guestEmail: data.guestEmail,
+          hostName: host.name,
+          hostEmail: host.email,
+          bookingTypeName: bookingType.name,
+          startTime: appointment.startTime,
+          endTime: appointment.endTime,
+          timezone: data.guestTimezone || agencyTimezone,
+          meetingLink: meetingLink || undefined,
+          notes: data.notes,
+          cancelUrl,
+          rescheduleUrl,
+        });
+      } catch (emailError) {
+        console.error("Error sending confirmation email:", emailError);
+        // Don't fail the booking if email fails
+      }
+    }
 
     return NextResponse.json({
       success: true,
@@ -282,8 +322,10 @@ export async function POST(
         startTime: appointment.startTime,
         endTime: appointment.endTime,
         status: appointment.status,
+        meetingLink,
         host: { name: host?.name },
         timezone: agencyTimezone,
+        cancelUrl,
       },
     });
   } catch (error) {
@@ -393,6 +435,14 @@ async function getAvailableSlots(
   }
 
   return slots;
+}
+
+// Helper: Generate a random meeting code (placeholder for real integration)
+function generateMeetingCode(): string {
+  const chars = "abcdefghijklmnopqrstuvwxyz";
+  const segment = () =>
+    Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  return `${segment()}-${segment()}-${segment()}`;
 }
 
 // Helper: Get days with available slots in a month
