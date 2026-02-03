@@ -21,8 +21,9 @@ export async function GET(request: NextRequest) {
   }
 
   // Get clientId from query params (used by TimerWidget/Timesheet)
+  // Support both single clientId and multiple clientId params
   const { searchParams } = new URL(request.url);
-  const clientId = searchParams.get('clientId');
+  const clientIds = searchParams.getAll('clientId');
 
   // Get base project filter
   let where = await getProjectFilterForUser(
@@ -31,9 +32,11 @@ export async function GET(request: NextRequest) {
     currentUser.agencyId
   );
 
-  // If clientId is specified, add it to the filter
-  if (clientId) {
-    where = { ...where, clientId };
+  // If clientIds are specified, add them to the filter
+  if (clientIds.length === 1) {
+    where = { ...where, clientId: clientIds[0] };
+  } else if (clientIds.length > 1) {
+    where = { ...where, clientId: { in: clientIds } };
   }
 
   const projects = await prisma.project.findMany({
