@@ -12,8 +12,8 @@ export async function middleware(request: NextRequest) {
   const isLocalhost = host === 'localhost' || host === '127.0.0.1';
   const subdomain = getSubdomainFromHost(hostname);
 
-  // Skip middleware for ALL API routes, NextAuth, static files, signout, test page, and widget
-  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test', '/widget/'];
+  // Skip middleware for ALL API routes, NextAuth, static files, signout, test page, widget, and public booking pages
+  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test', '/widget/', '/book/'];
   if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }

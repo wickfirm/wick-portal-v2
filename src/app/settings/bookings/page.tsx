@@ -142,6 +142,7 @@ export default function BookingsSettingsPage() {
   const [newTypeDuration, setNewTypeDuration] = useState(30);
   const [newTypeDescription, setNewTypeDescription] = useState("");
   const [editingType, setEditingType] = useState<any>(null);
+  const [userBookingSlug, setUserBookingSlug] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -150,9 +151,10 @@ export default function BookingsSettingsPage() {
 
   const fetchData = async () => {
     try {
-      const [availRes, typesRes] = await Promise.all([
+      const [availRes, typesRes, slugRes] = await Promise.all([
         fetch("/api/bookings/availability"),
         fetch("/api/bookings/types"),
+        fetch("/api/user/booking-slug"),
       ]);
 
       if (availRes.ok) {
@@ -166,6 +168,11 @@ export default function BookingsSettingsPage() {
       if (typesRes.ok) {
         const typesData = await typesRes.json();
         setBookingTypes(typesData);
+      }
+
+      if (slugRes.ok) {
+        const slugData = await slugRes.json();
+        setUserBookingSlug(slugData.bookingSlug);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -276,8 +283,12 @@ export default function BookingsSettingsPage() {
     }
   };
 
-  const copyBookingLink = (slug: string) => {
-    const link = `${window.location.origin}/book/${slug}`;
+  const copyBookingLink = (typeSlug: string) => {
+    // If user has a personal booking slug, use the user-prefixed URL format
+    // Otherwise, use the direct type URL
+    const link = userBookingSlug
+      ? `${window.location.origin}/book/${userBookingSlug}/${typeSlug}`
+      : `${window.location.origin}/book/${typeSlug}`;
     navigator.clipboard.writeText(link);
     alert("Booking link copied to clipboard!");
   };
