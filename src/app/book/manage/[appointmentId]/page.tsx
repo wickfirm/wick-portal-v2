@@ -384,12 +384,94 @@ export default function ManageBookingPage() {
   if (cancelled) {
     return (
       <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={{ ...styles.statusIcon, background: "#fee2e2", color: "#dc2626" }}>✓</div>
-          <h2 style={{ margin: 0, marginBottom: 8, color: "#dc2626" }}>Appointment Cancelled</h2>
-          <p style={{ margin: 0, color: "#666" }}>
-            Your appointment has been cancelled. A confirmation email has been sent.
-          </p>
+        <div style={styles.successCard}>
+          {/* Decorative background */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 120,
+            background: "linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)",
+            borderRadius: "20px 20px 0 0",
+          }} />
+
+          {/* Content */}
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+            {/* Icon */}
+            <div style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              background: "white",
+              boxShadow: "0 8px 32px rgba(220, 38, 38, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            </div>
+
+            <h2 style={{
+              fontSize: 26,
+              fontWeight: 700,
+              color: "#dc2626",
+              margin: "0 0 12px 0",
+            }}>
+              Appointment Cancelled
+            </h2>
+
+            <p style={{
+              fontSize: 15,
+              color: "#666",
+              margin: "0 0 24px 0",
+              lineHeight: 1.6,
+            }}>
+              Your appointment has been successfully cancelled.
+              <br />
+              A confirmation email has been sent to your inbox.
+            </p>
+
+            {/* Appointment summary */}
+            <div style={{
+              background: "#f8f9fa",
+              borderRadius: 12,
+              padding: 20,
+              marginBottom: 24,
+              borderLeft: "4px solid #dc2626",
+            }}>
+              <div style={{ fontSize: 13, color: "#999", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                Cancelled Appointment
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#333", marginBottom: 4 }}>
+                {appointment?.bookingType?.name}
+              </div>
+              <div style={{ fontSize: 14, color: "#666" }}>
+                {formatDate(appointment?.startTime)} at {formatTime(appointment?.startTime)}
+              </div>
+            </div>
+
+            {/* Action */}
+            <a
+              href="/"
+              style={{
+                display: "inline-block",
+                padding: "14px 32px",
+                background: brandColor,
+                color: "white",
+                borderRadius: 10,
+                textDecoration: "none",
+                fontSize: 15,
+                fontWeight: 600,
+                transition: "transform 0.2s ease",
+              }}
+            >
+              Book a New Appointment
+            </a>
+          </div>
         </div>
       </div>
     );
@@ -398,19 +480,196 @@ export default function ManageBookingPage() {
   if (rescheduled) {
     return (
       <div style={styles.container}>
-        <div style={styles.card}>
-          <div style={{ ...styles.statusIcon, background: "#d1fae5", color: "#059669" }}>✓</div>
-          <h2 style={{ margin: 0, marginBottom: 8, color: "#059669" }}>Appointment Rescheduled!</h2>
-          <p style={{ margin: 0, color: "#666", marginBottom: 16 }}>
-            Your new appointment time:
-          </p>
-          <div style={{ background: "#f8f9fa", padding: 16, borderRadius: 10, marginBottom: 16 }}>
-            <div style={{ fontWeight: 600, marginBottom: 4 }}>{formatDate(appointment.startTime)}</div>
-            <div style={{ color: "#666" }}>{formatTime(appointment.startTime)}</div>
+        <div style={styles.successCard}>
+          {/* Decorative background */}
+          <div style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 120,
+            background: "linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)",
+            borderRadius: "20px 20px 0 0",
+          }} />
+
+          {/* Confetti decoration */}
+          <div style={{
+            position: "absolute",
+            top: 20,
+            left: 30,
+            width: 8,
+            height: 8,
+            borderRadius: "50%",
+            background: "#34d399",
+            opacity: 0.6,
+          }} />
+          <div style={{
+            position: "absolute",
+            top: 40,
+            right: 40,
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "#10b981",
+            opacity: 0.5,
+          }} />
+          <div style={{
+            position: "absolute",
+            top: 60,
+            left: 60,
+            width: 4,
+            height: 4,
+            borderRadius: "50%",
+            background: "#059669",
+            opacity: 0.4,
+          }} />
+
+          {/* Content */}
+          <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
+            {/* Success Icon */}
+            <div style={{
+              width: 80,
+              height: 80,
+              borderRadius: "50%",
+              background: "white",
+              boxShadow: "0 8px 32px rgba(5, 150, 105, 0.2)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              margin: "0 auto 24px",
+            }}>
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+            </div>
+
+            <h2 style={{
+              fontSize: 26,
+              fontWeight: 700,
+              color: "#059669",
+              margin: "0 0 12px 0",
+            }}>
+              Successfully Rescheduled!
+            </h2>
+
+            <p style={{
+              fontSize: 15,
+              color: "#666",
+              margin: "0 0 24px 0",
+              lineHeight: 1.6,
+            }}>
+              Your appointment has been moved to the new time.
+              <br />
+              A confirmation email has been sent with the details.
+            </p>
+
+            {/* New Time Card */}
+            <div style={{
+              background: "linear-gradient(135deg, #059669 0%, #10b981 100%)",
+              borderRadius: 16,
+              padding: 24,
+              marginBottom: 24,
+              color: "white",
+              boxShadow: "0 8px 32px rgba(5, 150, 105, 0.3)",
+            }}>
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 8, textTransform: "uppercase", letterSpacing: "1px" }}>
+                New Appointment Time
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginBottom: 12 }}>
+                {appointment?.bookingType?.name}
+              </div>
+              <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 16,
+                flexWrap: "wrap",
+              }}>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>{formatDate(appointment?.startTime)}</span>
+                </div>
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  <span style={{ fontSize: 16, fontWeight: 600 }}>{formatTime(appointment?.startTime)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Add to Calendar */}
+            <div style={{
+              display: "flex",
+              gap: 12,
+              justifyContent: "center",
+              flexWrap: "wrap",
+            }}>
+              {appointment?.meetingLink && (
+                <a
+                  href={appointment.meetingLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "12px 24px",
+                    background: brandColor,
+                    color: "white",
+                    borderRadius: 10,
+                    textDecoration: "none",
+                    fontSize: 14,
+                    fontWeight: 600,
+                  }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M15 10l5 5-5 5" />
+                    <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+                  </svg>
+                  Join Meeting
+                </a>
+              )}
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "12px 24px",
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  borderRadius: 10,
+                  border: "none",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
+                </svg>
+                View Details
+              </button>
+            </div>
           </div>
-          <p style={{ margin: 0, color: "#666", fontSize: 14 }}>
-            A confirmation email has been sent with the updated details.
-          </p>
         </div>
       </div>
     );
@@ -776,6 +1035,16 @@ const styles: { [key: string]: React.CSSProperties } = {
     maxWidth: 500,
     width: "100%",
     overflow: "hidden",
+  },
+  successCard: {
+    background: "white",
+    borderRadius: 20,
+    boxShadow: "0 12px 48px rgba(0,0,0,0.12)",
+    maxWidth: 480,
+    width: "100%",
+    overflow: "hidden",
+    position: "relative" as const,
+    padding: "48px 32px 32px",
   },
   header: {
     padding: "28px 28px 20px",
