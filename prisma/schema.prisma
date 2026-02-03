@@ -1711,6 +1711,8 @@ model BookingAppointment {
   formResponses   Json?     @default("{}") @map("form_responses")
   // Reminders
   reminderSentAt  DateTime? @map("reminder_sent_at") @db.Timestamp(6)
+  // Rescheduling
+  rescheduledAt   DateTime? @map("rescheduled_at") @db.Timestamp(6)
   // Timestamps
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
   updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)

@@ -184,6 +184,8 @@ export async function sendBookingConfirmation({
 
           ${cancelUrl ? `
           <div class="actions">
+            <a href="${cancelUrl}" class="action-link" style="color:#76527c;">Reschedule</a>
+            <span style="color:#ccc;margin:0 8px;">|</span>
             <a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>
           </div>
           ` : ''}
@@ -583,6 +585,146 @@ export async function sendTimesheetReminderEmail({
 // ===========================================
 // CLIENT COMMUNICATION EMAILS
 // ===========================================
+
+export async function sendBookingReschedule({
+  guestName,
+  guestEmail,
+  hostName,
+  hostEmail,
+  bookingTypeName,
+  oldStartTime,
+  newStartTime,
+  newEndTime,
+  timezone,
+  meetingLink,
+  cancelUrl,
+}: {
+  guestName: string;
+  guestEmail: string;
+  hostName: string;
+  hostEmail: string;
+  bookingTypeName: string;
+  oldStartTime: Date;
+  newStartTime: Date;
+  newEndTime: Date;
+  timezone: string;
+  meetingLink?: string;
+  cancelUrl?: string;
+}): Promise<void> {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+      timeZone: timezone,
+    });
+  };
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: timezone,
+    });
+  };
+
+  const oldDateStr = formatDate(oldStartTime);
+  const oldTimeStr = formatTime(oldStartTime);
+  const newDateStr = formatDate(newStartTime);
+  const newTimeStr = `${formatTime(newStartTime)} - ${formatTime(newEndTime)}`;
+
+  // Generate HTML for a recipient
+  const generateHtml = (recipientName: string, isHost: boolean) => `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
+        .content { background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 12px 12px; }
+        .detail-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
+        .old-time { color: #666; text-decoration: line-through; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
+        .new-time { color: #059669; font-weight: 500; }
+        .meeting-link { display: inline-block; background: #76527c; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; margin: 20px 0; }
+        .actions { margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; text-align: center; }
+        .action-link { color: #76527c; margin: 0 12px; font-size: 14px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 style="margin:0;font-size:24px;">🔄 Meeting Rescheduled</h1>
+          <p style="margin:10px 0 0;opacity:0.9;">${bookingTypeName}</p>
+        </div>
+        <div class="content">
+          <p>Hi ${recipientName},</p>
+          <p>${isHost ? `${guestName} has` : 'Your meeting has been'} rescheduled. Here are the updated details:</p>
+
+          <div class="detail-box">
+            <div class="old-time">
+              <div style="font-size:12px;color:#999;margin-bottom:4px;">Previous Time</div>
+              ${oldDateStr} at ${oldTimeStr}
+            </div>
+            <div class="new-time">
+              <div style="font-size:12px;color:#059669;margin-bottom:4px;">✓ New Time</div>
+              📅 ${newDateStr}<br>
+              🕐 ${newTimeStr}
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <strong>🌍 Timezone:</strong> ${timezone}
+          </div>
+
+          ${isHost ? `
+          <div style="margin-top:8px;">
+            <strong>👤 Guest:</strong> ${guestName} (${guestEmail})
+          </div>
+          ` : `
+          <div style="margin-top:8px;">
+            <strong>👤 With:</strong> ${hostName}
+          </div>
+          `}
+
+          ${meetingLink ? `
+            <div style="text-align:center;margin-top:20px;">
+              <a href="${meetingLink}" class="meeting-link">Join Meeting</a>
+            </div>
+          ` : ''}
+
+          ${!isHost && cancelUrl ? `
+          <div class="actions">
+            <a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>
+          </div>
+          ` : ''}
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  // Send reschedule email to BOTH guest and host
+  console.log(`📧 Sending reschedule notification to guest: ${guestEmail} and host: ${hostEmail}`);
+
+  await Promise.all([
+    sendEmail({
+      to: guestEmail,
+      subject: `Rescheduled: ${bookingTypeName} - ${newDateStr}`,
+      html: generateHtml(guestName, false),
+    }),
+    sendEmail({
+      to: hostEmail,
+      subject: `Rescheduled: ${guestName} - ${bookingTypeName}`,
+      html: generateHtml(hostName, true),
+      replyTo: guestEmail,
+    }),
+  ]);
+}
 
 export async function sendClientEmail({
   clientName,
