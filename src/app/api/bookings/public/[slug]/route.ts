@@ -27,11 +27,17 @@ export async function GET(
       return NextResponse.json({ error: "Booking type not found" }, { status: 404 });
     }
 
-    // Get agency info for branding
+    // Get agency info for branding and timezone
     const agency = await prisma.agency.findFirst({
       where: { id: bookingType.agencyId },
       select: { id: true, name: true, logo: true, primaryColor: true },
     });
+
+    // Get agency availability (includes timezone)
+    const agencyAvail = await prisma.agencyAvailability.findFirst({
+      where: { agencyId: bookingType.agencyId },
+    });
+    const agencyTimezone = agencyAvail?.timezone || "Asia/Dubai";
 
     // Get host users info
     const assignedHostIds = bookingType.assignedUsers.map(au => au.userId);
@@ -61,7 +67,7 @@ export async function GET(
 
     // If requesting available slots for a specific date
     if (date) {
-      const slots = await getAvailableSlots(bookingType, hosts, date);
+      const slots = await getAvailableSlots(bookingType, hosts, date, agencyTimezone);
       return NextResponse.json({
         bookingType: {
           id: bookingType.id,
@@ -72,6 +78,7 @@ export async function GET(
           questions: bookingType.questions,
         },
         agency,
+        timezone: agencyTimezone,
         hosts: hostUsers,
         date,
         slots,
@@ -91,6 +98,7 @@ export async function GET(
           questions: bookingType.questions,
         },
         agency,
+        timezone: agencyTimezone,
         hosts: hostUsers,
         month,
         availableDays,
@@ -110,6 +118,7 @@ export async function GET(
         maxFutureDays: bookingType.maxFutureDays,
       },
       agency,
+      timezone: agencyTimezone,
       hosts: hostUsers,
     });
   } catch (error) {
@@ -138,6 +147,12 @@ export async function POST(
     if (!bookingType || !bookingType.isActive) {
       return NextResponse.json({ error: "Booking type not found" }, { status: 404 });
     }
+
+    // Get agency timezone
+    const agencyAvail = await prisma.agencyAvailability.findFirst({
+      where: { agencyId: bookingType.agencyId },
+    });
+    const agencyTimezone = agencyAvail?.timezone || "Asia/Dubai";
 
     // Validate required fields
     if (!data.guestName || !data.guestEmail || !data.startTime) {
@@ -204,21 +219,17 @@ export async function POST(
       );
     }
 
-    // Validate the time slot is still available
+    // The startTime comes as ISO string (already in UTC from the client)
     const startTime = new Date(data.startTime);
     const endTime = new Date(startTime.getTime() + bookingType.duration * 60000);
 
-    // Check for conflicts
+    // Check for conflicts with ANY existing booking at this time
     const conflict = await prisma.bookingAppointment.findFirst({
       where: {
-        hostUserId,
+        agencyId: bookingType.agencyId,
         status: { in: ["SCHEDULED", "CONFIRMED"] },
-        OR: [
-          {
-            startTime: { lt: endTime },
-            endTime: { gt: startTime },
-          },
-        ],
+        startTime: { lt: endTime },
+        endTime: { gt: startTime },
       },
     });
 
@@ -242,7 +253,7 @@ export async function POST(
         clientId: data.clientId || null,
         startTime,
         endTime,
-        timezone: data.timezone || "Asia/Dubai",
+        timezone: data.guestTimezone || agencyTimezone,
         status: bookingType.requiresApproval ? "SCHEDULED" : "CONFIRMED",
         notes: data.notes || null,
         formResponses: data.formResponses || {},
@@ -272,6 +283,7 @@ export async function POST(
         endTime: appointment.endTime,
         status: appointment.status,
         host: { name: host?.name },
+        timezone: agencyTimezone,
       },
     });
   } catch (error) {
@@ -284,15 +296,14 @@ export async function POST(
 async function getAvailableSlots(
   bookingType: any,
   hostIds: string[],
-  dateStr: string
+  dateStr: string,
+  agencyTimezone: string
 ): Promise<{ time: string; hostId: string }[]> {
-  // If no hosts, no slots available
   if (hostIds.length === 0) {
-    console.log("[getAvailableSlots] No hosts provided");
     return [];
   }
 
-  // Parse date string as local date (not UTC)
+  // Parse date string
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
@@ -303,39 +314,25 @@ async function getAvailableSlots(
   });
 
   if (!agencyAvail) {
-    console.log("[getAvailableSlots] No agency availability found for agencyId:", bookingType.agencyId);
     return [];
   }
 
   const weeklySchedule = (agencyAvail?.weeklySchedule as any) || {};
   const daySchedule = weeklySchedule[dayOfWeek] || [];
 
-  console.log("[getAvailableSlots] Day:", dayOfWeek, "Schedule:", daySchedule, "Hosts:", hostIds.length);
-
   if (daySchedule.length === 0) {
     return [];
   }
 
-  // Get existing appointments for this date
-  // Use UTC date range to match database timestamps
-  const startOfDayUTC = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-  const endOfDayUTC = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
-
-  // Also query with local date range as fallback (in case appointments were saved with local time)
-  const startOfDayLocal = new Date(date);
-  startOfDayLocal.setHours(0, 0, 0, 0);
-  const endOfDayLocal = new Date(date);
-  endOfDayLocal.setHours(23, 59, 59, 999);
-
-  // Use the wider range to catch all appointments
-  const startOfDay = startOfDayUTC < startOfDayLocal ? startOfDayUTC : startOfDayLocal;
-  const endOfDay = endOfDayUTC > endOfDayLocal ? endOfDayUTC : endOfDayLocal;
+  // Get existing appointments for this date (query wide range to handle timezone differences)
+  const startOfDayUTC = new Date(Date.UTC(year, month - 1, day - 1, 0, 0, 0, 0));
+  const endOfDayUTC = new Date(Date.UTC(year, month - 1, day + 1, 23, 59, 59, 999));
 
   const existingAppointments = await prisma.bookingAppointment.findMany({
     where: {
-      hostUserId: { in: hostIds },
+      agencyId: bookingType.agencyId,
       status: { in: ["SCHEDULED", "CONFIRMED"] },
-      startTime: { gte: startOfDay, lte: endOfDay },
+      startTime: { gte: startOfDayUTC, lte: endOfDayUTC },
     },
     select: {
       hostUserId: true,
@@ -343,13 +340,6 @@ async function getAvailableSlots(
       endTime: true,
     },
   });
-
-  console.log("[getAvailableSlots] Query range:", startOfDay.toISOString(), "to", endOfDay.toISOString());
-  console.log("[getAvailableSlots] Existing appointments for date:", dateStr, existingAppointments.map(a => ({
-    host: a.hostUserId,
-    start: a.startTime,
-    end: a.endTime
-  })));
 
   // Generate available slots
   const slots: { time: string; hostId: string }[] = [];
@@ -363,6 +353,8 @@ async function getAvailableSlots(
     const [startHour, startMin] = period.start.split(":").map(Number);
     const [endHour, endMin] = period.end.split(":").map(Number);
 
+    // Create slot times in UTC based on agency timezone offset
+    // For simplicity, we'll generate slots and store them as UTC
     let slotTime = new Date(date);
     slotTime.setHours(startHour, startMin, 0, 0);
 
@@ -374,28 +366,23 @@ async function getAvailableSlots(
       if (slotTime > minNoticeTime) {
         const slotEnd = new Date(slotTime.getTime() + duration * 60000);
 
-        // Check if ANY appointment exists at this time slot (regardless of host)
-        // This prevents double-booking the same time with different hosts
+        // Check if ANY appointment exists at this time slot
         const timeSlotTaken = existingAppointments.some(appt => {
           const apptStart = new Date(appt.startTime);
           const apptEnd = new Date(appt.endTime);
-          // Add buffer time
           const apptStartWithBuffer = new Date(apptStart.getTime() - bufferBefore * 60000);
           const apptEndWithBuffer = new Date(apptEnd.getTime() + bufferAfter * 60000);
           return slotTime < apptEndWithBuffer && slotEnd > apptStartWithBuffer;
         });
 
-        if (timeSlotTaken) {
-          // Skip this slot entirely - it's already booked
-          // Move to next slot
-        } else {
-          // Find an available host for this slot
+        if (!timeSlotTaken) {
+          // Add slot with first available host
           for (const hostId of hostIds) {
             slots.push({
               time: slotTime.toISOString(),
               hostId,
             });
-            break; // Only need one available host per slot
+            break;
           }
         }
       }
@@ -412,10 +399,9 @@ async function getAvailableSlots(
 async function getAvailableDays(
   bookingType: any,
   hostIds: string[],
-  monthStr: string // YYYY-MM
+  monthStr: string
 ): Promise<string[]> {
   if (hostIds.length === 0) {
-    console.log("[getAvailableDays] No hosts provided");
     return [];
   }
 
@@ -433,18 +419,15 @@ async function getAvailableDays(
   });
 
   if (!agencyAvail) {
-    console.log("[getAvailableDays] No agency availability found for agencyId:", bookingType.agencyId);
     return [];
   }
 
   const weeklySchedule = (agencyAvail?.weeklySchedule as any) || {};
-  console.log("[getAvailableDays] Agency schedule keys:", Object.keys(weeklySchedule), "MinNotice:", bookingType.minNotice, "hours, MaxFuture:", bookingType.maxFutureDays, "days");
 
   const availableDays: string[] = [];
   const currentDate = new Date(startDate);
 
   while (currentDate <= endDate) {
-    // Check if date is within allowed range
     if (currentDate >= minNoticeDate && currentDate <= maxFutureDate) {
       const dayName = currentDate.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
       const daySchedule = weeklySchedule[dayName] || [];

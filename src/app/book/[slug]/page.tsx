@@ -21,6 +21,10 @@ export default function PublicBookingPage() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // Timezone state
+  const [guestTimezone, setGuestTimezone] = useState<string>("");
+  const [agencyTimezone, setAgencyTimezone] = useState<string>("Asia/Dubai");
+
   // Form state
   const [step, setStep] = useState<"calendar" | "form" | "confirmation">("calendar");
   const [guestName, setGuestName] = useState("");
@@ -33,12 +37,18 @@ export default function PublicBookingPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Detect guest timezone
+    const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    setGuestTimezone(detectedTz);
     fetchBookingInfo();
   }, [slug]);
 
   useEffect(() => {
     if (bookingData) {
       fetchAvailableDays();
+      if (bookingData.timezone) {
+        setAgencyTimezone(bookingData.timezone);
+      }
     }
   }, [currentMonth, bookingData]);
 
@@ -58,6 +68,9 @@ export default function PublicBookingPage() {
       }
       const data = await res.json();
       setBookingData(data);
+      if (data.timezone) {
+        setAgencyTimezone(data.timezone);
+      }
       setLoading(false);
     } catch (err) {
       setError("Failed to load booking info");
@@ -108,6 +121,7 @@ export default function PublicBookingPage() {
           guestPhone,
           guestCompany,
           notes,
+          guestTimezone,
         }),
       });
 
@@ -144,23 +158,51 @@ export default function PublicBookingPage() {
     return availableDays.includes(dateStr);
   };
 
+  // Format time in guest's timezone
   const formatTime = (isoString: string) => {
     const date = new Date(isoString);
     return date.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZone: guestTimezone || undefined,
+    });
+  };
+
+  // Format time in agency timezone for display
+  const formatTimeInAgencyTz = (isoString: string) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: agencyTimezone,
     });
   };
 
   const formatDisplayDate = (dateStr: string) => {
-    const date = new Date(dateStr);
+    const date = new Date(dateStr + "T12:00:00"); // Add time to prevent timezone shift
     return date.toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
       year: "numeric",
     });
+  };
+
+  // Get friendly timezone name
+  const getTimezoneLabel = (tz: string) => {
+    try {
+      const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        timeZoneName: "short",
+      });
+      const parts = formatter.formatToParts(new Date());
+      const tzPart = parts.find(p => p.type === "timeZoneName");
+      return tzPart?.value || tz;
+    } catch {
+      return tz;
+    }
   };
 
   // Branding colors
@@ -186,6 +228,7 @@ export default function PublicBookingPage() {
   }
 
   const { daysInMonth, startingDay } = getDaysInMonth(currentMonth);
+  const showTimezoneNote = guestTimezone && guestTimezone !== agencyTimezone;
 
   return (
     <div
@@ -222,6 +265,18 @@ export default function PublicBookingPage() {
 
         {step === "calendar" && (
           <>
+            {/* Timezone Info */}
+            <div style={styles.timezoneBar}>
+              <span style={{ fontSize: 12, color: "#666" }}>
+                🌍 Times shown in {getTimezoneLabel(guestTimezone || agencyTimezone)}
+              </span>
+              {showTimezoneNote && (
+                <span style={{ fontSize: 11, color: "#999" }}>
+                  (Agency: {getTimezoneLabel(agencyTimezone)})
+                </span>
+              )}
+            </div>
+
             {/* Calendar */}
             <div style={styles.calendarSection}>
               <div style={styles.calendarNav}>
@@ -318,6 +373,11 @@ export default function PublicBookingPage() {
               <strong>{formatDisplayDate(selectedDate!)}</strong>
               <br />
               {formatTime(selectedSlot!)}
+              {showTimezoneNote && (
+                <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>
+                  ({formatTimeInAgencyTz(selectedSlot!)} {getTimezoneLabel(agencyTimezone)})
+                </span>
+              )}
             </div>
 
             <div style={styles.form}>
@@ -407,8 +467,12 @@ export default function PublicBookingPage() {
                   month: "long",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: guestTimezone || undefined,
                 })}{" "}
                 at {formatTime(confirmationData.startTime)}
+                <span style={{ fontSize: 12, color: "#666", display: "block", marginTop: 4 }}>
+                  {getTimezoneLabel(guestTimezone || agencyTimezone)}
+                </span>
               </div>
               {confirmationData.host?.name && (
                 <div style={{ marginTop: 12 }}>
@@ -488,6 +552,15 @@ const styles: { [key: string]: React.CSSProperties } = {
     background: "#f5f5f5",
     padding: "6px 12px",
     borderRadius: 20,
+  },
+  timezoneBar: {
+    padding: "10px 28px",
+    background: "#f8f9fa",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    flexWrap: "wrap",
   },
   calendarSection: {
     padding: "20px 28px",
