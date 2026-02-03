@@ -124,76 +124,136 @@ export async function sendBookingConfirmation({
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #76527c 0%, #5a3d5e 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-        .content { background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 12px 12px; }
-        .detail-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .detail-row { margin-bottom: 12px; }
-        .detail-label { color: #666; font-size: 13px; }
-        .detail-value { font-weight: 500; font-size: 15px; }
-        .meeting-link { display: inline-block; background: #76527c; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; margin: 20px 0; }
-        .actions { margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; text-align: center; }
-        .action-link { color: #76527c; margin: 0 12px; font-size: 14px; }
-        .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
-      </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          ${agencyLogo ? `<img src="${agencyLogo}" alt="${agencyName}" style="height:40px;margin-bottom:16px;">` : ''}
-          <h1 style="margin:0;font-size:24px;">Booking Confirmed!</h1>
-          <p style="margin:10px 0 0;opacity:0.9;">${bookingTypeName}</p>
-        </div>
-        <div class="content">
-          <p>Hi ${guestName},</p>
-          <p>Your meeting has been confirmed. Here are the details:</p>
+    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
+              <!-- Header with checkmark -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:40px 40px 32px;text-align:center;">
+                  <div style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;">
+                    <table role="presentation" cellspacing="0" cellpadding="0">
+                      <tr>
+                        <td style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;text-align:center;vertical-align:middle;">
+                          <span style="font-size:32px;line-height:64px;">&#10003;</span>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                  <h1 style="margin:0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">You're All Set!</h1>
+                  <p style="margin:8px 0 0;font-size:15px;color:rgba(255,255,255,0.9);">Your meeting has been confirmed</p>
+                </td>
+              </tr>
 
-          <div class="detail-box">
-            <div class="detail-row">
-              <div class="detail-label">📅 Date</div>
-              <div class="detail-value">${dateStr}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">🕐 Time</div>
-              <div class="detail-value">${timeStr}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">🌍 Timezone</div>
-              <div class="detail-value">${timezone}</div>
-            </div>
-            <div class="detail-row">
-              <div class="detail-label">👤 With</div>
-              <div class="detail-value">${hostName}</div>
-            </div>
-          </div>
+              <!-- Meeting info card -->
+              <tr>
+                <td style="padding:32px 40px;">
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+                    <tr>
+                      <td style="padding:24px;">
+                        <h2 style="margin:0 0 16px;font-size:18px;font-weight:600;color:#1e293b;">${bookingTypeName}</h2>
 
-          ${meetingLink ? `
-            <div style="text-align:center;">
-              <a href="${meetingLink}" class="meeting-link">Join Meeting</a>
-            </div>
-          ` : ''}
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:24px;vertical-align:top;padding-right:12px;">
+                                    <span style="font-size:16px;">&#128197;</span>
+                                  </td>
+                                  <td>
+                                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Date</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${dateStr}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:24px;vertical-align:top;padding-right:12px;">
+                                    <span style="font-size:16px;">&#128336;</span>
+                                  </td>
+                                  <td>
+                                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Time</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${timeStr}</div>
+                                    <div style="font-size:13px;color:#64748b;margin-top:2px;">${timezone}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:10px 0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:24px;vertical-align:top;padding-right:12px;">
+                                    <span style="font-size:16px;">&#128100;</span>
+                                  </td>
+                                  <td>
+                                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Meeting With</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${hostName}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
 
-          ${notes ? `
-            <div style="margin-top:20px;">
-              <strong>Notes:</strong>
-              <p style="color:#666;margin:8px 0 0;">${notes}</p>
-            </div>
-          ` : ''}
+                  ${meetingLink ? `
+                  <!-- Join Meeting Button -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${meetingLink}" style="display:inline-block;background:linear-gradient(135deg,#76527c 0%,#5a3d5e 100%);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;box-shadow:0 2px 4px rgba(118,82,124,0.3);">Join Meeting</a>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
 
-          ${cancelUrl ? `
-          <div class="actions">
-            <a href="${cancelUrl}" class="action-link" style="color:#76527c;">Reschedule</a>
-            <span style="color:#ccc;margin:0 8px;">|</span>
-            <a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>
-          </div>
-          ` : ''}
-        </div>
-        <div class="footer">
-          <p>This booking was made through ${agencyName}.</p>
-        </div>
-      </div>
+                  ${notes ? `
+                  <!-- Notes -->
+                  <div style="margin-top:24px;padding:16px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;">
+                    <div style="font-size:12px;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Notes</div>
+                    <div style="font-size:14px;color:#78350f;">${notes}</div>
+                  </div>
+                  ` : ''}
+                </td>
+              </tr>
+
+              ${(rescheduleUrl || cancelUrl) ? `
+              <!-- Action buttons -->
+              <tr>
+                <td style="padding:0 40px 32px;text-align:center;">
+                  <div style="border-top:1px solid #e2e8f0;padding-top:24px;">
+                    <span style="font-size:13px;color:#64748b;">Need to make changes?</span>
+                    <div style="margin-top:12px;">
+                      ${rescheduleUrl ? `<a href="${rescheduleUrl}" style="display:inline-block;color:#76527c;font-size:14px;font-weight:500;text-decoration:none;padding:8px 16px;border:1px solid #76527c;border-radius:6px;margin:0 4px;">Reschedule</a>` : ''}
+                      ${cancelUrl ? `<a href="${cancelUrl}" style="display:inline-block;color:#dc2626;font-size:14px;font-weight:500;text-decoration:none;padding:8px 16px;border:1px solid #dc2626;border-radius:6px;margin:0 4px;">Cancel</a>` : ''}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              ` : ''}
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+                  ${agencyLogo ? `<img src="${agencyLogo}" alt="${agencyName}" style="height:28px;margin-bottom:12px;">` : `<div style="font-size:14px;font-weight:600;color:#64748b;margin-bottom:8px;">${agencyName}</div>`}
+                  <p style="margin:0;font-size:12px;color:#94a3b8;">This booking was scheduled through ${agencyName}</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;
@@ -205,49 +265,118 @@ export async function sendBookingConfirmation({
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #76527c 0%, #5a3d5e 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-        .content { background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 12px 12px; }
-        .detail-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .footer { text-align: center; padding: 20px; color: #999; font-size: 12px; }
-      </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1 style="margin:0;font-size:24px;">New Booking</h1>
-          <p style="margin:10px 0 0;opacity:0.9;">${bookingTypeName}</p>
-        </div>
-        <div class="content">
-          <p>Hi ${hostName},</p>
-          <p>You have a new booking from <strong>${guestName}</strong>.</p>
+    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#76527c 0%,#5a3d5e 100%);padding:32px 40px;text-align:center;">
+                  <div style="display:inline-block;background:rgba(255,255,255,0.15);padding:8px 16px;border-radius:20px;margin-bottom:16px;">
+                    <span style="font-size:13px;color:#ffffff;font-weight:500;">NEW BOOKING</span>
+                  </div>
+                  <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;">${bookingTypeName}</h1>
+                </td>
+              </tr>
 
-          <div class="detail-box">
-            <p style="margin:0 0 10px;"><strong>📅 Date:</strong> ${dateStr}</p>
-            <p style="margin:0 0 10px;"><strong>🕐 Time:</strong> ${timeStr}</p>
-            <p style="margin:0 0 10px;"><strong>👤 Guest:</strong> ${guestName}</p>
-            <p style="margin:0;"><strong>📧 Email:</strong> ${guestEmail}</p>
-          </div>
+              <!-- Content -->
+              <tr>
+                <td style="padding:32px 40px;">
+                  <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi ${hostName}, you have a new booking from <strong style="color:#1e293b;">${guestName}</strong>.</p>
 
-          ${meetingLink ? `
-            <div style="text-align:center;margin:20px 0;">
-              <a href="${meetingLink}" style="display:inline-block;background:#76527c;color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:500;">Join Meeting</a>
-            </div>
-          ` : ''}
+                  <!-- Guest Info Card -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(135deg,#f0fdf4 0%,#ecfdf5 100%);border-radius:12px;border:1px solid #bbf7d0;margin-bottom:20px;">
+                    <tr>
+                      <td style="padding:20px;">
+                        <table role="presentation" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="vertical-align:top;">
+                              <div style="width:48px;height:48px;background:linear-gradient(135deg,#10b981 0%,#059669 100%);border-radius:50%;text-align:center;line-height:48px;color:#ffffff;font-size:18px;font-weight:600;">${guestName.charAt(0).toUpperCase()}</div>
+                            </td>
+                            <td style="padding-left:16px;vertical-align:middle;">
+                              <div style="font-size:16px;font-weight:600;color:#1e293b;">${guestName}</div>
+                              <div style="font-size:14px;color:#64748b;">${guestEmail}</div>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
 
-          ${notes ? `
-            <div style="margin-top:20px;">
-              <strong>Guest Notes:</strong>
-              <p style="color:#666;margin:8px 0 0;">${notes}</p>
-            </div>
-          ` : ''}
-        </div>
-        <div class="footer">
-          <p>View all your bookings in the Wick Portal.</p>
-        </div>
-      </div>
+                  <!-- Meeting Details -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+                    <tr>
+                      <td style="padding:20px;">
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="padding:8px 0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#ede9fe;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#128197;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Date</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${dateStr}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:8px 0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#fce7f3;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#128336;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Time</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${timeStr}</div>
+                                    <div style="font-size:12px;color:#94a3b8;">${timezone}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+
+                  ${meetingLink ? `
+                  <!-- Join Meeting Button -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${meetingLink}" style="display:inline-block;background:linear-gradient(135deg,#3b82f6 0%,#2563eb 100%);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;box-shadow:0 2px 4px rgba(59,130,246,0.3);">Join Meeting</a>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
+
+                  ${notes ? `
+                  <!-- Guest Notes -->
+                  <div style="margin-top:24px;padding:16px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;">
+                    <div style="font-size:12px;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">Guest Notes</div>
+                    <div style="font-size:14px;color:#78350f;">${notes}</div>
+                  </div>
+                  ` : ''}
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+                  <a href="https://wick.omnixia.ai/bookings" style="display:inline-block;color:#76527c;font-size:14px;font-weight:500;text-decoration:none;">View All Bookings &rarr;</a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;
@@ -317,37 +446,74 @@ export async function sendBookingCancellation({
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #fee2e2; color: #dc2626; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-        .content { background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 12px 12px; }
-        .detail-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-      </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1 style="margin:0;font-size:24px;">Booking Cancelled</h1>
-        </div>
-        <div class="content">
-          <p>Hi ${recipientName},</p>
-          <p>The following meeting has been cancelled by ${cancellerName}:</p>
+    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#ef4444 0%,#dc2626 100%);padding:40px 40px 32px;text-align:center;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
+                    <tr>
+                      <td style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;text-align:center;vertical-align:middle;">
+                        <span style="font-size:32px;line-height:64px;color:#ffffff;">&#10005;</span>
+                      </td>
+                    </tr>
+                  </table>
+                  <h1 style="margin:20px 0 0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Meeting Cancelled</h1>
+                </td>
+              </tr>
 
-          <div class="detail-box">
-            <p style="margin:0 0 10px;font-weight:600;">${bookingTypeName}</p>
-            <p style="margin:0 0 8px;">📅 ${dateStr}</p>
-            <p style="margin:0;">🕐 ${timeStr}</p>
-          </div>
+              <!-- Content -->
+              <tr>
+                <td style="padding:32px 40px;">
+                  <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi ${recipientName}, the following meeting has been cancelled by <strong style="color:#1e293b;">${cancellerName}</strong>.</p>
 
-          ${reason ? `
-            <div style="margin-top:20px;">
-              <strong>Reason:</strong>
-              <p style="color:#666;margin:8px 0 0;">${reason}</p>
-            </div>
-          ` : ''}
-        </div>
-      </div>
+                  <!-- Cancelled Meeting Card -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:12px;border:1px solid #fecaca;">
+                    <tr>
+                      <td style="padding:24px;">
+                        <div style="text-decoration:line-through;opacity:0.7;">
+                          <h3 style="margin:0 0 16px;font-size:17px;font-weight:600;color:#991b1b;">${bookingTypeName}</h3>
+                          <table role="presentation" cellspacing="0" cellpadding="0">
+                            <tr>
+                              <td style="padding:6px 0;">
+                                <span style="font-size:14px;color:#991b1b;">&#128197; ${dateStr}</span>
+                              </td>
+                            </tr>
+                            <tr>
+                              <td style="padding:6px 0;">
+                                <span style="font-size:14px;color:#991b1b;">&#128336; ${timeStr}</span>
+                              </td>
+                            </tr>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  ${reason ? `
+                  <!-- Reason -->
+                  <div style="margin-top:24px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                    <div style="font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Reason for cancellation</div>
+                    <div style="font-size:14px;color:#475569;">${reason}</div>
+                  </div>
+                  ` : ''}
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+                  <p style="margin:0;font-size:13px;color:#94a3b8;">If you have any questions, please contact the other party directly.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;
@@ -597,6 +763,7 @@ export async function sendBookingReschedule({
   newEndTime,
   timezone,
   meetingLink,
+  rescheduleUrl,
   cancelUrl,
 }: {
   guestName: string;
@@ -609,6 +776,7 @@ export async function sendBookingReschedule({
   newEndTime: Date;
   timezone: string;
   meetingLink?: string;
+  rescheduleUrl?: string;
   cancelUrl?: string;
 }): Promise<void> {
   const formatDate = (date: Date) => {
@@ -642,68 +810,135 @@ export async function sendBookingReschedule({
     <head>
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 30px; border-radius: 12px 12px 0 0; text-align: center; }
-        .content { background: #fff; border: 1px solid #e5e5e5; border-top: none; padding: 30px; border-radius: 0 0 12px 12px; }
-        .detail-box { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-        .old-time { color: #666; text-decoration: line-through; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eee; }
-        .new-time { color: #059669; font-weight: 500; }
-        .meeting-link { display: inline-block; background: #76527c; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 500; margin: 20px 0; }
-        .actions { margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; text-align: center; }
-        .action-link { color: #76527c; margin: 0 12px; font-size: 14px; }
-      </style>
     </head>
-    <body>
-      <div class="container">
-        <div class="header">
-          <h1 style="margin:0;font-size:24px;">🔄 Meeting Rescheduled</h1>
-          <p style="margin:10px 0 0;opacity:0.9;">${bookingTypeName}</p>
-        </div>
-        <div class="content">
-          <p>Hi ${recipientName},</p>
-          <p>${isHost ? `${guestName} has` : 'Your meeting has been'} rescheduled. Here are the updated details:</p>
+    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);padding:40px 40px 32px;text-align:center;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto;">
+                    <tr>
+                      <td style="width:64px;height:64px;background:rgba(255,255,255,0.2);border-radius:50%;text-align:center;vertical-align:middle;">
+                        <span style="font-size:28px;line-height:64px;color:#ffffff;">&#8634;</span>
+                      </td>
+                    </tr>
+                  </table>
+                  <h1 style="margin:20px 0 0;font-size:26px;font-weight:700;color:#ffffff;letter-spacing:-0.5px;">Meeting Rescheduled</h1>
+                  <p style="margin:8px 0 0;font-size:15px;color:rgba(255,255,255,0.9);">${bookingTypeName}</p>
+                </td>
+              </tr>
 
-          <div class="detail-box">
-            <div class="old-time">
-              <div style="font-size:12px;color:#999;margin-bottom:4px;">Previous Time</div>
-              ${oldDateStr} at ${oldTimeStr}
-            </div>
-            <div class="new-time">
-              <div style="font-size:12px;color:#059669;margin-bottom:4px;">✓ New Time</div>
-              📅 ${newDateStr}<br>
-              🕐 ${newTimeStr}
-            </div>
-          </div>
+              <!-- Content -->
+              <tr>
+                <td style="padding:32px 40px;">
+                  <p style="margin:0 0 24px;font-size:15px;color:#475569;">Hi ${recipientName}, ${isHost ? `<strong style="color:#1e293b;">${guestName}</strong> has` : 'your meeting has been'} rescheduled to a new time.</p>
 
-          <div style="margin-top:16px;">
-            <strong>🌍 Timezone:</strong> ${timezone}
-          </div>
+                  <!-- Time Change Card -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:24px;">
+                    <!-- Old Time -->
+                    <tr>
+                      <td style="padding:16px;background:#fef2f2;border-radius:12px 12px 0 0;border:1px solid #fecaca;border-bottom:none;">
+                        <table role="presentation" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="width:32px;vertical-align:top;">
+                              <span style="font-size:18px;opacity:0.5;">&#128197;</span>
+                            </td>
+                            <td style="opacity:0.6;">
+                              <div style="font-size:11px;color:#991b1b;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">Previous Time</div>
+                              <div style="font-size:14px;color:#991b1b;text-decoration:line-through;">${oldDateStr} at ${oldTimeStr}</div>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                    <!-- Arrow -->
+                    <tr>
+                      <td style="text-align:center;background:linear-gradient(to bottom,#fef2f2 50%,#f0fdf4 50%);padding:0;">
+                        <div style="display:inline-block;background:#ffffff;border:2px solid #e2e8f0;border-radius:50%;width:32px;height:32px;line-height:28px;font-size:16px;">&#8595;</div>
+                      </td>
+                    </tr>
+                    <!-- New Time -->
+                    <tr>
+                      <td style="padding:16px;background:#f0fdf4;border-radius:0 0 12px 12px;border:1px solid #bbf7d0;border-top:none;">
+                        <table role="presentation" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="width:32px;vertical-align:top;">
+                              <span style="font-size:18px;">&#9989;</span>
+                            </td>
+                            <td>
+                              <div style="font-size:11px;color:#166534;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px;">New Time</div>
+                              <div style="font-size:15px;font-weight:600;color:#166534;">${newDateStr}</div>
+                              <div style="font-size:14px;color:#166534;margin-top:2px;">${newTimeStr}</div>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
 
-          ${isHost ? `
-          <div style="margin-top:8px;">
-            <strong>👤 Guest:</strong> ${guestName} (${guestEmail})
-          </div>
-          ` : `
-          <div style="margin-top:8px;">
-            <strong>👤 With:</strong> ${hostName}
-          </div>
-          `}
+                  <!-- Additional Details -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;">
+                    <tr>
+                      <td style="padding:16px;">
+                        <table role="presentation" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="padding:4px 0;">
+                              <span style="font-size:13px;color:#64748b;">&#127760; Timezone:</span>
+                              <span style="font-size:13px;color:#1e293b;font-weight:500;margin-left:8px;">${timezone}</span>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:4px 0;">
+                              <span style="font-size:13px;color:#64748b;">&#128100; ${isHost ? 'Guest:' : 'With:'}</span>
+                              <span style="font-size:13px;color:#1e293b;font-weight:500;margin-left:8px;">${isHost ? `${guestName} (${guestEmail})` : hostName}</span>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
 
-          ${meetingLink ? `
-            <div style="text-align:center;margin-top:20px;">
-              <a href="${meetingLink}" class="meeting-link">Join Meeting</a>
-            </div>
-          ` : ''}
+                  ${meetingLink ? `
+                  <!-- Join Meeting Button -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:24px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${meetingLink}" style="display:inline-block;background:linear-gradient(135deg,#76527c 0%,#5a3d5e 100%);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;box-shadow:0 2px 4px rgba(118,82,124,0.3);">Join Meeting</a>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
+                </td>
+              </tr>
 
-          ${!isHost && cancelUrl ? `
-          <div class="actions">
-            <a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>
-          </div>
-          ` : ''}
-        </div>
-      </div>
+              ${!isHost && (rescheduleUrl || cancelUrl) ? `
+              <!-- Action buttons -->
+              <tr>
+                <td style="padding:0 40px 32px;text-align:center;">
+                  <div style="border-top:1px solid #e2e8f0;padding-top:24px;">
+                    <span style="font-size:13px;color:#64748b;">Need to make more changes?</span>
+                    <div style="margin-top:12px;">
+                      ${rescheduleUrl ? `<a href="${rescheduleUrl}" style="display:inline-block;color:#76527c;font-size:14px;font-weight:500;text-decoration:none;padding:8px 16px;border:1px solid #76527c;border-radius:6px;margin:0 4px;">Reschedule Again</a>` : ''}
+                      ${cancelUrl ? `<a href="${cancelUrl}" style="display:inline-block;color:#dc2626;font-size:14px;font-weight:500;text-decoration:none;padding:8px 16px;border:1px solid #dc2626;border-radius:6px;margin:0 4px;">Cancel</a>` : ''}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+              ` : ''}
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+                  <p style="margin:0;font-size:13px;color:#94a3b8;">Please add this updated time to your calendar.</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
     </body>
     </html>
   `;

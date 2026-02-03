@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendBookingConfirmation } from "@/lib/email";
+import { createCalendarEvent } from "@/lib/google-calendar";
+import { createZoomMeeting } from "@/lib/zoom";
 
 // Helper to parse the slug - supports both /[typeSlug] and /[userSlug]/[typeSlug]
 async function parseSlug(slugParts: string[]): Promise<{
@@ -292,14 +294,101 @@ export async function POST(
       select: { name: true, email: true },
     });
 
-    // Generate meeting link placeholder
+    // Create meeting link and calendar event
     let meetingLink = null;
+    let meetingId = null;
+    let calendarEventId = null;
+
     if (bookingType.autoCreateMeet && bookingType.locationType === "VIDEO") {
-      meetingLink = `https://meet.google.com/${generateMeetingCode()}`;
+      // Check host's connected integrations to determine meeting provider
+      const hostIntegrations = await prisma.user.findUnique({
+        where: { id: hostUserId },
+        select: {
+          calendarConnected: true,
+          zoomConnected: true,
+        },
+      });
+
+      // Priority: Zoom > Google Meet > Fallback
+      if (hostIntegrations?.zoomConnected) {
+        // Try to create Zoom meeting
+        try {
+          const zoomResult = await createZoomMeeting({
+            userId: hostUserId,
+            topic: `${bookingType.name} with ${data.guestName}`,
+            agenda: data.notes || `Booking created through the booking system`,
+            startTime,
+            duration: bookingType.duration,
+            timezone: data.guestTimezone || agencyTimezone,
+          });
+
+          if (zoomResult) {
+            meetingId = zoomResult.meetingId;
+            meetingLink = zoomResult.joinUrl;
+          }
+        } catch (zoomError) {
+          console.error("Error creating Zoom meeting:", zoomError);
+        }
+      }
+
+      // If no Zoom meeting, try Google Meet via Calendar
+      if (!meetingLink && hostIntegrations?.calendarConnected) {
+        try {
+          const calendarResult = await createCalendarEvent({
+            userId: hostUserId,
+            summary: `${bookingType.name} with ${data.guestName}`,
+            description: data.notes || `Booking created through the booking system`,
+            startTime,
+            endTime,
+            timezone: data.guestTimezone || agencyTimezone,
+            attendeeEmail: data.guestEmail,
+            attendeeName: data.guestName,
+            createGoogleMeet: true,
+          });
+
+          if (calendarResult) {
+            calendarEventId = calendarResult.eventId;
+            meetingLink = calendarResult.meetLink || null;
+          }
+        } catch (calError) {
+          console.error("Error creating calendar event:", calError);
+        }
+      } else if (hostIntegrations?.calendarConnected) {
+        // Zoom meeting created, still create calendar event without Google Meet
+        try {
+          const calendarResult = await createCalendarEvent({
+            userId: hostUserId,
+            summary: `${bookingType.name} with ${data.guestName}`,
+            description: data.notes || `Booking created through the booking system`,
+            startTime,
+            endTime,
+            timezone: data.guestTimezone || agencyTimezone,
+            attendeeEmail: data.guestEmail,
+            attendeeName: data.guestName,
+            meetingLink, // Pass Zoom link
+            createGoogleMeet: false,
+          });
+
+          if (calendarResult) {
+            calendarEventId = calendarResult.eventId;
+          }
+        } catch (calError) {
+          console.error("Error creating calendar event:", calError);
+        }
+      }
+
+      // Fallback: generate placeholder meeting link if nothing created
+      if (!meetingLink) {
+        meetingLink = `https://meet.google.com/${generateMeetingCode()}`;
+      }
 
       await prisma.bookingAppointment.update({
         where: { id: appointment.id },
-        data: { meetingLink },
+        data: {
+          meetingLink,
+          meetingId,
+          calendarEventId,
+        },
       });
     }
 

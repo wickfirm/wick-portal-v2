@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendBookingCancellation, sendBookingReschedule } from "@/lib/email";
+import { updateCalendarEvent, deleteCalendarEvent } from "@/lib/google-calendar";
 
 // GET - Fetch appointment details for guest management
 export async function GET(
@@ -129,6 +130,21 @@ export async function PUT(
     // Store old time for email
     const oldStartTime = appointment.startTime;
 
+    // Update Google Calendar event if exists
+    if (appointment.calendarEventId) {
+      try {
+        await updateCalendarEvent({
+          userId: appointment.hostUserId,
+          eventId: appointment.calendarEventId,
+          startTime: newStart,
+          endTime: newEnd,
+          timezone: guestTimezone || appointment.timezone,
+        });
+      } catch (calError) {
+        console.error("Error updating calendar event:", calError);
+      }
+    }
+
     // Update appointment
     const updated = await prisma.bookingAppointment.update({
       where: { id: appointmentId },
@@ -140,9 +156,11 @@ export async function PUT(
       },
     });
 
-    // Get base URL for cancel link
+    // Get base URL for manage links
     const baseUrl = req.headers.get("origin") || "https://wick.omnixia.ai";
-    const cancelUrl = `${baseUrl}/book/manage/${appointment.id}`;
+    const manageUrl = `${baseUrl}/book/manage/${appointment.id}`;
+    const rescheduleUrl = `${manageUrl}?action=reschedule`;
+    const cancelUrl = `${manageUrl}?action=cancel`;
 
     // Send reschedule emails
     if (host) {
@@ -158,6 +176,7 @@ export async function PUT(
           newEndTime: newEnd,
           timezone: guestTimezone || appointment.timezone,
           meetingLink: appointment.meetingLink || undefined,
+          rescheduleUrl,
           cancelUrl,
         });
       } catch (emailError) {
@@ -251,10 +270,17 @@ export async function DELETE(
       }
     }
 
-    // TODO: Delete Google Calendar event if exists
-    // if (appointment.calendarEventId) {
-    //   await deleteCalendarEvent(appointment.calendarEventId);
-    // }
+    // Delete Google Calendar event if exists
+    if (appointment.calendarEventId) {
+      try {
+        await deleteCalendarEvent({
+          userId: appointment.hostUserId,
+          eventId: appointment.calendarEventId,
+        });
+      } catch (calError) {
+        console.error("Error deleting calendar event:", calError);
+      }
+    }
 
     return NextResponse.json({ success: true, appointment: updated });
   } catch (error) {
