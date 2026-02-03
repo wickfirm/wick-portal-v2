@@ -182,10 +182,11 @@ export async function sendBookingConfirmation({
             </div>
           ` : ''}
 
+          ${cancelUrl ? `
           <div class="actions">
-            ${rescheduleUrl ? `<a href="${rescheduleUrl}" class="action-link">Reschedule</a>` : ''}
-            ${cancelUrl ? `<a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>` : ''}
+            <a href="${cancelUrl}" class="action-link" style="color:#dc2626;">Cancel Booking</a>
           </div>
+          ` : ''}
         </div>
         <div class="footer">
           <p>This booking was made through ${agencyName}.</p>
@@ -250,7 +251,9 @@ export async function sendBookingConfirmation({
   `;
 
   // Send both emails in parallel
-  await Promise.all([
+  console.log(`📧 Sending booking confirmation to guest: ${guestEmail} and host: ${hostEmail}`);
+
+  const results = await Promise.all([
     sendEmail({
       to: guestEmail,
       subject: `Confirmed: ${bookingTypeName} on ${dateStr}`,
@@ -263,6 +266,8 @@ export async function sendBookingConfirmation({
       replyTo: guestEmail,
     }),
   ]);
+
+  console.log(`📧 Email results - Guest: ${results[0]}, Host: ${results[1]}`);
 }
 
 export async function sendBookingCancellation({
@@ -301,11 +306,10 @@ export async function sendBookingCancellation({
     timeZone: timezone,
   });
 
-  const recipientEmail = cancelledBy === "HOST" ? guestEmail : hostEmail;
-  const recipientName = cancelledBy === "HOST" ? guestName : hostName;
   const cancellerName = cancelledBy === "HOST" ? hostName : guestName;
 
-  const html = `
+  // Generate HTML for a recipient
+  const generateHtml = (recipientName: string) => `
     <!DOCTYPE html>
     <html>
     <head>
@@ -346,11 +350,19 @@ export async function sendBookingCancellation({
     </html>
   `;
 
-  await sendEmail({
-    to: recipientEmail,
-    subject: `Cancelled: ${bookingTypeName} on ${dateStr}`,
-    html,
-  });
+  // Send cancellation email to BOTH guest and host
+  await Promise.all([
+    sendEmail({
+      to: guestEmail,
+      subject: `Cancelled: ${bookingTypeName} on ${dateStr}`,
+      html: generateHtml(guestName),
+    }),
+    sendEmail({
+      to: hostEmail,
+      subject: `Cancelled: ${bookingTypeName} on ${dateStr}`,
+      html: generateHtml(hostName),
+    }),
+  ]);
 }
 
 export async function sendBookingReminder({
