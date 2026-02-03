@@ -374,19 +374,23 @@ async function getAvailableSlots(
       if (slotTime > minNoticeTime) {
         const slotEnd = new Date(slotTime.getTime() + duration * 60000);
 
-        // Check each host for availability
-        for (const hostId of hostIds) {
-          const isConflict = existingAppointments.some(appt => {
-            if (appt.hostUserId !== hostId) return false;
-            const apptStart = new Date(appt.startTime);
-            const apptEnd = new Date(appt.endTime);
-            // Add buffer time
-            apptStart.setMinutes(apptStart.getMinutes() - bufferBefore);
-            apptEnd.setMinutes(apptEnd.getMinutes() + bufferAfter);
-            return slotTime < apptEnd && slotEnd > apptStart;
-          });
+        // Check if ANY appointment exists at this time slot (regardless of host)
+        // This prevents double-booking the same time with different hosts
+        const timeSlotTaken = existingAppointments.some(appt => {
+          const apptStart = new Date(appt.startTime);
+          const apptEnd = new Date(appt.endTime);
+          // Add buffer time
+          const apptStartWithBuffer = new Date(apptStart.getTime() - bufferBefore * 60000);
+          const apptEndWithBuffer = new Date(apptEnd.getTime() + bufferAfter * 60000);
+          return slotTime < apptEndWithBuffer && slotEnd > apptStartWithBuffer;
+        });
 
-          if (!isConflict) {
+        if (timeSlotTaken) {
+          // Skip this slot entirely - it's already booked
+          // Move to next slot
+        } else {
+          // Find an available host for this slot
+          for (const hostId of hostIds) {
             slots.push({
               time: slotTime.toISOString(),
               hostId,
