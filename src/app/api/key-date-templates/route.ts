@@ -27,3 +27,33 @@ export async function GET() {
     return NextResponse.json({ error: "Failed to fetch templates" }, { status: 500 });
   }
 }
+
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const user = session.user as any;
+  if (!["SUPER_ADMIN", "ADMIN", "PLATFORM_ADMIN"].includes(user.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  try {
+    const data = await req.json();
+
+    const template = await prisma.keyDateTemplate.create({
+      data: {
+        name: data.name,
+        region: data.region,
+        date: data.date,
+        isRecurring: data.isRecurring ?? true,
+        category: data.category || "HOLIDAY",
+        color: data.color || null,
+      },
+    });
+
+    return NextResponse.json(template);
+  } catch (error) {
+    console.error("Error creating template:", error);
+    return NextResponse.json({ error: "Failed to create template" }, { status: 500 });
+  }
+}

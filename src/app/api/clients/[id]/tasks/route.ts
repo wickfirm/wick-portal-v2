@@ -18,13 +18,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       where,
       include: { 
         category: true,
-        assignee: { select: { name: true, email: true } },
-        client: { 
-          select: { 
-            nickname: true, 
-            name: true, 
-            agencies: { include: { agency: true } } 
-          } 
+        assignee: { select: { id: true, name: true, email: true } },
+        client: {
+          select: {
+            id: true,
+            nickname: true,
+            name: true,
+            agencies: { include: { agency: true } }
+          }
         },
       },
       orderBy: [{ createdAt: "desc" }],
@@ -78,7 +79,18 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         assigneeId: currentUser?.id || null, // Auto-assign to creator
         order: (lastTask?.order ?? 0) + 1,
       },
-      include: { category: true, assignee: { select: { name: true, email: true } } },
+      include: {
+        category: true,
+        assignee: { select: { id: true, name: true, email: true } },
+        client: {
+          select: {
+            id: true,
+            nickname: true,
+            name: true,
+            agencies: { include: { agency: true } }
+          }
+        },
+      },
     });
 
     return NextResponse.json(task);
