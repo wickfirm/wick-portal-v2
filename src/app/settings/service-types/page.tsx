@@ -26,6 +26,8 @@ export default function ServiceTypesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", icon: "", color: "" });
   const [error, setError] = useState("");
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServiceTypes();
@@ -102,6 +104,50 @@ export default function ServiceTypesPage() {
       const err = await res.json();
       setError(err.error || "Failed to update");
     }
+  }
+
+  function handleDragStart(id: string) {
+    setDraggedId(id);
+  }
+
+  function handleDragOver(e: React.DragEvent, id: string) {
+    e.preventDefault();
+    if (id !== draggedId) setDragOverId(id);
+  }
+
+  function handleDragLeave() {
+    setDragOverId(null);
+  }
+
+  async function handleDrop(targetId: string) {
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = serviceTypes.findIndex(st => st.id === draggedId);
+    const targetIndex = serviceTypes.findIndex(st => st.id === targetId);
+
+    const newServiceTypes = [...serviceTypes];
+    const [removed] = newServiceTypes.splice(draggedIndex, 1);
+    newServiceTypes.splice(targetIndex, 0, removed);
+
+    setServiceTypes(newServiceTypes);
+    setDraggedId(null);
+    setDragOverId(null);
+
+    // Save new order
+    await fetch("/api/service-types/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: newServiceTypes.map(st => st.id) }),
+    });
+  }
+
+  function handleDragEnd() {
+    setDraggedId(null);
+    setDragOverId(null);
   }
 
   const inputStyle = {
@@ -203,11 +249,22 @@ export default function ServiceTypesPage() {
           ) : (
             <div>
               {serviceTypes.map((st, idx) => (
-                <div key={st.id} style={{
-                  padding: "16px 20px",
-                  borderBottom: idx < serviceTypes.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                  opacity: st.isActive ? 1 : 0.5,
-                }}>
+                <div
+                  key={st.id}
+                  draggable={editingId !== st.id}
+                  onDragStart={() => handleDragStart(st.id)}
+                  onDragOver={(e) => handleDragOver(e, st.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(st.id)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: idx < serviceTypes.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                    opacity: draggedId === st.id ? 0.5 : st.isActive ? 1 : 0.5,
+                    cursor: editingId === st.id ? "default" : "grab",
+                    background: dragOverId === st.id ? theme.colors.primaryBg || "rgba(118,82,124,0.08)" : draggedId === st.id ? theme.colors.bgTertiary : "transparent",
+                    transition: "background 0.15s ease",
+                  }}>
                   {editingId === st.id ? (
                     /* Edit Mode */
                     <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
@@ -244,6 +301,9 @@ export default function ServiceTypesPage() {
                     /* View Mode */
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+                        <div style={{ color: theme.colors.textMuted, cursor: "grab", flexShrink: 0 }} title="Drag to reorder">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>
+                        </div>
                         <div style={{
                           width: 36,
                           height: 36,

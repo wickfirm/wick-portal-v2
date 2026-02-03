@@ -68,6 +68,13 @@ export default function ProjectDetailPage() {
   const [userRole, setUserRole] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
 
+  // Resources state
+  const [showAddResource, setShowAddResource] = useState(false);
+  const [newResource, setNewResource] = useState({ name: "", url: "", type: "LINK" });
+  const [addingResource, setAddingResource] = useState(false);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
+  const [editResourceForm, setEditResourceForm] = useState({ name: "", url: "", type: "" });
+
   useEffect(() => {
     Promise.all([
       fetch(`/api/projects/${projectId}`).then(res => {
@@ -88,6 +95,68 @@ export default function ProjectDetailPage() {
         setLoading(false);
       });
   }, [projectId]);
+
+  // Resource functions
+  async function addResource(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newResource.name.trim() || !newResource.url.trim()) return;
+    setAddingResource(true);
+
+    const res = await fetch(`/api/projects/${projectId}/resources`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newResource),
+    });
+
+    if (res.ok) {
+      const resource = await res.json();
+      setProject(prev => prev ? { ...prev, resources: [...prev.resources, resource] } : prev);
+      setNewResource({ name: "", url: "", type: "LINK" });
+      setShowAddResource(false);
+    }
+    setAddingResource(false);
+  }
+
+  async function updateResource(id: string) {
+    const res = await fetch(`/api/projects/${projectId}/resources/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(editResourceForm),
+    });
+
+    if (res.ok) {
+      const updated = await res.json();
+      setProject(prev => prev ? {
+        ...prev,
+        resources: prev.resources.map(r => r.id === id ? updated : r),
+      } : prev);
+      setEditingResourceId(null);
+    }
+  }
+
+  async function deleteResource(id: string) {
+    if (!confirm("Delete this resource?")) return;
+
+    const res = await fetch(`/api/projects/${projectId}/resources/${id}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      setProject(prev => prev ? {
+        ...prev,
+        resources: prev.resources.filter(r => r.id !== id),
+      } : prev);
+    }
+  }
+
+  const RESOURCE_TYPES = [
+    { value: "LINK", label: "Link" },
+    { value: "DOCUMENT", label: "Document" },
+    { value: "DESIGN", label: "Design File" },
+    { value: "SPREADSHEET", label: "Spreadsheet" },
+    { value: "VIDEO", label: "Video" },
+    { value: "OTHER", label: "Other" },
+  ];
 
   const tabs = [
     { id: "overview", label: "Overview", icon: "📊" },
@@ -404,54 +473,270 @@ export default function ProjectDetailPage() {
             background: theme.colors.bgSecondary,
             borderRadius: theme.borderRadius.lg,
             border: "1px solid " + theme.colors.borderLight,
-            padding: 24,
+            overflow: "hidden",
           }}>
-            {project.resources.length === 0 ? (
-              <div style={{ textAlign: "center", padding: 40, color: theme.colors.textMuted }}>
-                No resources yet
-              </div>
-            ) : (
-              <div style={{ display: "grid", gap: 12 }}>
-                {project.resources.map(resource => (
-                  <div
-                    key={resource.id}
+            {/* Header with Add Button */}
+            <div style={{
+              padding: "16px 24px",
+              borderBottom: "1px solid " + theme.colors.borderLight,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>
+                Project Resources
+              </h3>
+              <button
+                onClick={() => setShowAddResource(!showAddResource)}
+                style={{
+                  padding: "8px 16px",
+                  background: showAddResource ? theme.colors.bgTertiary : theme.gradients.primary,
+                  color: showAddResource ? theme.colors.textSecondary : "white",
+                  border: "none",
+                  borderRadius: theme.borderRadius.md,
+                  fontSize: 13,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {showAddResource ? "Cancel" : "+ Add Resource"}
+              </button>
+            </div>
+
+            {/* Add Resource Form */}
+            {showAddResource && (
+              <div style={{ padding: 24, borderBottom: "1px solid " + theme.colors.borderLight, background: theme.colors.bgPrimary }}>
+                <form onSubmit={addResource} style={{ display: "flex", gap: 12, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <div style={{ flex: 1, minWidth: 180 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Name</label>
+                    <input
+                      value={newResource.name}
+                      onChange={e => setNewResource({ ...newResource, name: e.target.value })}
+                      placeholder="e.g., Brand Guidelines"
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: 14,
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: 2, minWidth: 200 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>URL</label>
+                    <input
+                      value={newResource.url}
+                      onChange={e => setNewResource({ ...newResource, url: e.target.value })}
+                      placeholder="https://..."
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: 14,
+                        outline: "none",
+                      }}
+                    />
+                  </div>
+                  <div style={{ width: 140 }}>
+                    <label style={{ display: "block", marginBottom: 6, fontSize: 13, fontWeight: 500 }}>Type</label>
+                    <select
+                      value={newResource.type}
+                      onChange={e => setNewResource({ ...newResource, type: e.target.value })}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        border: "1px solid " + theme.colors.borderMedium,
+                        borderRadius: theme.borderRadius.md,
+                        fontSize: 14,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {RESOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                    </select>
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={addingResource || !newResource.name.trim() || !newResource.url.trim()}
                     style={{
-                      padding: 16,
-                      background: theme.colors.bgPrimary,
+                      padding: "10px 20px",
+                      background: addingResource || !newResource.name.trim() || !newResource.url.trim() ? theme.colors.bgTertiary : theme.colors.primary,
+                      color: addingResource || !newResource.name.trim() || !newResource.url.trim() ? theme.colors.textMuted : "white",
+                      border: "none",
                       borderRadius: theme.borderRadius.md,
-                      border: "1px solid " + theme.colors.borderLight,
+                      fontSize: 14,
+                      fontWeight: 500,
+                      cursor: addingResource || !newResource.name.trim() || !newResource.url.trim() ? "not-allowed" : "pointer",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                      <div>
-                        <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 4 }}>
-                          {resource.name}
-                        </div>
-                        <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
-                          {resource.type}
-                        </div>
-                      </div>
-                      <a
-                        href={resource.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          padding: "8px 16px",
-                          background: theme.colors.primary,
-                          color: "white",
-                          borderRadius: theme.borderRadius.md,
-                          textDecoration: "none",
-                          fontSize: 13,
-                          fontWeight: 500,
-                        }}
-                      >
-                        View →
-                      </a>
-                    </div>
-                  </div>
-                ))}
+                    {addingResource ? "Adding..." : "Add"}
+                  </button>
+                </form>
               </div>
             )}
+
+            {/* Resources List */}
+            <div style={{ padding: 24 }}>
+              {project.resources.length === 0 ? (
+                <div style={{ textAlign: "center", padding: 40, color: theme.colors.textMuted }}>
+                  No resources yet. Add your first resource above.
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 12 }}>
+                  {project.resources.map(resource => (
+                    <div
+                      key={resource.id}
+                      style={{
+                        padding: 16,
+                        background: theme.colors.bgPrimary,
+                        borderRadius: theme.borderRadius.md,
+                        border: "1px solid " + theme.colors.borderLight,
+                      }}
+                    >
+                      {editingResourceId === resource.id ? (
+                        /* Edit Mode */
+                        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+                          <input
+                            value={editResourceForm.name}
+                            onChange={e => setEditResourceForm({ ...editResourceForm, name: e.target.value })}
+                            style={{
+                              flex: 1,
+                              minWidth: 150,
+                              padding: "8px 12px",
+                              border: "1px solid " + theme.colors.borderMedium,
+                              borderRadius: 6,
+                              fontSize: 14,
+                            }}
+                          />
+                          <input
+                            value={editResourceForm.url}
+                            onChange={e => setEditResourceForm({ ...editResourceForm, url: e.target.value })}
+                            style={{
+                              flex: 2,
+                              minWidth: 180,
+                              padding: "8px 12px",
+                              border: "1px solid " + theme.colors.borderMedium,
+                              borderRadius: 6,
+                              fontSize: 14,
+                            }}
+                          />
+                          <select
+                            value={editResourceForm.type}
+                            onChange={e => setEditResourceForm({ ...editResourceForm, type: e.target.value })}
+                            style={{
+                              padding: "8px 12px",
+                              border: "1px solid " + theme.colors.borderMedium,
+                              borderRadius: 6,
+                              fontSize: 14,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {RESOURCE_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </select>
+                          <button
+                            onClick={() => updateResource(resource.id)}
+                            style={{
+                              padding: "8px 14px",
+                              background: theme.colors.primary,
+                              color: "white",
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Save
+                          </button>
+                          <button
+                            onClick={() => setEditingResourceId(null)}
+                            style={{
+                              padding: "8px 14px",
+                              background: theme.colors.bgTertiary,
+                              color: theme.colors.textSecondary,
+                              border: "none",
+                              borderRadius: 6,
+                              fontSize: 13,
+                              fontWeight: 500,
+                              cursor: "pointer",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        /* View Mode */
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          <div>
+                            <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary, marginBottom: 4 }}>
+                              {resource.name}
+                            </div>
+                            <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
+                              {resource.type}
+                            </div>
+                          </div>
+                          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                            <button
+                              onClick={() => {
+                                setEditingResourceId(resource.id);
+                                setEditResourceForm({ name: resource.name, url: resource.url, type: resource.type });
+                              }}
+                              style={{
+                                padding: "6px 12px",
+                                background: theme.colors.infoBg || theme.colors.bgTertiary,
+                                color: theme.colors.info,
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteResource(resource.id)}
+                              style={{
+                                padding: "6px 12px",
+                                background: theme.colors.errorBg,
+                                color: theme.colors.error,
+                                border: "none",
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                              }}
+                            >
+                              Delete
+                            </button>
+                            <a
+                              href={resource.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                padding: "6px 14px",
+                                background: theme.colors.primary,
+                                color: "white",
+                                borderRadius: 6,
+                                textDecoration: "none",
+                                fontSize: 12,
+                                fontWeight: 500,
+                              }}
+                            >
+                              View →
+                            </a>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

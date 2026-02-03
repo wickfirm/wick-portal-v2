@@ -135,7 +135,7 @@ export default function TeamPage() {
       return {
         users: Array.isArray(usersData) ? usersData : [],
         agencies: Array.isArray(agenciesData) ? agenciesData : [],
-        clients: Array.isArray(clientsData) ? clientsData : [],
+        clients: Array.isArray(clientsData) ? clientsData : (clientsData?.clients || []),
       };
     },
     enabled: status === "authenticated" && !isExternalPartner,

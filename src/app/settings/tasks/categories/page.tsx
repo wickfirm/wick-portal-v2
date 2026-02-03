@@ -8,6 +8,7 @@ import { theme } from "@/lib/theme";
 type TaskCategory = {
   id: string;
   name: string;
+  order: number;
 };
 
 export default function TaskCategoriesPage() {
@@ -18,6 +19,8 @@ export default function TaskCategoriesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCategories();
@@ -70,6 +73,50 @@ export default function TaskCategoriesPage() {
     if (!confirm("Delete this category?")) return;
     await fetch("/api/task-categories/" + id, { method: "DELETE" });
     fetchCategories();
+  }
+
+  function handleDragStart(id: string) {
+    setDraggedId(id);
+  }
+
+  function handleDragOver(e: React.DragEvent, id: string) {
+    e.preventDefault();
+    if (id !== draggedId) setDragOverId(id);
+  }
+
+  function handleDragLeave() {
+    setDragOverId(null);
+  }
+
+  async function handleDrop(targetId: string) {
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = categories.findIndex(c => c.id === draggedId);
+    const targetIndex = categories.findIndex(c => c.id === targetId);
+
+    const newCategories = [...categories];
+    const [removed] = newCategories.splice(draggedIndex, 1);
+    newCategories.splice(targetIndex, 0, removed);
+
+    setCategories(newCategories);
+    setDraggedId(null);
+    setDragOverId(null);
+
+    // Save new order
+    await fetch("/api/task-categories/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: newCategories.map(c => c.id) }),
+    });
+  }
+
+  function handleDragEnd() {
+    setDraggedId(null);
+    setDragOverId(null);
   }
 
   const inputStyle = {
@@ -141,13 +188,25 @@ export default function TaskCategoriesPage() {
           ) : (
             <div>
               {categories.map((category, idx) => (
-                <div key={category.id} style={{
-                  padding: "16px 20px",
-                  borderBottom: idx < categories.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
+                <div
+                  key={category.id}
+                  draggable={editingId !== category.id}
+                  onDragStart={() => handleDragStart(category.id)}
+                  onDragOver={(e) => handleDragOver(e, category.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(category.id)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: idx < categories.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    cursor: editingId === category.id ? "default" : "grab",
+                    background: dragOverId === category.id ? theme.colors.primaryBg || "rgba(118,82,124,0.08)" : draggedId === category.id ? theme.colors.bgTertiary : "transparent",
+                    opacity: draggedId === category.id ? 0.5 : 1,
+                    transition: "background 0.15s ease",
+                  }}>
                   {editingId === category.id ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
                       <div style={{ width: 16, height: 16, borderRadius: 4, background: theme.colors.info }} />
@@ -164,6 +223,9 @@ export default function TaskCategoriesPage() {
                   ) : (
                     <>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ color: theme.colors.textMuted, cursor: "grab" }} title="Drag to reorder">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>
+                        </div>
                         <div style={{ width: 16, height: 16, borderRadius: 4, background: theme.colors.info }} />
                         <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{category.name}</span>
                       </div>
