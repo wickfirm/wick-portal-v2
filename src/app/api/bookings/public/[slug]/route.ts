@@ -317,10 +317,19 @@ async function getAvailableSlots(
   }
 
   // Get existing appointments for this date
-  const startOfDay = new Date(date);
-  startOfDay.setHours(0, 0, 0, 0);
-  const endOfDay = new Date(date);
-  endOfDay.setHours(23, 59, 59, 999);
+  // Use UTC date range to match database timestamps
+  const startOfDayUTC = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
+  const endOfDayUTC = new Date(Date.UTC(year, month - 1, day, 23, 59, 59, 999));
+
+  // Also query with local date range as fallback (in case appointments were saved with local time)
+  const startOfDayLocal = new Date(date);
+  startOfDayLocal.setHours(0, 0, 0, 0);
+  const endOfDayLocal = new Date(date);
+  endOfDayLocal.setHours(23, 59, 59, 999);
+
+  // Use the wider range to catch all appointments
+  const startOfDay = startOfDayUTC < startOfDayLocal ? startOfDayUTC : startOfDayLocal;
+  const endOfDay = endOfDayUTC > endOfDayLocal ? endOfDayUTC : endOfDayLocal;
 
   const existingAppointments = await prisma.bookingAppointment.findMany({
     where: {
@@ -335,6 +344,7 @@ async function getAvailableSlots(
     },
   });
 
+  console.log("[getAvailableSlots] Query range:", startOfDay.toISOString(), "to", endOfDay.toISOString());
   console.log("[getAvailableSlots] Existing appointments for date:", dateStr, existingAppointments.map(a => ({
     host: a.hostUserId,
     start: a.startTime,
