@@ -8,8 +8,9 @@ export async function GET(req: NextRequest) {
   const state = searchParams.get("state");
   const error = searchParams.get("error");
 
-  // Base URL for redirects
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+  // Base URL for redirects - derive from request URL
+  const requestUrl = new URL(req.url);
+  const baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
 
   if (error) {
     console.error("Zoom OAuth error:", error);
