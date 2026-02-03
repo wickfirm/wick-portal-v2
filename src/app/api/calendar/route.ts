@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 interface CalendarEvent {
   id: string;
-  type: "task" | "timeEntry" | "leave" | "project" | "holiday" | "booking";
+  type: "task" | "timeEntry" | "leave" | "project" | "holiday" | "booking" | "keyDate";
   title: string;
   date: string;        // YYYY-MM-DD
   endDate?: string;    // YYYY-MM-DD for multi-day events
@@ -29,6 +29,15 @@ const EVENT_COLORS = {
   project: "#34a853",    // Green
   holiday: "#f9ab00",    // Warning yellow
   booking: "#f6dab9",    // Peach
+  keyDate: "#f59e0b",    // Amber
+};
+
+const KEY_DATE_CATEGORY_COLORS: Record<string, string> = {
+  HOLIDAY: "#f59e0b",
+  RELIGIOUS: "#8b5cf6",
+  CAMPAIGN: "#ec4899",
+  EVENT: "#06b6d4",
+  OTHER: "#6b7280",
 };
 
 export async function GET(req: NextRequest) {
@@ -43,6 +52,7 @@ export async function GET(req: NextRequest) {
   const startStr = searchParams.get("start");
   const endStr = searchParams.get("end");
   const filterUserId = searchParams.get("userId");
+  const filterClientId = searchParams.get("clientId");
 
   if (!startStr || !endStr) {
     return NextResponse.json({ error: "start and end query params are required (YYYY-MM-DD)" }, { status: 400 });
@@ -60,12 +70,13 @@ export async function GET(req: NextRequest) {
 
   try {
     // Run all queries in parallel
-    const [tasks, timeEntries, leaveRequests, projects, holidays, bookings, teamMembers] = await Promise.all([
+    const [tasks, timeEntries, leaveRequests, projects, holidays, bookings, teamMembers, clients, keyDates] = await Promise.all([
       // 1. Tasks with dueDate in range
       prisma.clientTask.findMany({
         where: {
           dueDate: { gte: start, lte: end },
           ...(targetUserId ? { assigneeId: targetUserId } : {}),
+          ...(filterClientId ? { clientId: filterClientId } : {}),
         },
         select: {
           id: true,
@@ -83,6 +94,7 @@ export async function GET(req: NextRequest) {
         where: {
           date: { gte: start, lte: end },
           ...(targetUserId ? { userId: targetUserId } : {}),
+          ...(filterClientId ? { clientId: filterClientId } : {}),
         },
         select: {
           id: true,
@@ -130,6 +142,7 @@ export async function GET(req: NextRequest) {
           ...(targetUserId
             ? { assignments: { some: { userId: targetUserId } } }
             : {}),
+          ...(filterClientId ? { clientId: filterClientId } : {}),
         },
         select: {
           id: true,
@@ -185,6 +198,29 @@ export async function GET(req: NextRequest) {
             orderBy: { name: "asc" },
           })
         : Promise.resolve([]),
+
+      // 8. Clients list (for filter dropdown)
+      prisma.client.findMany({
+        where: { status: { not: "ARCHIVED" } },
+        select: { id: true, name: true, nickname: true },
+        orderBy: { name: "asc" },
+      }),
+
+      // 9. Key dates (for all clients or filtered client)
+      prisma.clientKeyDate.findMany({
+        where: filterClientId ? { clientId: filterClientId } : {},
+        select: {
+          id: true,
+          name: true,
+          date: true,
+          endDate: true,
+          isRecurring: true,
+          category: true,
+          color: true,
+          notes: true,
+          client: { select: { id: true, name: true } },
+        },
+      }),
     ]);
 
     // Transform to unified CalendarEvent[]
@@ -321,11 +357,56 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Key dates — handle recurring dates by adjusting year
+    const startYear = start.getFullYear();
+    const endYear = end.getFullYear();
+    for (const kd of keyDates) {
+      const originalDate = new Date(kd.date);
+      const yearsToCheck = kd.isRecurring
+        ? [startYear, endYear].filter((v, i, a) => a.indexOf(v) === i)
+        : [originalDate.getFullYear()];
+
+      for (const year of yearsToCheck) {
+        const adjustedDate = new Date(year, originalDate.getMonth(), originalDate.getDate());
+        const dateStr = adjustedDate.toISOString().split("T")[0];
+
+        // Check if this date falls within range
+        if (adjustedDate >= start && adjustedDate <= end) {
+          let endDateStr: string | undefined;
+          if (kd.endDate) {
+            const originalEnd = new Date(kd.endDate);
+            const adjustedEnd = new Date(year, originalEnd.getMonth(), originalEnd.getDate());
+            endDateStr = adjustedEnd.toISOString().split("T")[0];
+          }
+
+          events.push({
+            id: `keydate-${kd.id}-${year}`,
+            type: "keyDate",
+            title: `${kd.name}${kd.client ? ` (${kd.client.name})` : ""}`,
+            date: dateStr,
+            endDate: endDateStr,
+            color: kd.color || KEY_DATE_CATEGORY_COLORS[kd.category] || EVENT_COLORS.keyDate,
+            link: kd.client ? `/clients/${kd.client.id}?tab=key-dates` : undefined,
+            metadata: {
+              keyDateId: kd.id,
+              category: kd.category,
+              isRecurring: kd.isRecurring,
+              notes: kd.notes,
+              clientId: kd.client?.id,
+              clientName: kd.client?.name,
+            },
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       events,
       teamMembers: isAdmin ? teamMembers : [],
+      clients,
       dateRange: { start: startStr, end: endStr },
       filteredUserId: targetUserId,
+      filteredClientId: filterClientId,
     });
   } catch (error) {
     console.error("Calendar API error:", error);

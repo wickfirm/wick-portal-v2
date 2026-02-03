@@ -8,7 +8,7 @@ import { theme } from "@/lib/theme";
 
 interface CalendarEvent {
   id: string;
-  type: "task" | "timeEntry" | "leave" | "project" | "holiday" | "booking";
+  type: "task" | "timeEntry" | "leave" | "project" | "holiday" | "booking" | "keyDate";
   title: string;
   date: string;
   endDate?: string;
@@ -22,6 +22,12 @@ interface TeamMember {
   name: string;
   email: string;
   role: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  nickname: string | null;
 }
 
 interface CalendarViewProps {
@@ -40,6 +46,7 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   project: "Projects",
   holiday: "Public Holidays",
   booking: "Bookings",
+  keyDate: "Key Dates",
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
@@ -49,6 +56,7 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   project: "#34a853",
   holiday: "#f9ab00",
   booking: "#f6dab9",
+  keyDate: "#f59e0b",
 };
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -124,12 +132,14 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const [hoveredEvent, setHoveredEvent] = useState<string | null>(null);
   const [activeTypes, setActiveTypes] = useState<Set<string>>(
-    new Set(["task", "timeEntry", "leave", "project", "holiday", "booking"])
+    new Set(["task", "timeEntry", "leave", "project", "holiday", "booking", "keyDate"])
   );
 
   // Date range for API
@@ -159,11 +169,13 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
         end: dateRange.end,
       });
       if (selectedUserId) params.set("userId", selectedUserId);
+      if (selectedClientId) params.set("clientId", selectedClientId);
 
       const res = await fetch(`/api/calendar?${params}`);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       setEvents(data.events || []);
+      if (data.clients) setClients(data.clients);
       if (data.teamMembers?.length > 0) {
         setTeamMembers(data.teamMembers);
       }
@@ -172,7 +184,7 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
     } finally {
       setLoading(false);
     }
-  }, [dateRange, selectedUserId]);
+  }, [dateRange, selectedUserId, selectedClientId]);
 
   useEffect(() => {
     fetchEvents();
@@ -418,6 +430,27 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
                       <>
                         <span>{event.metadata.time}</span>
                         {event.metadata.company && <span> · {event.metadata.company}</span>}
+                      </>
+                    )}
+                    {event.type === "keyDate" && (
+                      <>
+                        <span
+                          style={{
+                            padding: "1px 6px",
+                            borderRadius: 4,
+                            fontSize: 10,
+                            fontWeight: 600,
+                            background: `${event.color}20`,
+                            color: event.color,
+                          }}
+                        >
+                          {event.metadata.category}
+                        </span>
+                        {event.metadata.clientName && <span style={{ marginLeft: 6 }}>{event.metadata.clientName}</span>}
+                        {event.metadata.isRecurring && <span style={{ marginLeft: 6, fontSize: 10 }}>🔄 Recurring</span>}
+                        {event.metadata.notes && (
+                          <div style={{ marginTop: 3, fontStyle: "italic" }}>{event.metadata.notes}</div>
+                        )}
                       </>
                     )}
                   </div>
@@ -810,6 +843,24 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
                           <span> · {event.metadata.status}</span>
                         </>
                       )}
+                      {event.type === "keyDate" && (
+                        <>
+                          <span
+                            style={{
+                              padding: "1px 6px",
+                              borderRadius: 4,
+                              fontSize: 10,
+                              fontWeight: 600,
+                              background: `${event.color}20`,
+                              color: event.color,
+                            }}
+                          >
+                            {event.metadata.category}
+                          </span>
+                          {event.metadata.clientName && <span style={{ marginLeft: 6 }}>{event.metadata.clientName}</span>}
+                          {event.metadata.isRecurring && <span style={{ marginLeft: 6, fontSize: 10 }}>🔄</span>}
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -926,6 +977,32 @@ export default function CalendarView({ currentUserId, currentUserRole }: Calenda
 
         {/* Right: View toggle + Team filter */}
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* Client filter */}
+          {clients.length > 0 && (
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              style={{
+                border: `1px solid ${selectedClientId ? theme.colors.primary : theme.colors.borderLight}`,
+                borderRadius: 8,
+                padding: "6px 10px",
+                fontSize: 12,
+                background: selectedClientId ? `${theme.colors.primary}08` : "white",
+                color: theme.colors.textPrimary,
+                cursor: "pointer",
+                outline: "none",
+                minWidth: 140,
+              }}
+            >
+              <option value="">All clients</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nickname || c.name}
+                </option>
+              ))}
+            </select>
+          )}
+
           {/* Team member filter (admin only) */}
           {isAdmin && teamMembers.length > 0 && (
             <select
