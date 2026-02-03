@@ -20,15 +20,102 @@ const DAY_LABELS: { [key: string]: string } = {
   sunday: "Sunday",
 };
 
-const TIMEZONES = [
-  "Asia/Dubai",
-  "Asia/Riyadh",
-  "Asia/Beirut",
-  "Europe/London",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Europe/Paris",
-  "Asia/Singapore",
+// Comprehensive timezone list grouped by region
+const TIMEZONE_GROUPS = [
+  {
+    region: "Americas",
+    timezones: [
+      { value: "Pacific/Honolulu", label: "Hawaii (HST)" },
+      { value: "America/Anchorage", label: "Alaska (AKST)" },
+      { value: "America/Los_Angeles", label: "Pacific Time (PST)" },
+      { value: "America/Phoenix", label: "Arizona (MST)" },
+      { value: "America/Denver", label: "Mountain Time (MST)" },
+      { value: "America/Chicago", label: "Central Time (CST)" },
+      { value: "America/Mexico_City", label: "Mexico City (CST)" },
+      { value: "America/New_York", label: "Eastern Time (EST)" },
+      { value: "America/Toronto", label: "Toronto (EST)" },
+      { value: "America/Bogota", label: "Bogotá (COT)" },
+      { value: "America/Lima", label: "Lima (PET)" },
+      { value: "America/Halifax", label: "Atlantic Time (AST)" },
+      { value: "America/Sao_Paulo", label: "São Paulo (BRT)" },
+      { value: "America/Argentina/Buenos_Aires", label: "Buenos Aires (ART)" },
+      { value: "America/Santiago", label: "Santiago (CLT)" },
+    ],
+  },
+  {
+    region: "Europe",
+    timezones: [
+      { value: "Atlantic/Reykjavik", label: "Reykjavik (GMT)" },
+      { value: "Europe/London", label: "London (GMT)" },
+      { value: "Europe/Dublin", label: "Dublin (GMT)" },
+      { value: "Europe/Lisbon", label: "Lisbon (WET)" },
+      { value: "Europe/Paris", label: "Paris (CET)" },
+      { value: "Europe/Berlin", label: "Berlin (CET)" },
+      { value: "Europe/Amsterdam", label: "Amsterdam (CET)" },
+      { value: "Europe/Brussels", label: "Brussels (CET)" },
+      { value: "Europe/Madrid", label: "Madrid (CET)" },
+      { value: "Europe/Rome", label: "Rome (CET)" },
+      { value: "Europe/Zurich", label: "Zurich (CET)" },
+      { value: "Europe/Vienna", label: "Vienna (CET)" },
+      { value: "Europe/Warsaw", label: "Warsaw (CET)" },
+      { value: "Europe/Stockholm", label: "Stockholm (CET)" },
+      { value: "Europe/Athens", label: "Athens (EET)" },
+      { value: "Europe/Helsinki", label: "Helsinki (EET)" },
+      { value: "Europe/Istanbul", label: "Istanbul (TRT)" },
+      { value: "Europe/Moscow", label: "Moscow (MSK)" },
+    ],
+  },
+  {
+    region: "Middle East",
+    timezones: [
+      { value: "Asia/Beirut", label: "Beirut (EET)" },
+      { value: "Asia/Jerusalem", label: "Jerusalem (IST)" },
+      { value: "Asia/Amman", label: "Amman (EET)" },
+      { value: "Asia/Baghdad", label: "Baghdad (AST)" },
+      { value: "Asia/Kuwait", label: "Kuwait (AST)" },
+      { value: "Asia/Riyadh", label: "Riyadh (AST)" },
+      { value: "Asia/Qatar", label: "Qatar (AST)" },
+      { value: "Asia/Tehran", label: "Tehran (IRST)" },
+      { value: "Asia/Dubai", label: "Dubai (GST)" },
+      { value: "Asia/Muscat", label: "Muscat (GST)" },
+    ],
+  },
+  {
+    region: "Africa",
+    timezones: [
+      { value: "Africa/Casablanca", label: "Casablanca (WET)" },
+      { value: "Africa/Lagos", label: "Lagos (WAT)" },
+      { value: "Africa/Cairo", label: "Cairo (EET)" },
+      { value: "Africa/Johannesburg", label: "Johannesburg (SAST)" },
+      { value: "Africa/Nairobi", label: "Nairobi (EAT)" },
+    ],
+  },
+  {
+    region: "Asia",
+    timezones: [
+      { value: "Asia/Karachi", label: "Karachi (PKT)" },
+      { value: "Asia/Kolkata", label: "Mumbai / Delhi (IST)" },
+      { value: "Asia/Dhaka", label: "Dhaka (BST)" },
+      { value: "Asia/Bangkok", label: "Bangkok (ICT)" },
+      { value: "Asia/Jakarta", label: "Jakarta (WIB)" },
+      { value: "Asia/Singapore", label: "Singapore (SGT)" },
+      { value: "Asia/Hong_Kong", label: "Hong Kong (HKT)" },
+      { value: "Asia/Shanghai", label: "Shanghai (CST)" },
+      { value: "Asia/Seoul", label: "Seoul (KST)" },
+      { value: "Asia/Tokyo", label: "Tokyo (JST)" },
+    ],
+  },
+  {
+    region: "Australia & Pacific",
+    timezones: [
+      { value: "Australia/Perth", label: "Perth (AWST)" },
+      { value: "Australia/Adelaide", label: "Adelaide (ACST)" },
+      { value: "Australia/Sydney", label: "Sydney (AEST)" },
+      { value: "Australia/Melbourne", label: "Melbourne (AEST)" },
+      { value: "Pacific/Auckland", label: "Auckland (NZST)" },
+      { value: "Pacific/Fiji", label: "Fiji (FJT)" },
+    ],
+  },
 ];
 
 export default function BookingsSettingsPage() {
@@ -542,12 +629,16 @@ export default function BookingsSettingsPage() {
             <select
               value={timezone}
               onChange={(e) => setTimezone(e.target.value)}
-              style={{ ...inputStyle, width: 240 }}
+              style={{ ...inputStyle, width: 300 }}
             >
-              {TIMEZONES.map((tz) => (
-                <option key={tz} value={tz}>
-                  {tz}
-                </option>
+              {TIMEZONE_GROUPS.map((group) => (
+                <optgroup key={group.region} label={group.region}>
+                  {group.timezones.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </select>
           </div>

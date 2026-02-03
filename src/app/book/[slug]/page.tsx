@@ -1,7 +1,122 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
+
+// Comprehensive timezone list grouped by region (similar to Calendly)
+const TIMEZONE_GROUPS = [
+  {
+    region: "Americas",
+    timezones: [
+      { value: "Pacific/Honolulu", label: "Hawaii (HST)", offset: -10 },
+      { value: "America/Anchorage", label: "Alaska (AKST)", offset: -9 },
+      { value: "America/Los_Angeles", label: "Pacific Time (PST)", offset: -8 },
+      { value: "America/Phoenix", label: "Arizona (MST)", offset: -7 },
+      { value: "America/Denver", label: "Mountain Time (MST)", offset: -7 },
+      { value: "America/Chicago", label: "Central Time (CST)", offset: -6 },
+      { value: "America/Mexico_City", label: "Mexico City (CST)", offset: -6 },
+      { value: "America/New_York", label: "Eastern Time (EST)", offset: -5 },
+      { value: "America/Toronto", label: "Toronto (EST)", offset: -5 },
+      { value: "America/Bogota", label: "Bogotá (COT)", offset: -5 },
+      { value: "America/Lima", label: "Lima (PET)", offset: -5 },
+      { value: "America/Halifax", label: "Atlantic Time (AST)", offset: -4 },
+      { value: "America/Sao_Paulo", label: "São Paulo (BRT)", offset: -3 },
+      { value: "America/Argentina/Buenos_Aires", label: "Buenos Aires (ART)", offset: -3 },
+      { value: "America/Santiago", label: "Santiago (CLT)", offset: -3 },
+    ],
+  },
+  {
+    region: "Europe",
+    timezones: [
+      { value: "Atlantic/Reykjavik", label: "Reykjavik (GMT)", offset: 0 },
+      { value: "Europe/London", label: "London (GMT)", offset: 0 },
+      { value: "Europe/Dublin", label: "Dublin (GMT)", offset: 0 },
+      { value: "Europe/Lisbon", label: "Lisbon (WET)", offset: 0 },
+      { value: "Europe/Paris", label: "Paris (CET)", offset: 1 },
+      { value: "Europe/Berlin", label: "Berlin (CET)", offset: 1 },
+      { value: "Europe/Amsterdam", label: "Amsterdam (CET)", offset: 1 },
+      { value: "Europe/Brussels", label: "Brussels (CET)", offset: 1 },
+      { value: "Europe/Madrid", label: "Madrid (CET)", offset: 1 },
+      { value: "Europe/Rome", label: "Rome (CET)", offset: 1 },
+      { value: "Europe/Zurich", label: "Zurich (CET)", offset: 1 },
+      { value: "Europe/Vienna", label: "Vienna (CET)", offset: 1 },
+      { value: "Europe/Warsaw", label: "Warsaw (CET)", offset: 1 },
+      { value: "Europe/Stockholm", label: "Stockholm (CET)", offset: 1 },
+      { value: "Europe/Oslo", label: "Oslo (CET)", offset: 1 },
+      { value: "Europe/Copenhagen", label: "Copenhagen (CET)", offset: 1 },
+      { value: "Europe/Prague", label: "Prague (CET)", offset: 1 },
+      { value: "Europe/Budapest", label: "Budapest (CET)", offset: 1 },
+      { value: "Europe/Athens", label: "Athens (EET)", offset: 2 },
+      { value: "Europe/Helsinki", label: "Helsinki (EET)", offset: 2 },
+      { value: "Europe/Bucharest", label: "Bucharest (EET)", offset: 2 },
+      { value: "Europe/Kiev", label: "Kyiv (EET)", offset: 2 },
+      { value: "Europe/Istanbul", label: "Istanbul (TRT)", offset: 3 },
+      { value: "Europe/Moscow", label: "Moscow (MSK)", offset: 3 },
+    ],
+  },
+  {
+    region: "Middle East",
+    timezones: [
+      { value: "Asia/Beirut", label: "Beirut (EET)", offset: 2 },
+      { value: "Asia/Jerusalem", label: "Jerusalem (IST)", offset: 2 },
+      { value: "Asia/Amman", label: "Amman (EET)", offset: 2 },
+      { value: "Asia/Baghdad", label: "Baghdad (AST)", offset: 3 },
+      { value: "Asia/Kuwait", label: "Kuwait (AST)", offset: 3 },
+      { value: "Asia/Riyadh", label: "Riyadh (AST)", offset: 3 },
+      { value: "Asia/Qatar", label: "Qatar (AST)", offset: 3 },
+      { value: "Asia/Bahrain", label: "Bahrain (AST)", offset: 3 },
+      { value: "Asia/Tehran", label: "Tehran (IRST)", offset: 3.5 },
+      { value: "Asia/Dubai", label: "Dubai (GST)", offset: 4 },
+      { value: "Asia/Muscat", label: "Muscat (GST)", offset: 4 },
+    ],
+  },
+  {
+    region: "Africa",
+    timezones: [
+      { value: "Africa/Casablanca", label: "Casablanca (WET)", offset: 0 },
+      { value: "Africa/Lagos", label: "Lagos (WAT)", offset: 1 },
+      { value: "Africa/Cairo", label: "Cairo (EET)", offset: 2 },
+      { value: "Africa/Johannesburg", label: "Johannesburg (SAST)", offset: 2 },
+      { value: "Africa/Nairobi", label: "Nairobi (EAT)", offset: 3 },
+    ],
+  },
+  {
+    region: "Asia",
+    timezones: [
+      { value: "Asia/Karachi", label: "Karachi (PKT)", offset: 5 },
+      { value: "Asia/Kolkata", label: "Mumbai / Delhi (IST)", offset: 5.5 },
+      { value: "Asia/Colombo", label: "Colombo (IST)", offset: 5.5 },
+      { value: "Asia/Dhaka", label: "Dhaka (BST)", offset: 6 },
+      { value: "Asia/Bangkok", label: "Bangkok (ICT)", offset: 7 },
+      { value: "Asia/Jakarta", label: "Jakarta (WIB)", offset: 7 },
+      { value: "Asia/Ho_Chi_Minh", label: "Ho Chi Minh (ICT)", offset: 7 },
+      { value: "Asia/Singapore", label: "Singapore (SGT)", offset: 8 },
+      { value: "Asia/Kuala_Lumpur", label: "Kuala Lumpur (MYT)", offset: 8 },
+      { value: "Asia/Hong_Kong", label: "Hong Kong (HKT)", offset: 8 },
+      { value: "Asia/Taipei", label: "Taipei (CST)", offset: 8 },
+      { value: "Asia/Shanghai", label: "Shanghai (CST)", offset: 8 },
+      { value: "Asia/Manila", label: "Manila (PHT)", offset: 8 },
+      { value: "Asia/Seoul", label: "Seoul (KST)", offset: 9 },
+      { value: "Asia/Tokyo", label: "Tokyo (JST)", offset: 9 },
+    ],
+  },
+  {
+    region: "Australia & Pacific",
+    timezones: [
+      { value: "Australia/Perth", label: "Perth (AWST)", offset: 8 },
+      { value: "Australia/Darwin", label: "Darwin (ACST)", offset: 9.5 },
+      { value: "Australia/Adelaide", label: "Adelaide (ACST)", offset: 9.5 },
+      { value: "Australia/Brisbane", label: "Brisbane (AEST)", offset: 10 },
+      { value: "Australia/Sydney", label: "Sydney (AEST)", offset: 10 },
+      { value: "Australia/Melbourne", label: "Melbourne (AEST)", offset: 10 },
+      { value: "Pacific/Auckland", label: "Auckland (NZST)", offset: 12 },
+      { value: "Pacific/Fiji", label: "Fiji (FJT)", offset: 12 },
+    ],
+  },
+];
+
+// Flat list for lookups
+const TIMEZONES = TIMEZONE_GROUPS.flatMap(g => g.timezones);
 
 // Minimalist public booking page - no auth required
 export default function PublicBookingPage() {
@@ -24,6 +139,8 @@ export default function PublicBookingPage() {
   // Timezone state
   const [guestTimezone, setGuestTimezone] = useState<string>("");
   const [agencyTimezone, setAgencyTimezone] = useState<string>("Asia/Dubai");
+  const [showTimezoneDropdown, setShowTimezoneDropdown] = useState(false);
+  const timezoneRef = useRef<HTMLDivElement>(null);
 
   // Form state
   const [step, setStep] = useState<"calendar" | "form" | "confirmation">("calendar");
@@ -42,6 +159,19 @@ export default function PublicBookingPage() {
     setGuestTimezone(detectedTz);
     fetchBookingInfo();
   }, [slug]);
+
+  // Close timezone dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (timezoneRef.current && !timezoneRef.current.contains(e.target as Node)) {
+        setShowTimezoneDropdown(false);
+      }
+    };
+    if (showTimezoneDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showTimezoneDropdown]);
 
   useEffect(() => {
     if (bookingData) {
@@ -265,14 +395,88 @@ export default function PublicBookingPage() {
 
         {step === "calendar" && (
           <>
-            {/* Timezone Info */}
+            {/* Timezone Selector */}
             <div style={styles.timezoneBar}>
-              <span style={{ fontSize: 12, color: "#666" }}>
-                🌍 Times shown in {getTimezoneLabel(guestTimezone || agencyTimezone)}
-              </span>
+              <div ref={timezoneRef} style={styles.timezoneSelector}>
+                <button
+                  onClick={() => setShowTimezoneDropdown(!showTimezoneDropdown)}
+                  style={styles.timezoneButton}
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="2" y1="12" x2="22" y2="12" />
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                  </svg>
+                  <span>{TIMEZONES.find(tz => tz.value === guestTimezone)?.label || getTimezoneLabel(guestTimezone || agencyTimezone)}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: "auto" }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
+                {showTimezoneDropdown && (
+                  <div style={styles.timezoneDropdown}>
+                    <div style={styles.timezoneSearch}>
+                      <input
+                        type="text"
+                        placeholder="Search timezone..."
+                        style={styles.timezoneSearchInput}
+                        onChange={(e) => {
+                          const search = e.target.value.toLowerCase();
+                          const dropdown = e.target.parentElement?.parentElement;
+                          const items = dropdown?.querySelectorAll('[data-tz-item]');
+                          items?.forEach((item) => {
+                            const el = item as HTMLElement;
+                            const label = el.textContent?.toLowerCase() || '';
+                            el.style.display = label.includes(search) ? 'block' : 'none';
+                          });
+                        }}
+                        autoFocus
+                      />
+                    </div>
+                    <div style={styles.timezoneList}>
+                      {TIMEZONE_GROUPS.map((group) => (
+                        <div key={group.region} data-tz-group>
+                          <div style={styles.timezoneGroupHeader} data-tz-item>
+                            {group.region}
+                          </div>
+                          {group.timezones.map((tz) => (
+                            <button
+                              key={tz.value}
+                              data-tz-item
+                              onClick={() => {
+                                setGuestTimezone(tz.value);
+                                setShowTimezoneDropdown(false);
+                              }}
+                              onMouseEnter={(e) => {
+                                if (guestTimezone !== tz.value) {
+                                  (e.target as HTMLElement).style.background = "#f5f5f5";
+                                }
+                              }}
+                              onMouseLeave={(e) => {
+                                if (guestTimezone !== tz.value) {
+                                  (e.target as HTMLElement).style.background = "transparent";
+                                }
+                              }}
+                              style={{
+                                ...styles.timezoneOption,
+                                background: guestTimezone === tz.value ? "#f0f7ff" : "transparent",
+                                fontWeight: guestTimezone === tz.value ? 600 : 400,
+                              }}
+                            >
+                              <span>{tz.label}</span>
+                              <span style={{ color: "#999", fontSize: 11 }}>
+                                UTC{tz.offset >= 0 ? "+" : ""}{tz.offset}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               {showTimezoneNote && (
-                <span style={{ fontSize: 11, color: "#999" }}>
-                  (Agency: {getTimezoneLabel(agencyTimezone)})
+                <span style={{ fontSize: 11, color: "#999", marginLeft: 8 }}>
+                  (Host: {getTimezoneLabel(agencyTimezone)})
                 </span>
               )}
             </div>
@@ -561,6 +765,81 @@ const styles: { [key: string]: React.CSSProperties } = {
     justifyContent: "center",
     gap: 8,
     flexWrap: "wrap",
+  },
+  timezoneSelector: {
+    position: "relative" as const,
+  },
+  timezoneButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: 6,
+    padding: "6px 12px",
+    background: "white",
+    border: "1px solid #ddd",
+    borderRadius: 8,
+    fontSize: 12,
+    color: "#555",
+    cursor: "pointer",
+    minWidth: 180,
+  },
+  timezoneDropdown: {
+    position: "absolute" as const,
+    top: "calc(100% + 4px)",
+    left: "50%",
+    transform: "translateX(-50%)",
+    background: "white",
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+    width: 300,
+    maxHeight: 360,
+    zIndex: 1000,
+    overflow: "hidden",
+  },
+  timezoneSearch: {
+    padding: 8,
+    borderBottom: "1px solid #eee",
+  },
+  timezoneSearchInput: {
+    width: "100%",
+    padding: "8px 12px",
+    border: "1px solid #ddd",
+    borderRadius: 6,
+    fontSize: 13,
+    outline: "none",
+  },
+  timezoneList: {
+    maxHeight: 300,
+    overflowY: "auto" as const,
+  },
+  timezoneOption: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    padding: "10px 14px",
+    border: "none",
+    background: "transparent",
+    fontSize: 13,
+    color: "#333",
+    cursor: "pointer",
+    textAlign: "left" as const,
+    transition: "background 0.1s ease",
+  },
+  timezoneOptionHover: {
+    background: "#f5f5f5",
+  },
+  timezoneGroupHeader: {
+    padding: "8px 14px",
+    fontSize: 11,
+    fontWeight: 600,
+    color: "#999",
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+    background: "#fafafa",
+    borderTop: "1px solid #eee",
+    position: "sticky" as const,
+    top: 0,
   },
   calendarSection: {
     padding: "20px 28px",
