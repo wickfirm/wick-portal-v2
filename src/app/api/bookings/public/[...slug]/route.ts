@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendBookingConfirmation } from "@/lib/email";
-import { createCalendarEvent } from "@/lib/google-calendar";
+import { createCalendarEvent, getUserBusyTimes } from "@/lib/google-calendar";
 import { createZoomMeeting } from "@/lib/zoom";
 
 // Helper to parse the slug - supports both /[typeSlug] and /[userSlug]/[typeSlug]
@@ -472,6 +472,7 @@ async function getAvailableSlots(
   const startOfDayUTC = new Date(Date.UTC(year, month - 1, day - 1, 0, 0, 0, 0));
   const endOfDayUTC = new Date(Date.UTC(year, month - 1, day + 1, 23, 59, 59, 999));
 
+  // Get existing appointments from database
   const existingAppointments = await prisma.bookingAppointment.findMany({
     where: {
       agencyId: bookingType.agencyId,
@@ -484,6 +485,25 @@ async function getAvailableSlots(
       endTime: true,
     },
   });
+
+  // Fetch Google Calendar busy times for each host
+  const hostBusyTimes: Map<string, { start: Date; end: Date }[]> = new Map();
+
+  for (const hostId of hostIds) {
+    try {
+      const busyTimes = await getUserBusyTimes({
+        userId: hostId,
+        startTime: startOfDayUTC,
+        endTime: endOfDayUTC,
+        timezone: agencyTimezone,
+      });
+      hostBusyTimes.set(hostId, busyTimes);
+    } catch (error) {
+      // If calendar fetch fails, continue without it
+      console.log(`Could not fetch calendar for host ${hostId}:`, error);
+      hostBusyTimes.set(hostId, []);
+    }
+  }
 
   const slots: { time: string; hostId: string }[] = [];
   const duration = bookingType.duration;
@@ -506,7 +526,8 @@ async function getAvailableSlots(
       if (slotTime > minNoticeTime) {
         const slotEnd = new Date(slotTime.getTime() + duration * 60000);
 
-        const timeSlotTaken = existingAppointments.some(appt => {
+        // Check if slot conflicts with existing appointments
+        const appointmentConflict = existingAppointments.some(appt => {
           const apptStart = new Date(appt.startTime);
           const apptEnd = new Date(appt.endTime);
           const apptStartWithBuffer = new Date(apptStart.getTime() - bufferBefore * 60000);
@@ -514,13 +535,22 @@ async function getAvailableSlots(
           return slotTime < apptEndWithBuffer && slotEnd > apptStartWithBuffer;
         });
 
-        if (!timeSlotTaken) {
+        if (!appointmentConflict) {
+          // Find a host that is available (not busy in Google Calendar)
           for (const hostId of hostIds) {
-            slots.push({
-              time: slotTime.toISOString(),
-              hostId,
+            const busyTimes = hostBusyTimes.get(hostId) || [];
+
+            const calendarConflict = busyTimes.some(busy => {
+              return slotTime < busy.end && slotEnd > busy.start;
             });
-            break;
+
+            if (!calendarConflict) {
+              slots.push({
+                time: slotTime.toISOString(),
+                hostId,
+              });
+              break; // Found an available host for this slot
+            }
           }
         }
       }
