@@ -150,16 +150,32 @@ export async function POST(
     // Determine host user
     let hostUserId: string | null = null;
 
+    // Build list of potential hosts
+    let potentialHosts: string[] = [];
     if (bookingType.specificUserId) {
-      hostUserId = bookingType.specificUserId;
-    } else if (bookingType.assignmentType === "ROUND_ROBIN") {
-      // Get the user with the least upcoming appointments
-      const userIds = bookingType.assignedUsers.map(au => au.userId);
-      if (userIds.length > 0) {
+      potentialHosts = [bookingType.specificUserId];
+    } else if (bookingType.assignedUsers.length > 0) {
+      potentialHosts = bookingType.assignedUsers.map((au: any) => au.userId);
+    } else {
+      // Fallback: use all active users from the agency
+      const agencyUsers = await prisma.user.findMany({
+        where: {
+          agencyId: bookingType.agencyId,
+          isActive: true,
+          role: { in: ["ADMIN", "SUPER_ADMIN", "MANAGER", "MEMBER"] },
+        },
+        select: { id: true },
+      });
+      potentialHosts = agencyUsers.map(u => u.id);
+    }
+
+    if (potentialHosts.length > 0) {
+      if (bookingType.assignmentType === "ROUND_ROBIN" || potentialHosts.length > 1) {
+        // Get the user with the least upcoming appointments (round-robin)
         const appointmentCounts = await prisma.bookingAppointment.groupBy({
           by: ["hostUserId"],
           where: {
-            hostUserId: { in: userIds },
+            hostUserId: { in: potentialHosts },
             status: { in: ["SCHEDULED", "CONFIRMED"] },
             startTime: { gte: new Date() },
           },
@@ -169,11 +185,13 @@ export async function POST(
         const countMap = new Map(appointmentCounts.map(c => [c.hostUserId, c._count]));
 
         // Find user with lowest count (or first user if none have appointments)
-        hostUserId = userIds.reduce((minUser, userId) => {
+        hostUserId = potentialHosts.reduce((minUser, userId) => {
           const currentCount = countMap.get(userId) || 0;
           const minCount = countMap.get(minUser) || 0;
           return currentCount < minCount ? userId : minUser;
-        }, userIds[0]);
+        }, potentialHosts[0]);
+      } else {
+        hostUserId = potentialHosts[0];
       }
     } else if (data.hostUserId) {
       hostUserId = data.hostUserId;
