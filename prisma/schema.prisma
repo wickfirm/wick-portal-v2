@@ -1600,3 +1600,140 @@ enum task_status {
   ON_HOLD
   FUTURE_PLAN
 }
+
+// ==========================================
+// BOOKING SYSTEM (Calendly-style)
+// ==========================================
+
+model BookingType {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId        String    @map("agency_id")
+  name            String    // "30-min Discovery Call"
+  slug            String    @unique // "discovery-call"
+  description     String?
+  duration        Int       @default(30) // minutes
+  color           String?   @default("#76527c")
+  bufferBefore    Int       @default(0) @map("buffer_before") // minutes before meeting
+  bufferAfter     Int       @default(15) @map("buffer_after") // minutes after meeting
+  minNotice       Int       @default(24) @map("min_notice") // hours in advance required
+  maxFutureDays   Int       @default(60) @map("max_future_days") // how far ahead can book
+  isActive        Boolean   @default(true) @map("is_active")
+  requiresApproval Boolean  @default(false) @map("requires_approval")
+  // Meeting location
+  locationType    String    @default("VIDEO") @map("location_type") // VIDEO, PHONE, IN_PERSON, CUSTOM
+  locationDetails String?   @map("location_details") // Custom location or meeting link
+  autoCreateMeet  Boolean   @default(true) @map("auto_create_meet") // Auto-create Google Meet/Zoom
+  // Assignment
+  assignmentType  String    @default("ROUND_ROBIN") @map("assignment_type") // SPECIFIC_USER, ROUND_ROBIN, ANY_AVAILABLE
+  specificUserId  String?   @map("specific_user_id")
+  // Questions/form fields
+  questions       Json?     @default("[]") // Custom form questions
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  appointments    BookingAppointment[] @relation("BookingTypeAppointments")
+  assignedUsers   BookingTypeUser[]    @relation("BookingTypeUsers")
+
+  @@index([agencyId])
+  @@index([slug])
+  @@index([isActive])
+  @@map("booking_types")
+}
+
+model BookingTypeUser {
+  id            String      @id @default(dbgenerated("(gen_random_uuid())::text"))
+  bookingTypeId String      @map("booking_type_id")
+  userId        String      @map("user_id")
+  priority      Int         @default(0) // For round-robin ordering
+  createdAt     DateTime    @default(now()) @map("created_at") @db.Timestamp(6)
+
+  bookingType   BookingType @relation("BookingTypeUsers", fields: [bookingTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingTypeId, userId])
+  @@map("booking_type_users")
+}
+
+model AgencyAvailability {
+  id            String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId      String    @unique @map("agency_id")
+  timezone      String    @default("Asia/Dubai")
+  // Weekly schedule (JSON: { "monday": [{ start: "09:00", end: "17:00" }], ... })
+  weeklySchedule Json     @default("{}") @map("weekly_schedule")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@map("agency_availability")
+}
+
+model UserAvailability {
+  id            String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  userId        String    @unique @map("user_id")
+  timezone      String    @default("Asia/Dubai")
+  // Override agency schedule? If false, uses agency defaults
+  useCustomSchedule Boolean @default(false) @map("use_custom_schedule")
+  // Weekly schedule (JSON: { "monday": [{ start: "09:00", end: "17:00" }], ... })
+  weeklySchedule Json     @default("{}") @map("weekly_schedule")
+  // Date-specific overrides (JSON: { "2024-12-25": [] } means unavailable that day)
+  dateOverrides  Json     @default("{}") @map("date_overrides")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@map("user_availability")
+}
+
+model BookingAppointment {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId        String    @map("agency_id")
+  bookingTypeId   String    @map("booking_type_id")
+  hostUserId      String    @map("host_user_id") // Team member hosting
+  // Guest info (can be existing client or external)
+  guestName       String    @map("guest_name")
+  guestEmail      String    @map("guest_email")
+  guestPhone      String?   @map("guest_phone")
+  guestCompany    String?   @map("guest_company")
+  clientId        String?   @map("client_id") // If guest is an existing client
+  // Scheduling
+  startTime       DateTime  @map("start_time") @db.Timestamp(6)
+  endTime         DateTime  @map("end_time") @db.Timestamp(6)
+  timezone        String    @default("Asia/Dubai")
+  // Status
+  status          BookingAppointmentStatus @default(SCHEDULED)
+  cancelledAt     DateTime? @map("cancelled_at") @db.Timestamp(6)
+  cancelledBy     String?   @map("cancelled_by") // "HOST" or "GUEST"
+  cancellationReason String? @map("cancellation_reason")
+  // Meeting details
+  meetingLink     String?   @map("meeting_link") // Zoom/Google Meet link
+  meetingId       String?   @map("meeting_id") // External meeting ID
+  calendarEventId String?   @map("calendar_event_id") // Google Calendar event ID
+  location        String?
+  // Notes and form responses
+  notes           String?
+  formResponses   Json?     @default("{}") @map("form_responses")
+  // Reminders
+  reminderSentAt  DateTime? @map("reminder_sent_at") @db.Timestamp(6)
+  // Timestamps
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  bookingType     BookingType @relation("BookingTypeAppointments", fields: [bookingTypeId], references: [id])
+
+  @@index([agencyId])
+  @@index([bookingTypeId])
+  @@index([hostUserId])
+  @@index([clientId])
+  @@index([status])
+  @@index([startTime])
+  @@index([guestEmail])
+  @@map("booking_appointments")
+}
+
+enum BookingAppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+  RESCHEDULED
+
+  @@map("booking_appointment_status")
+}
