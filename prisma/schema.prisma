@@ -23,6 +23,7 @@ model User {
   billRate          Decimal?        @db.Decimal(10, 2)
   calendarConnected Boolean?        @default(false) @map("calendar_connected")
   googleCalendarId  String?         @map("google_calendar_id")
+  bookingSlug       String?         @unique @map("booking_slug") // Vanity URL for booking pages (e.g., /book/john/...)
   activeTimer       ActiveTimer?
   mediaActivities   MediaActivity[] @relation("MediaActivityUser")
   uploadedFiles     MediaFile[]     @relation("FileUploader")

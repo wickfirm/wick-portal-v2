@@ -2,18 +2,19 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { sendBookingConfirmation } from "@/lib/email";
 
-// GET - Get public booking type info and available slots (no auth required)
-export async function GET(
-  req: NextRequest,
-  { params }: { params: { slug: string } }
-) {
-  const { searchParams } = new URL(req.url);
-  const date = searchParams.get("date"); // Optional: specific date to get slots for
-  const month = searchParams.get("month"); // Optional: YYYY-MM to get available days
+// Helper to parse the slug - supports both /[typeSlug] and /[userSlug]/[typeSlug]
+async function parseSlug(slugParts: string[]): Promise<{
+  bookingType: any;
+  hostUser: { id: string; name: string; email: string } | null;
+  hosts: string[];
+  error?: string;
+}> {
+  // Case 1: /book/[typeSlug] - Direct booking type slug
+  if (slugParts.length === 1) {
+    const typeSlug = slugParts[0];
 
-  try {
     const bookingType = await prisma.bookingType.findUnique({
-      where: { slug: params.slug },
+      where: { slug: typeSlug },
       include: {
         assignedUsers: {
           select: {
@@ -25,7 +26,92 @@ export async function GET(
     });
 
     if (!bookingType || !bookingType.isActive) {
-      return NextResponse.json({ error: "Booking type not found" }, { status: 404 });
+      return { bookingType: null, hostUser: null, hosts: [], error: "Booking type not found" };
+    }
+
+    // Get host users
+    const assignedHostIds = bookingType.assignedUsers.map(au => au.userId);
+    let hosts: string[] = [];
+
+    if (bookingType.specificUserId) {
+      hosts = [bookingType.specificUserId];
+    } else if (assignedHostIds.length > 0) {
+      hosts = assignedHostIds;
+    } else {
+      const agencyUsers = await prisma.user.findMany({
+        where: {
+          agencyId: bookingType.agencyId,
+          isActive: true,
+          role: { in: ["ADMIN", "SUPER_ADMIN", "MANAGER", "MEMBER"] },
+        },
+        select: { id: true },
+      });
+      hosts = agencyUsers.map(u => u.id);
+    }
+
+    return { bookingType, hostUser: null, hosts };
+  }
+
+  // Case 2: /book/[userSlug]/[typeSlug] - User-prefixed booking
+  if (slugParts.length === 2) {
+    const [userSlug, typeSlug] = slugParts;
+
+    // Find the user by their booking slug
+    const user = await prisma.user.findFirst({
+      where: { bookingSlug: userSlug },
+      select: { id: true, name: true, email: true, agencyId: true },
+    });
+
+    if (!user || !user.agencyId) {
+      return { bookingType: null, hostUser: null, hosts: [], error: "User not found" };
+    }
+
+    // Find the booking type by slug within the user's agency
+    const bookingType = await prisma.bookingType.findFirst({
+      where: {
+        slug: typeSlug,
+        agencyId: user.agencyId,
+        isActive: true,
+      },
+      include: {
+        assignedUsers: {
+          select: {
+            userId: true,
+            priority: true,
+          },
+        },
+      },
+    });
+
+    if (!bookingType) {
+      return { bookingType: null, hostUser: null, hosts: [], error: "Booking type not found" };
+    }
+
+    // For user-prefixed URLs, the user IS the host
+    return {
+      bookingType,
+      hostUser: { id: user.id, name: user.name, email: user.email },
+      hosts: [user.id],
+    };
+  }
+
+  return { bookingType: null, hostUser: null, hosts: [], error: "Invalid URL format" };
+}
+
+// GET - Get public booking type info and available slots (no auth required)
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { slug: string[] } }
+) {
+  const { searchParams } = new URL(req.url);
+  const date = searchParams.get("date");
+  const month = searchParams.get("month");
+
+  try {
+    const { bookingType, hostUser, hosts, error } = await parseSlug(params.slug);
+
+    if (error || !bookingType) {
+      return NextResponse.json({ error: error || "Not found" }, { status: 404 });
     }
 
     // Get agency info for branding and timezone
@@ -40,74 +126,13 @@ export async function GET(
     });
     const agencyTimezone = agencyAvail?.timezone || "Asia/Dubai";
 
-    // Get host users info
-    const assignedHostIds = bookingType.assignedUsers.map(au => au.userId);
-    let hosts: string[] = [];
-
-    if (bookingType.specificUserId) {
-      hosts = [bookingType.specificUserId];
-    } else if (assignedHostIds.length > 0) {
-      hosts = assignedHostIds;
-    } else {
-      // Fallback: use all active users from the agency as potential hosts
-      const agencyUsers = await prisma.user.findMany({
-        where: {
-          agencyId: bookingType.agencyId,
-          isActive: true,
-          role: { in: ["ADMIN", "SUPER_ADMIN", "MANAGER", "MEMBER"] },
-        },
-        select: { id: true },
-      });
-      hosts = agencyUsers.map(u => u.id);
-    }
-
     const hostUsers = await prisma.user.findMany({
       where: { id: { in: hosts } },
       select: { id: true, name: true },
     });
 
-    // If requesting available slots for a specific date
-    if (date) {
-      const slots = await getAvailableSlots(bookingType, hosts, date, agencyTimezone);
-      return NextResponse.json({
-        bookingType: {
-          id: bookingType.id,
-          name: bookingType.name,
-          description: bookingType.description,
-          duration: bookingType.duration,
-          color: bookingType.color,
-          questions: bookingType.questions,
-        },
-        agency,
-        timezone: agencyTimezone,
-        hosts: hostUsers,
-        date,
-        slots,
-      });
-    }
-
-    // If requesting available days in a month
-    if (month) {
-      const availableDays = await getAvailableDays(bookingType, hosts, month);
-      return NextResponse.json({
-        bookingType: {
-          id: bookingType.id,
-          name: bookingType.name,
-          description: bookingType.description,
-          duration: bookingType.duration,
-          color: bookingType.color,
-          questions: bookingType.questions,
-        },
-        agency,
-        timezone: agencyTimezone,
-        hosts: hostUsers,
-        month,
-        availableDays,
-      });
-    }
-
-    // Return basic booking type info
-    return NextResponse.json({
+    // Base response data
+    const baseResponse = {
       bookingType: {
         id: bookingType.id,
         name: bookingType.name,
@@ -121,7 +146,22 @@ export async function GET(
       agency,
       timezone: agencyTimezone,
       hosts: hostUsers,
-    });
+      hostUser: hostUser ? { id: hostUser.id, name: hostUser.name } : null,
+    };
+
+    // If requesting available slots for a specific date
+    if (date) {
+      const slots = await getAvailableSlots(bookingType, hosts, date, agencyTimezone);
+      return NextResponse.json({ ...baseResponse, date, slots });
+    }
+
+    // If requesting available days in a month
+    if (month) {
+      const availableDays = await getAvailableDays(bookingType, hosts, month);
+      return NextResponse.json({ ...baseResponse, month, availableDays });
+    }
+
+    return NextResponse.json(baseResponse);
   } catch (error) {
     console.error("Error fetching public booking:", error);
     return NextResponse.json({ error: "Failed to fetch booking info" }, { status: 500 });
@@ -131,22 +171,14 @@ export async function GET(
 // POST - Create a booking (public, no auth required)
 export async function POST(
   req: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: { slug: string[] } }
 ) {
   try {
     const data = await req.json();
+    const { bookingType, hostUser, hosts, error } = await parseSlug(params.slug);
 
-    const bookingType = await prisma.bookingType.findUnique({
-      where: { slug: params.slug },
-      include: {
-        assignedUsers: {
-          orderBy: { priority: "asc" },
-        },
-      },
-    });
-
-    if (!bookingType || !bookingType.isActive) {
-      return NextResponse.json({ error: "Booking type not found" }, { status: 404 });
+    if (error || !bookingType) {
+      return NextResponse.json({ error: error || "Not found" }, { status: 404 });
     }
 
     // Get agency timezone
@@ -166,51 +198,36 @@ export async function POST(
     // Determine host user
     let hostUserId: string | null = null;
 
-    // Build list of potential hosts
-    let potentialHosts: string[] = [];
-    if (bookingType.specificUserId) {
-      potentialHosts = [bookingType.specificUserId];
-    } else if (bookingType.assignedUsers.length > 0) {
-      potentialHosts = bookingType.assignedUsers.map((au: any) => au.userId);
+    if (hostUser) {
+      // User-prefixed URL - the user IS the host
+      hostUserId = hostUser.id;
     } else {
-      // Fallback: use all active users from the agency
-      const agencyUsers = await prisma.user.findMany({
-        where: {
-          agencyId: bookingType.agencyId,
-          isActive: true,
-          role: { in: ["ADMIN", "SUPER_ADMIN", "MANAGER", "MEMBER"] },
-        },
-        select: { id: true },
-      });
-      potentialHosts = agencyUsers.map(u => u.id);
-    }
+      // Direct type URL - use round-robin or assignment logic
+      if (hosts.length > 0) {
+        if (bookingType.assignmentType === "ROUND_ROBIN" || hosts.length > 1) {
+          const appointmentCounts = await prisma.bookingAppointment.groupBy({
+            by: ["hostUserId"],
+            where: {
+              hostUserId: { in: hosts },
+              status: { in: ["SCHEDULED", "CONFIRMED"] },
+              startTime: { gte: new Date() },
+            },
+            _count: true,
+          });
 
-    if (potentialHosts.length > 0) {
-      if (bookingType.assignmentType === "ROUND_ROBIN" || potentialHosts.length > 1) {
-        // Get the user with the least upcoming appointments (round-robin)
-        const appointmentCounts = await prisma.bookingAppointment.groupBy({
-          by: ["hostUserId"],
-          where: {
-            hostUserId: { in: potentialHosts },
-            status: { in: ["SCHEDULED", "CONFIRMED"] },
-            startTime: { gte: new Date() },
-          },
-          _count: true,
-        });
+          const countMap = new Map(appointmentCounts.map(c => [c.hostUserId, c._count]));
 
-        const countMap = new Map(appointmentCounts.map(c => [c.hostUserId, c._count]));
-
-        // Find user with lowest count (or first user if none have appointments)
-        hostUserId = potentialHosts.reduce((minUser, userId) => {
-          const currentCount = countMap.get(userId) || 0;
-          const minCount = countMap.get(minUser) || 0;
-          return currentCount < minCount ? userId : minUser;
-        }, potentialHosts[0]);
-      } else {
-        hostUserId = potentialHosts[0];
+          hostUserId = hosts.reduce((minUser, userId) => {
+            const currentCount = countMap.get(userId) || 0;
+            const minCount = countMap.get(minUser) || 0;
+            return currentCount < minCount ? userId : minUser;
+          }, hosts[0]);
+        } else {
+          hostUserId = hosts[0];
+        }
+      } else if (data.hostUserId) {
+        hostUserId = data.hostUserId;
       }
-    } else if (data.hostUserId) {
-      hostUserId = data.hostUserId;
     }
 
     if (!hostUserId) {
@@ -220,14 +237,17 @@ export async function POST(
       );
     }
 
-    // The startTime comes as ISO string (already in UTC from the client)
     const startTime = new Date(data.startTime);
     const endTime = new Date(startTime.getTime() + bookingType.duration * 60000);
 
-    // Check for conflicts with ANY existing booking at this time
+    // Check for conflicts
+    const conflictQuery = hostUser
+      ? { hostUserId } // User-prefixed: check only this host
+      : { agencyId: bookingType.agencyId }; // Direct: check agency-wide
+
     const conflict = await prisma.bookingAppointment.findFirst({
       where: {
-        agencyId: bookingType.agencyId,
+        ...conflictQuery,
         status: { in: ["SCHEDULED", "CONFIRMED"] },
         startTime: { lt: endTime },
         endTime: { gt: startTime },
@@ -267,19 +287,16 @@ export async function POST(
     });
 
     // Get host info for response
-    const host = await prisma.user.findUnique({
+    const host = hostUser || await prisma.user.findUnique({
       where: { id: hostUserId },
       select: { name: true, email: true },
     });
 
-    // Generate meeting link placeholder (will be replaced with real Zoom/Meet integration)
+    // Generate meeting link placeholder
     let meetingLink = null;
     if (bookingType.autoCreateMeet && bookingType.locationType === "VIDEO") {
-      // For now, generate a Google Meet-style link as placeholder
-      // In production, integrate with Google Calendar API or Zoom API
       meetingLink = `https://meet.google.com/${generateMeetingCode()}`;
 
-      // Update appointment with meeting link
       await prisma.bookingAppointment.update({
         where: { id: appointment.id },
         data: { meetingLink },
@@ -310,7 +327,6 @@ export async function POST(
         });
       } catch (emailError) {
         console.error("Error sending confirmation email:", emailError);
-        // Don't fail the booking if email fails
       }
     }
 
@@ -345,12 +361,10 @@ async function getAvailableSlots(
     return [];
   }
 
-  // Parse date string
   const [year, month, day] = dateStr.split("-").map(Number);
   const date = new Date(year, month - 1, day);
   const dayOfWeek = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase();
 
-  // Get agency availability
   const agencyAvail = await prisma.agencyAvailability.findFirst({
     where: { agencyId: bookingType.agencyId },
   });
@@ -366,7 +380,6 @@ async function getAvailableSlots(
     return [];
   }
 
-  // Get existing appointments for this date (query wide range to handle timezone differences)
   const startOfDayUTC = new Date(Date.UTC(year, month - 1, day - 1, 0, 0, 0, 0));
   const endOfDayUTC = new Date(Date.UTC(year, month - 1, day + 1, 23, 59, 59, 999));
 
@@ -383,7 +396,6 @@ async function getAvailableSlots(
     },
   });
 
-  // Generate available slots
   const slots: { time: string; hostId: string }[] = [];
   const duration = bookingType.duration;
   const bufferBefore = bookingType.bufferBefore || 0;
@@ -395,8 +407,6 @@ async function getAvailableSlots(
     const [startHour, startMin] = period.start.split(":").map(Number);
     const [endHour, endMin] = period.end.split(":").map(Number);
 
-    // Create slot times in UTC based on agency timezone offset
-    // For simplicity, we'll generate slots and store them as UTC
     let slotTime = new Date(date);
     slotTime.setHours(startHour, startMin, 0, 0);
 
@@ -404,11 +414,9 @@ async function getAvailableSlots(
     periodEnd.setHours(endHour, endMin, 0, 0);
 
     while (slotTime.getTime() + duration * 60000 <= periodEnd.getTime()) {
-      // Check if slot is in the future with min notice
       if (slotTime > minNoticeTime) {
         const slotEnd = new Date(slotTime.getTime() + duration * 60000);
 
-        // Check if ANY appointment exists at this time slot
         const timeSlotTaken = existingAppointments.some(appt => {
           const apptStart = new Date(appt.startTime);
           const apptEnd = new Date(appt.endTime);
@@ -418,7 +426,6 @@ async function getAvailableSlots(
         });
 
         if (!timeSlotTaken) {
-          // Add slot with first available host
           for (const hostId of hostIds) {
             slots.push({
               time: slotTime.toISOString(),
@@ -429,7 +436,6 @@ async function getAvailableSlots(
         }
       }
 
-      // Move to next slot (30-min increments)
       slotTime = new Date(slotTime.getTime() + 30 * 60000);
     }
   }
@@ -437,7 +443,7 @@ async function getAvailableSlots(
   return slots;
 }
 
-// Helper: Generate a random meeting code (placeholder for real integration)
+// Helper: Generate a random meeting code
 function generateMeetingCode(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz";
   const segment = () =>
@@ -463,7 +469,6 @@ async function getAvailableDays(
   const minNoticeDate = new Date(now.getTime() + bookingType.minNotice * 60 * 60000);
   const maxFutureDate = new Date(now.getTime() + bookingType.maxFutureDays * 24 * 60 * 60000);
 
-  // Get agency schedule
   const agencyAvail = await prisma.agencyAvailability.findFirst({
     where: { agencyId: bookingType.agencyId },
   });

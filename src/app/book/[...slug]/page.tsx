@@ -119,9 +119,18 @@ const TIMEZONE_GROUPS = [
 const TIMEZONES = TIMEZONE_GROUPS.flatMap(g => g.timezones);
 
 // Minimalist public booking page - no auth required
+// Supports both /book/[typeSlug] and /book/[userSlug]/[typeSlug] patterns
 export default function PublicBookingPage() {
   const params = useParams();
-  const slug = params.slug as string;
+  const slugParts = params.slug as string[];
+
+  // Determine if this is a user-prefixed URL or a direct type URL
+  // /book/wick-discovery -> slugParts = ["wick-discovery"]
+  // /book/john/discovery-call -> slugParts = ["john", "discovery-call"]
+  const isUserPrefixed = slugParts.length === 2;
+  const apiPath = isUserPrefixed
+    ? `/api/bookings/public/${slugParts[0]}/${slugParts[1]}`
+    : `/api/bookings/public/${slugParts[0]}`;
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -158,7 +167,7 @@ export default function PublicBookingPage() {
     const detectedTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     setGuestTimezone(detectedTz);
     fetchBookingInfo();
-  }, [slug]);
+  }, [apiPath]);
 
   // Close timezone dropdown when clicking outside
   useEffect(() => {
@@ -190,7 +199,7 @@ export default function PublicBookingPage() {
 
   const fetchBookingInfo = async () => {
     try {
-      const res = await fetch(`/api/bookings/public/${slug}`);
+      const res = await fetch(apiPath);
       if (!res.ok) {
         setError("Booking type not found");
         setLoading(false);
@@ -211,7 +220,7 @@ export default function PublicBookingPage() {
   const fetchAvailableDays = async () => {
     const monthStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth() + 1).padStart(2, "0")}`;
     try {
-      const res = await fetch(`/api/bookings/public/${slug}?month=${monthStr}`);
+      const res = await fetch(`${apiPath}?month=${monthStr}`);
       if (res.ok) {
         const data = await res.json();
         setAvailableDays(data.availableDays || []);
@@ -225,7 +234,7 @@ export default function PublicBookingPage() {
     if (!selectedDate) return;
     setLoadingSlots(true);
     try {
-      const res = await fetch(`/api/bookings/public/${slug}?date=${selectedDate}`);
+      const res = await fetch(`${apiPath}?date=${selectedDate}`);
       if (res.ok) {
         const data = await res.json();
         setAvailableSlots(data.slots || []);
@@ -241,7 +250,7 @@ export default function PublicBookingPage() {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/bookings/public/${slug}`, {
+      const res = await fetch(apiPath, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -381,6 +390,11 @@ export default function PublicBookingPage() {
           <h1 style={{ ...styles.title, color: brandColor }}>
             {bookingData?.bookingType?.name}
           </h1>
+          {bookingData?.hostUser && (
+            <p style={{ ...styles.subtitle, marginBottom: 8 }}>
+              with <strong>{bookingData.hostUser.name}</strong>
+            </p>
+          )}
           {bookingData?.bookingType?.description && (
             <p style={styles.subtitle}>{bookingData.bookingType.description}</p>
           )}
