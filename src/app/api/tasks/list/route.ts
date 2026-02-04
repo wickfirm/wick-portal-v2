@@ -84,6 +84,8 @@ export async function GET() {
         internalLink: true,
         internalLinkLabel: true,
         assigneeId: true,
+        order: true,
+        pinned: true,
         category: {
           select: {
             id: true,
@@ -104,6 +106,7 @@ export async function GET() {
         }
       },
       orderBy: [
+        { pinned: "desc" },
         { createdAt: "desc" },
       ],
     });

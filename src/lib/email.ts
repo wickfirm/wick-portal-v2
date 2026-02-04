@@ -961,6 +961,203 @@ export async function sendBookingReschedule({
   ]);
 }
 
+// ===========================================
+// HR EMAILS
+// ===========================================
+
+export async function sendLeaveRequestNotification({
+  employeeName,
+  employeeEmail,
+  leaveType,
+  startDate,
+  endDate,
+  totalDays,
+  reason,
+  managementEmail,
+  approvalUrl,
+}: {
+  employeeName: string;
+  employeeEmail: string;
+  leaveType: string;
+  startDate: Date;
+  endDate: Date;
+  totalDays: number;
+  reason?: string;
+  managementEmail: string;
+  approvalUrl: string;
+}): Promise<void> {
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
+
+  const startDateStr = formatDate(startDate);
+  const endDateStr = formatDate(endDate);
+  const leaveTypeLabel = leaveType === "ANNUAL" ? "Annual Leave" : leaveType === "SICK" ? "Sick Leave" : leaveType === "UNPAID" ? "Unpaid Leave" : leaveType;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin:0;padding:0;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#f4f4f5;padding:40px 20px;">
+        <tr>
+          <td align="center">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:520px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 6px -1px rgba(0,0,0,0.1),0 2px 4px -1px rgba(0,0,0,0.06);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#f59e0b 0%,#d97706 100%);padding:32px 40px;text-align:center;">
+                  <div style="display:inline-block;background:rgba(255,255,255,0.15);padding:8px 16px;border-radius:20px;margin-bottom:16px;">
+                    <span style="font-size:13px;color:#ffffff;font-weight:500;">LEAVE REQUEST</span>
+                  </div>
+                  <h1 style="margin:0;font-size:24px;font-weight:700;color:#ffffff;">New Time-Off Request</h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding:32px 40px;">
+                  <!-- Employee Info -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border-radius:12px;border:1px solid #bfdbfe;margin-bottom:24px;">
+                    <tr>
+                      <td style="padding:20px;">
+                        <table role="presentation" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="vertical-align:top;">
+                              <div style="width:48px;height:48px;background:linear-gradient(135deg,#3b82f6 0%,#1d4ed8 100%);border-radius:50%;text-align:center;line-height:48px;color:#ffffff;font-size:18px;font-weight:600;">${employeeName.charAt(0).toUpperCase()}</div>
+                            </td>
+                            <td style="padding-left:16px;vertical-align:middle;">
+                              <div style="font-size:16px;font-weight:600;color:#1e293b;">${employeeName}</div>
+                              <div style="font-size:14px;color:#64748b;">${employeeEmail}</div>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Leave Details -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
+                    <tr>
+                      <td style="padding:24px;">
+                        <h3 style="margin:0 0 16px;font-size:14px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;">Request Details</h3>
+
+                        <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                          <tr>
+                            <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#fef3c7;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#127796;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;">Leave Type</div>
+                                    <div style="font-size:15px;font-weight:600;color:#1e293b;">${leaveTypeLabel}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#dcfce7;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#128197;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;">Start Date</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${startDateStr}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:10px 0;border-bottom:1px solid #e2e8f0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#fce7f3;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#128197;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;">End Date</div>
+                                    <div style="font-size:15px;font-weight:500;color:#1e293b;">${endDateStr}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                          <tr>
+                            <td style="padding:10px 0;">
+                              <table role="presentation" cellspacing="0" cellpadding="0">
+                                <tr>
+                                  <td style="width:40px;height:40px;background:#e0e7ff;border-radius:8px;text-align:center;vertical-align:middle;">
+                                    <span style="font-size:18px;">&#128337;</span>
+                                  </td>
+                                  <td style="padding-left:14px;">
+                                    <div style="font-size:12px;color:#64748b;">Total Days</div>
+                                    <div style="font-size:15px;font-weight:600;color:#1e293b;">${totalDays} working day${totalDays === 1 ? '' : 's'}</div>
+                                  </td>
+                                </tr>
+                              </table>
+                            </td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+
+                  ${reason ? `
+                  <!-- Reason -->
+                  <div style="margin-top:20px;padding:16px;background:#fffbeb;border-radius:8px;border:1px solid #fde68a;">
+                    <div style="font-size:12px;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Reason</div>
+                    <div style="font-size:14px;color:#78350f;">${reason}</div>
+                  </div>
+                  ` : ''}
+
+                  <!-- Action Button -->
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;">
+                    <tr>
+                      <td align="center">
+                        <a href="${approvalUrl}" style="display:inline-block;background:linear-gradient(135deg,#76527c 0%,#5a3d5e 100%);color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 32px;border-radius:8px;box-shadow:0 2px 4px rgba(118,82,124,0.3);">Review Request</a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f8fafc;padding:24px 40px;text-align:center;border-top:1px solid #e2e8f0;">
+                  <p style="margin:0;font-size:13px;color:#94a3b8;">This is an automated notification from The Wick Firm HR System</p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  console.log(`📧 Sending leave request notification to management: ${managementEmail}`);
+
+  await sendEmail({
+    to: managementEmail,
+    subject: `Leave Request: ${employeeName} - ${leaveTypeLabel} (${totalDays} day${totalDays === 1 ? '' : 's'})`,
+    html,
+    replyTo: employeeEmail,
+  });
+}
+
 export async function sendClientEmail({
   clientName,
   clientEmail,

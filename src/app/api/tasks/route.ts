@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
   const tasks = await prisma.clientTask.findMany({
     where,
     include: { category: true, client: true },
-    orderBy: [{ createdAt: "desc" }],
+    orderBy: [
+      { pinned: "desc" },
+      { createdAt: "desc" },
+    ],
   });
 
   return NextResponse.json(tasks);

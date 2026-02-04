@@ -63,6 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         : { disconnect: true };
     }
     if (data.order !== undefined) updateData.order = data.order;
+    if (data.pinned !== undefined) updateData.pinned = Boolean(data.pinned);
 
     const task = await prisma.clientTask.update({
       where: { id: params.id },

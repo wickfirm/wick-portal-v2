@@ -23,6 +23,7 @@ type Task = {
   assigneeId: string | null;
   assignee: { id: string; name: string; email: string } | null;
   order: number;
+  pinned?: boolean;
   client?: {
     id: string;
     nickname: string | null;
@@ -109,32 +110,36 @@ export default function TasksManager({
     return task.assigneeId === currentUserId;
   };
 
-  // Smart task sorting: Priority + Due Date + Manual Order
+  // Smart task sorting: Pinned + Priority + Due Date + Manual Order
   const priorityWeight = { "URGENT": 4, "HIGH": 3, "MEDIUM": 2, "LOW": 1 };
-  
+
   const smartSortTasks = (tasksToSort: Task[]) => {
     return [...tasksToSort].sort((a, b) => {
+      // 0. Pinned tasks always come first
+      if (a.pinned && !b.pinned) return -1;
+      if (!a.pinned && b.pinned) return 1;
+
       // 1. First by manual order if set (non-zero)
       if (a.order !== 0 && b.order !== 0) {
         return a.order - b.order;
       }
       if (a.order !== 0) return -1; // a has manual order, comes first
       if (b.order !== 0) return 1;  // b has manual order, comes first
-      
+
       // 2. Then by priority (URGENT > HIGH > MEDIUM > LOW)
       const priorityA = priorityWeight[a.priority as keyof typeof priorityWeight] || 0;
       const priorityB = priorityWeight[b.priority as keyof typeof priorityWeight] || 0;
       if (priorityA !== priorityB) {
         return priorityB - priorityA; // Higher priority first
       }
-      
+
       // 3. Then by due date (earliest first, null last)
       if (a.dueDate && !b.dueDate) return -1;
       if (!a.dueDate && b.dueDate) return 1;
       if (a.dueDate && b.dueDate) {
         return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
       }
-      
+
       // 4. Finally by creation (tasks array order)
       return 0;
     });
@@ -876,6 +881,34 @@ export default function TasksManager({
         )}
       </td>
 
+      {/* Pin */}
+      <td style={{ padding: "10px 12px", textAlign: "center" }}>
+        <button
+          onClick={(e) => { e.stopPropagation(); updateTaskField(task.id, "pinned", !task.pinned); }}
+          title={task.pinned ? "Unpin task" : "Pin task to top"}
+          style={{
+            background: task.pinned ? theme.colors.primaryBg : "transparent",
+            border: "none",
+            cursor: "pointer",
+            padding: 4,
+            borderRadius: 4,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: task.pinned ? theme.colors.primary : theme.colors.textMuted,
+            opacity: task.pinned ? 1 : 0.4,
+            transition: "all 0.15s",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+          onMouseLeave={(e) => (e.currentTarget.style.opacity = task.pinned ? "1" : "0.4")}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill={task.pinned ? "currentColor" : "none"} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="17" x2="12" y2="22" />
+            <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+          </svg>
+        </button>
+      </td>
+
       {/* Watch */}
       <td style={{ padding: "10px 12px", textAlign: "center" }}>
         <button
@@ -1202,6 +1235,12 @@ export default function TasksManager({
                         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
                       </svg>
                     </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 40 }} title="Pin to top">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <line x1="12" y1="17" x2="12" y2="22" />
+                        <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+                      </svg>
+                    </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -1340,6 +1379,12 @@ export default function TasksManager({
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 40 }}>
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
                         <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 40 }} title="Pin to top">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                        <line x1="12" y1="17" x2="12" y2="22" />
+                        <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
                       </svg>
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "center", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 44 }}>

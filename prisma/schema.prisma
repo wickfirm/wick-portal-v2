@@ -97,6 +97,7 @@ model Client {
   users            User[]          @relation("UserClient")
   expenses         ProjectExpense[] @relation("ClientExpenses")
   keyDates         ClientKeyDate[]  @relation("ClientKeyDates")
+  pinned           Boolean       @default(false)
 
   @@index([status])
   @@index([createdAt])
@@ -180,6 +181,7 @@ model Project {
   notes               Note[]              @relation("ProjectNotes")
   resources           ProjectResource[]   @relation("ProjectResources")
   expenses            ProjectExpense[]    @relation("ProjectExpenses")
+  pinned              Boolean             @default(false)
 
   @@index([status])
   @@index([clientId])
@@ -347,6 +349,7 @@ model ClientTask {
   dailyTasks        DailyTask[]   @relation("TaskDailyTasks")
   timeEntries       TimeEntry[]
   notes             Note[]        @relation("TaskNotes")
+  pinned            Boolean       @default(false)
 
   @@index([status])
   @@index([clientId])

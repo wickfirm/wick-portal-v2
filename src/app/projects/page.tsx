@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Header from "@/components/Header";
 import ProjectsList from "./projects-list";
@@ -18,6 +18,7 @@ type Project = {
   startDate: Date | null;
   endDate: Date | null;
   createdAt: Date;
+  pinned?: boolean;
   client: {
     id: string;
     name: string;
@@ -180,6 +181,8 @@ export default function ProjectsPage() {
     }
   }, [status, router]);
 
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error, refetch } = useQuery<ProjectsData>({
     queryKey: ["projects"],
     queryFn: async () => {
@@ -189,6 +192,35 @@ export default function ProjectsPage() {
     },
     enabled: status === "authenticated",
   });
+
+  const handlePinToggle = async (projectId: string, pinned: boolean) => {
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned }),
+      });
+
+      if (res.ok) {
+        // Optimistically update the cache
+        queryClient.setQueryData<ProjectsData>(["projects"], (old) => {
+          if (!old) return old;
+          const updatedProjects = old.projects.map(p =>
+            p.id === projectId ? { ...p, pinned } : p
+          );
+          // Re-sort: pinned first, then by name
+          updatedProjects.sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return a.name.localeCompare(b.name);
+          });
+          return { ...old, projects: updatedProjects };
+        });
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin:", err);
+    }
+  };
 
   if (status === "loading") return <ProjectsPageSkeleton />;
   if (!session) return null;
@@ -286,7 +318,7 @@ export default function ProjectsPage() {
 
         {/* Projects List */}
         <div style={anim(0.15)}>
-          <ProjectsList projects={projects} isAdmin={isAdmin} />
+          <ProjectsList projects={projects} isAdmin={isAdmin} onPinToggle={handlePinToggle} />
         </div>
       </main>
     </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { theme, STATUS_STYLES } from "@/lib/theme";
@@ -17,6 +17,7 @@ type Client = {
   email: string | null;
   phone: string | null;
   createdAt: Date;
+  pinned: boolean;
   projects: {
     id: string;
     status: string;
@@ -30,7 +31,9 @@ type ClientsData = {
     active: number;
     onboarding: number;
     leads: number;
+    churned: number;
   };
+  isAdmin: boolean;
 };
 
 // SVG Icons
@@ -93,6 +96,18 @@ const icons = {
   chevron: (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="9 18 15 12 9 6" />
+    </svg>
+  ),
+  pin: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+    </svg>
+  ),
+  pinFilled: (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
     </svg>
   ),
 };
@@ -188,6 +203,7 @@ export default function ClientsPage() {
   const [filter, setFilter] = useState("ALL");
   const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [hideChurned, setHideChurned] = useState(true); // Default: hide churned clients
 
   const anim = (delay: number) => ({
     opacity: mounted ? 1 : 0,
@@ -201,6 +217,8 @@ export default function ClientsPage() {
     }
   }, [status, router]);
 
+  const queryClient = useQueryClient();
+
   const { data, isLoading, error, refetch } = useQuery<ClientsData>({
     queryKey: ["clients"],
     queryFn: async () => {
@@ -210,6 +228,38 @@ export default function ClientsPage() {
     },
     enabled: status === "authenticated",
   });
+
+  const togglePin = async (clientId: string, currentPinned: boolean, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    try {
+      const res = await fetch(`/api/clients/${clientId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned: !currentPinned }),
+      });
+
+      if (res.ok) {
+        // Optimistically update the cache
+        queryClient.setQueryData<ClientsData>(["clients"], (old) => {
+          if (!old) return old;
+          const updatedClients = old.clients.map(c =>
+            c.id === clientId ? { ...c, pinned: !currentPinned } : c
+          );
+          // Re-sort: pinned first, then by name
+          updatedClients.sort((a, b) => {
+            if (a.pinned && !b.pinned) return -1;
+            if (!a.pinned && b.pinned) return 1;
+            return a.name.localeCompare(b.name);
+          });
+          return { ...old, clients: updatedClients };
+        });
+      }
+    } catch (err) {
+      console.error("Failed to toggle pin:", err);
+    }
+  };
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -222,9 +272,12 @@ export default function ClientsPage() {
   if (error) return <ClientsError error={error as Error} retry={() => refetch()} />;
   if (!data) return <ClientsError error={new Error("No data received")} retry={() => refetch()} />;
 
-  const { clients, stats } = data;
+  const { clients, stats, isAdmin: isAdminFromApi } = data;
 
   const filteredClients = clients.filter(client => {
+    // Hide churned clients if checkbox is checked (only relevant for admins)
+    if (hideChurned && client.status === "CHURNED") return false;
+
     const matchesFilter = filter === "ALL" || client.status === filter;
     const matchesSearch = !search ||
       client.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -345,16 +398,53 @@ export default function ClientsPage() {
               onBlur={(e) => e.currentTarget.style.borderColor = theme.colors.borderLight}
             />
           </div>
+          {/* Hide Churned checkbox (admins only) */}
+          {isAdminFromApi && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "8px 14px",
+                borderRadius: 10,
+                border: `1px solid ${theme.colors.borderLight}`,
+                background: theme.colors.bgSecondary,
+                fontSize: 13,
+                color: theme.colors.textSecondary,
+                cursor: "pointer",
+                transition: "all 0.15s ease",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={hideChurned}
+                onChange={(e) => setHideChurned(e.target.checked)}
+                style={{
+                  width: 16,
+                  height: 16,
+                  accentColor: theme.colors.primary,
+                  cursor: "pointer",
+                }}
+              />
+              Hide churned
+            </label>
+          )}
+
           <div style={{ display: "flex", gap: 6 }}>
-            {["ALL", "ACTIVE", "ONBOARDING", "LEAD"].map((s) => (
+            {(isAdminFromApi ? ["ALL", "ACTIVE", "ONBOARDING", "LEAD", "CHURNED"] : ["ALL", "ACTIVE", "ONBOARDING", "LEAD"]).map((s) => (
               <button
                 key={s}
-                onClick={() => setFilter(s)}
+                onClick={() => {
+                  setFilter(s);
+                  // If selecting CHURNED filter, automatically uncheck hide churned
+                  if (s === "CHURNED") setHideChurned(false);
+                }}
                 style={{
                   padding: "10px 18px",
                   borderRadius: 10,
                   border: filter === s ? "none" : `1px solid ${theme.colors.borderLight}`,
-                  background: filter === s ? theme.gradients.primary : theme.colors.bgSecondary,
+                  background: filter === s ? (s === "CHURNED" ? theme.colors.error : theme.gradients.primary) : theme.colors.bgSecondary,
                   color: filter === s ? "white" : theme.colors.textSecondary,
                   fontSize: 13,
                   fontWeight: 500,
@@ -490,6 +580,37 @@ export default function ClientsPage() {
                         {activeProjects > 0 ? `${activeProjects} active` : "projects"}
                       </div>
                     </div>
+
+                    {/* Pin Button */}
+                    <button
+                      onClick={(e) => togglePin(client.id, client.pinned, e)}
+                      title={client.pinned ? "Unpin client" : "Pin client to top"}
+                      style={{
+                        background: client.pinned ? theme.colors.primaryBg : "transparent",
+                        border: "none",
+                        padding: 8,
+                        borderRadius: 8,
+                        cursor: "pointer",
+                        color: client.pinned ? theme.colors.primary : theme.colors.textMuted,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        transition: "all 0.15s ease",
+                        flexShrink: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!client.pinned) {
+                          e.currentTarget.style.background = theme.colors.bgTertiary;
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!client.pinned) {
+                          e.currentTarget.style.background = "transparent";
+                        }
+                      }}
+                    >
+                      {client.pinned ? icons.pinFilled : icons.pin}
+                    </button>
 
                     {/* Chevron */}
                     <div style={{ color: theme.colors.textMuted, flexShrink: 0 }}>

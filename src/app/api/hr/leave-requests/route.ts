@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import { sendLeaveRequestNotification } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -177,6 +178,12 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
+    // Get user details for email
+    const userDetails = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { name: true, email: true }
+    });
+
     // Create leave request
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
@@ -203,6 +210,28 @@ export async function POST(request: Request) {
         }
       }
     });
+
+    // Send email notification to management
+    const MANAGEMENT_EMAIL = "management@thewickfirm.com";
+    const approvalUrl = `https://wick.omnixia.ai/dashboard/hr?tab=leaves`;
+
+    try {
+      await sendLeaveRequestNotification({
+        employeeName: userDetails?.name || "Employee",
+        employeeEmail: userDetails?.email || "",
+        leaveType,
+        startDate: start,
+        endDate: end,
+        totalDays,
+        reason,
+        managementEmail: MANAGEMENT_EMAIL,
+        approvalUrl,
+      });
+      console.log(`📧 Leave request notification sent to ${MANAGEMENT_EMAIL}`);
+    } catch (emailError) {
+      console.error("Failed to send leave request email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json(leaveRequest, { status: 201 });
   } catch (error) {

@@ -9,6 +9,7 @@ interface Project {
   name: string;
   status: string;
   serviceType: string;
+  pinned?: boolean;
   client: {
     id: string;
     name: string;
@@ -20,11 +21,27 @@ interface Project {
 interface Props {
   projects: Project[];
   isAdmin: boolean;
+  onPinToggle?: (projectId: string, pinned: boolean) => void;
 }
 
 const avatarColors = ["#76527c", "#5f4263", "#3d6b73", "#8a6030", "#34a853"];
 
-export default function ProjectsList({ projects, isAdmin }: Props) {
+const icons = {
+  pin: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+    </svg>
+  ),
+  pinFilled: (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="17" x2="12" y2="22" />
+      <path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z" />
+    </svg>
+  ),
+};
+
+export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) {
   const projectsByClient = projects.reduce((acc, project) => {
     const clientId = project.client.id;
     if (!acc[clientId]) {
@@ -173,6 +190,42 @@ export default function ProjectsList({ projects, isAdmin }: Props) {
                         </div>
                         <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 500, minWidth: 28 }}>{pct}%</span>
                       </div>
+
+                      {/* Pin Button */}
+                      {onPinToggle && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onPinToggle(project.id, !project.pinned);
+                          }}
+                          title={project.pinned ? "Unpin project" : "Pin project to top"}
+                          style={{
+                            background: project.pinned ? theme.colors.primaryBg : "transparent",
+                            border: "none",
+                            padding: 6,
+                            borderRadius: 6,
+                            cursor: "pointer",
+                            color: project.pinned ? theme.colors.primary : theme.colors.textMuted,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.15s ease",
+                            flexShrink: 0,
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!project.pinned) {
+                              e.currentTarget.style.background = theme.colors.bgTertiary;
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!project.pinned) {
+                              e.currentTarget.style.background = "transparent";
+                            }
+                          }}
+                        >
+                          {project.pinned ? icons.pinFilled : icons.pin}
+                        </button>
+                      )}
 
                       {/* Actions */}
                       <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
