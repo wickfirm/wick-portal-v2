@@ -91,6 +91,8 @@ export async function GET(request: Request) {
     const canViewOthers = ["SUPER_ADMIN", "ADMIN"].includes(dbUser.role || "");
     const viewUserId = canViewOthers && userIdParam ? userIdParam : dbUser.id;
 
+    console.log("Timesheet API - User:", dbUser.email, "Role:", dbUser.role, "canViewOthers:", canViewOthers, "agencyId:", dbUser.agencyId);
+
     // Get team members if user can view others
     let teamMembers: any[] = [];
     if (canViewOthers && dbUser.agencyId) {
