@@ -4,15 +4,17 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 
-// Omnixia Logo Component
-function OmnixiaLogo({ size = 40 }: { size?: number }) {
+// Omnixia Logo Component (original: 175x151)
+function OmnixiaLogo({ height = 40 }: { height?: number }) {
+  const width = Math.round((175 / 151) * height);
   return (
     <Image
       src="/omnixia-logo.png"
       alt="Omnixia"
-      width={size}
-      height={size}
+      width={width}
+      height={height}
       style={{ objectFit: "contain" }}
+      priority
     />
   );
 }
@@ -68,8 +70,7 @@ export default function BlogPage() {
       <nav className={`marketing-nav ${scrolled ? "scrolled" : ""}`}>
         <div className="nav-container">
           <Link href="/" className="nav-logo">
-            <OmnixiaLogo size={40} />
-            <span className="nav-logo-text">omnixia</span>
+            <OmnixiaLogo height={36} />
           </Link>
           <div className="nav-links">
             <Link href="/features" className="nav-link">Features</Link>

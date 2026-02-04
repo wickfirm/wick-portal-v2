@@ -84,15 +84,17 @@ const icons = {
   ),
 };
 
-// Omnixia Logo Component
-function OmnixiaLogo({ size = 40 }: { size?: number }) {
+// Omnixia Logo Component (original: 175x151)
+function OmnixiaLogo({ height = 40 }: { height?: number }) {
+  const width = Math.round((175 / 151) * height); // maintain aspect ratio
   return (
     <Image
       src="/omnixia-logo.png"
       alt="Omnixia"
-      width={size}
-      height={size}
+      width={width}
+      height={height}
       style={{ objectFit: "contain" }}
+      priority
     />
   );
 }
@@ -114,8 +116,7 @@ export default function MarketingPage() {
       <nav className={`marketing-nav ${scrolled ? "scrolled" : ""}`}>
         <div className="nav-container">
           <Link href="/" className="nav-logo">
-            <OmnixiaLogo size={40} />
-            <span className="nav-logo-text">omnixia</span>
+            <OmnixiaLogo height={36} />
           </Link>
 
           <div className="nav-links">
@@ -437,8 +438,7 @@ export default function MarketingPage() {
           <div className="footer-grid">
             <div className="footer-brand">
               <div className="footer-logo">
-                <OmnixiaLogo size={36} />
-                <span className="nav-logo-text">omnixia</span>
+                <OmnixiaLogo height={32} />
               </div>
               <p className="footer-tagline">
                 The all-in-one operating system for modern agencies.
