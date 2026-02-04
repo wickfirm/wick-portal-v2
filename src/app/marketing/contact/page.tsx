@@ -33,15 +33,41 @@ export default function ContactPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  const [error, setError] = useState("");
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    setError("");
 
-    // Simulate submission - in production, this would hit an API
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch("/api/marketing/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          company: formData.company,
+          teamSize: formData.teamSize,
+          message: formData.message,
+          source: "contact_form",
+        }),
+      });
 
-    setIsSubmitting(false);
-    setSubmitted(true);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Something went wrong");
+      }
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to submit. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputStyle = {
@@ -248,6 +274,20 @@ export default function ContactPage() {
                   }}
                 />
               </div>
+
+              {error && (
+                <div style={{
+                  padding: "12px 16px",
+                  background: "rgba(239, 68, 68, 0.1)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "8px",
+                  color: "#ef4444",
+                  fontSize: "14px",
+                  marginBottom: "16px",
+                }}>
+                  {error}
+                </div>
+              )}
 
               <button
                 type="submit"

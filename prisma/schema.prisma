@@ -1752,6 +1752,50 @@ enum BookingAppointmentStatus {
   @@map("booking_appointment_status")
 }
 
+// Website Lead - captures submissions from marketing contact forms
+model WebsiteLead {
+  id          String            @id @default(dbgenerated("(gen_random_uuid())::text"))
+  name        String
+  email       String
+  company     String?
+  phone       String?
+  teamSize    String?           @map("team_size")
+  message     String
+  source      String            @default("contact_form") // contact_form, newsletter, etc.
+  sourceUrl   String?           @map("source_url")
+  utmSource   String?           @map("utm_source")
+  utmMedium   String?           @map("utm_medium")
+  utmCampaign String?           @map("utm_campaign")
+  ipAddress   String?           @map("ip_address")
+  userAgent   String?           @map("user_agent")
+  status      WebsiteLeadStatus @default(NEW)
+  notes       String?
+  convertedToClientId String?   @unique @map("converted_to_client_id")
+  agencyId    String?           @map("agency_id") // For future multi-tenant CRM
+  assignedTo  String?           @map("assigned_to")
+  followUpAt  DateTime?         @map("follow_up_at") @db.Timestamp(6)
+  respondedAt DateTime?         @map("responded_at") @db.Timestamp(6)
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime          @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@index([email])
+  @@index([status])
+  @@index([agencyId])
+  @@index([createdAt])
+  @@map("website_leads")
+}
+
+enum WebsiteLeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+  ARCHIVED
+
+  @@map("website_lead_status")
+}
+
 // Password Reset Token for forgot password flow
 model PasswordResetToken {
   id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
