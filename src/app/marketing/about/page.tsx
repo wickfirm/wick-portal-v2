@@ -30,7 +30,7 @@ export default function AboutPage() {
       <nav className={`marketing-nav ${scrolled ? "scrolled" : ""}`}>
         <div className="nav-container">
           <Link href="/" className="nav-logo">
-            <OmnixiaLogo height={36} />
+            <OmnixiaLogo height={47} />
           </Link>
           <div className="nav-links">
             <Link href="/features" className="nav-link">Features</Link>

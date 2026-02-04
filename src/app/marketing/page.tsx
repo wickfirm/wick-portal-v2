@@ -112,7 +112,7 @@ export default function MarketingPage() {
       <nav className={`marketing-nav ${scrolled ? "scrolled" : ""}`}>
         <div className="nav-container">
           <Link href="/" className="nav-logo">
-            <OmnixiaLogo height={36} />
+            <OmnixiaLogo height={47} />
           </Link>
 
           <div className="nav-links">
@@ -434,7 +434,7 @@ export default function MarketingPage() {
           <div className="footer-grid">
             <div className="footer-brand">
               <div className="footer-logo">
-                <OmnixiaLogo height={32} />
+                <OmnixiaLogo height={42} />
               </div>
               <p className="footer-tagline">
                 The all-in-one operating system for modern agencies.
