@@ -13,7 +13,10 @@ function OmnixiaLogo({ height = 40 }: { height?: number }) {
       alt="Omnixia"
       width={width}
       height={height}
-      style={{ objectFit: "contain" }}
+      style={{
+        objectFit: "contain",
+        filter: "brightness(0) invert(1)",
+      }}
       priority
     />
   );
