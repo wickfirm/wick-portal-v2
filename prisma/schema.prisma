@@ -1751,3 +1751,17 @@ enum BookingAppointmentStatus {
 
   @@map("booking_appointment_status")
 }
+
+// Password Reset Token for forgot password flow
+model PasswordResetToken {
+  id        String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  email     String
+  token     String    @unique
+  expiresAt DateTime  @map("expires_at") @db.Timestamp(6)
+  usedAt    DateTime? @map("used_at") @db.Timestamp(6)
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@index([email])
+  @@index([token])
+  @@map("password_reset_tokens")
+}
