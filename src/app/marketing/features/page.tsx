@@ -2,23 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 // Omnixia Logo Component
 function OmnixiaLogo({ size = 40 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none">
-      <defs>
-        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00d4ff" />
-          <stop offset="100%" stopColor="#00b4d8" />
-        </linearGradient>
-      </defs>
-      <path
-        d="M50 10C28 10 10 28 10 50s18 40 40 40 40-18 40-40S72 10 50 10zm0 65c-14 0-25-11-25-25s11-25 25-25c6 0 12 2 16 6l-16 19 20-5c-3 17-17 30-35 30z"
-        fill="url(#logoGradient)"
-      />
-      <circle cx="50" cy="50" r="8" fill="#0a0f2c" />
-    </svg>
+    <Image
+      src="/omnixia-logo.png"
+      alt="Omnixia"
+      width={size}
+      height={size}
+      style={{ objectFit: "contain" }}
+    />
   );
 }
 
