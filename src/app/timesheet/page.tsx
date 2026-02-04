@@ -1002,6 +1002,7 @@ export default function TimesheetPage() {
           canEdit={canEdit}
           dailyOvertimeThreshold={DAILY_OVERTIME_SECONDS}
           weeklyOvertimeThreshold={WEEKLY_OVERTIME_SECONDS}
+          showOvertimeAlerts={canSeeOvertimeAlerts}
         />
 
         {/* Month View Reports */}

@@ -45,6 +45,7 @@ interface Props {
   canEdit: boolean;
   dailyOvertimeThreshold?: number;
   weeklyOvertimeThreshold?: number;
+  showOvertimeAlerts?: boolean; // Only show overtime styling if true (for admins)
 }
 
 type ScreenSize = "mobile" | "tablet" | "desktop";
@@ -57,6 +58,7 @@ export default function TimesheetGrid({
   canEdit,
   dailyOvertimeThreshold = 28800,
   weeklyOvertimeThreshold = 144000,
+  showOvertimeAlerts = false,
 }: Props) {
   const [rows, setRows] = useState<RowData[]>(initialEntries);
   const [showAddRow, setShowAddRow] = useState(false);
@@ -423,7 +425,7 @@ export default function TimesheetGrid({
   });
 
   const weekTotal = dailyTotals.reduce((a, b) => a + b, 0);
-  const isWeekOvertime = weekTotal > weeklyOvertimeThreshold;
+  const isWeekOvertime = showOvertimeAlerts && weekTotal > weeklyOvertimeThreshold;
 
   // ═══════════════════════════════════════
   //  MOBILE LAYOUT  (<768px)
@@ -557,7 +559,7 @@ export default function TimesheetGrid({
                     const dateKey = date.toISOString().split("T")[0];
                     const dayEntries = row.entries[dateKey] || [];
                     const dayDuration = dayEntries.reduce((s, e) => s + e.duration, 0);
-                    const isDayOvertime = dailyTotals[i] > dailyOvertimeThreshold;
+                    const isDayOvertime = showOvertimeAlerts && dailyTotals[i] > dailyOvertimeThreshold;
 
                     return (
                       <button
@@ -1216,7 +1218,7 @@ export default function TimesheetGrid({
 
           {/* Day headers with overtime indicators */}
           {dates.map((date, i) => {
-            const isDayOvertime = dailyTotals[i] > dailyOvertimeThreshold;
+            const isDayOvertime = showOvertimeAlerts && dailyTotals[i] > dailyOvertimeThreshold;
             return (
               <div
                 key={i}
@@ -1353,7 +1355,7 @@ export default function TimesheetGrid({
                   const dayEntries = row.entries[dateKey] || [];
                   const dayDuration = dayEntries.reduce((s, e) => s + e.duration, 0);
                   const entryCount = dayEntries.length;
-                  const isDayOvertime = dailyTotals[i] > dailyOvertimeThreshold;
+                  const isDayOvertime = showOvertimeAlerts && dailyTotals[i] > dailyOvertimeThreshold;
 
                   return (
                     <div
