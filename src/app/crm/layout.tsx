@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { theme } from "@/lib/theme";
 
 const crmNavItems = [
   { href: "/crm", label: "Overview", icon: "dashboard" },
@@ -46,25 +47,60 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="crm-layout">
+    <div>
       {/* CRM Sub-navigation */}
-      <div className="crm-subnav">
-        <div className="crm-subnav-inner">
-          <div className="crm-subnav-title">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <div style={{
+        background: theme.colors.bgSecondary,
+        borderBottom: `1px solid ${theme.colors.borderLight}`,
+        marginBottom: 0,
+      }}>
+        <div style={{
+          maxWidth: 1400,
+          margin: "0 auto",
+          padding: "0 24px",
+          display: "flex",
+          alignItems: "center",
+          gap: 32,
+          height: 52,
+        }}>
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            fontWeight: 600,
+            fontSize: 15,
+            color: theme.colors.textPrimary,
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.colors.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
             <span>CRM</span>
           </div>
-          <nav className="crm-subnav-links">
+          <nav style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}>
             {crmNavItems.map((item) => {
               const isActive = pathname === item.href ||
-                (item.href !== "/crm" && pathname.startsWith(item.href));
+                (item.href !== "/crm" && pathname?.startsWith(item.href));
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`crm-subnav-link ${isActive ? "active" : ""}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    fontSize: 14,
+                    fontWeight: 500,
+                    color: isActive ? theme.colors.primary : theme.colors.textSecondary,
+                    background: isActive ? theme.colors.primaryBg : "transparent",
+                    textDecoration: "none",
+                    transition: "all 0.15s ease",
+                  }}
                 >
                   {icons[item.icon]}
                   <span>{item.label}</span>
@@ -76,109 +112,13 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* CRM Content */}
-      <div className="crm-content">
+      <div style={{
+        maxWidth: 1400,
+        margin: "0 auto",
+        padding: 24,
+      }}>
         {children}
       </div>
-
-      <style jsx>{`
-        .crm-layout {
-          min-height: calc(100vh - 64px);
-        }
-
-        .crm-subnav {
-          background: var(--card-bg, #fff);
-          border-bottom: 1px solid var(--border-color, #e5e7eb);
-          position: sticky;
-          top: 64px;
-          z-index: 40;
-        }
-
-        .crm-subnav-inner {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 0 24px;
-          display: flex;
-          align-items: center;
-          gap: 32px;
-          height: 52px;
-        }
-
-        .crm-subnav-title {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          font-weight: 600;
-          font-size: 15px;
-          color: var(--text-primary, #111827);
-        }
-
-        .crm-subnav-title svg {
-          color: var(--primary-color, #7c3aed);
-        }
-
-        .crm-subnav-links {
-          display: flex;
-          align-items: center;
-          gap: 4px;
-        }
-
-        .crm-subnav-link {
-          display: flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 14px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          color: var(--text-secondary, #6b7280);
-          text-decoration: none;
-          transition: all 0.15s ease;
-        }
-
-        .crm-subnav-link:hover {
-          background: var(--hover-bg, #f3f4f6);
-          color: var(--text-primary, #111827);
-        }
-
-        .crm-subnav-link.active {
-          background: var(--primary-light, #ede9fe);
-          color: var(--primary-color, #7c3aed);
-        }
-
-        .crm-subnav-link svg {
-          flex-shrink: 0;
-        }
-
-        .crm-content {
-          max-width: 1400px;
-          margin: 0 auto;
-          padding: 24px;
-        }
-
-        @media (max-width: 768px) {
-          .crm-subnav-inner {
-            padding: 0 16px;
-            gap: 16px;
-            overflow-x: auto;
-          }
-
-          .crm-subnav-title span {
-            display: none;
-          }
-
-          .crm-subnav-link span {
-            display: none;
-          }
-
-          .crm-subnav-link {
-            padding: 8px 10px;
-          }
-
-          .crm-content {
-            padding: 16px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
