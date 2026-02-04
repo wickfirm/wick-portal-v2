@@ -188,6 +188,14 @@ export default function TimesheetPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<ViewMode>(searchParams.get("month") ? "month" : "week");
 
+  // Sync state with URL params when they change
+  useEffect(() => {
+    setWeek(searchParams.get("week") || "");
+    setMonth(searchParams.get("month") || "");
+    setUserId(searchParams.get("userId") || "");
+    setViewMode(searchParams.get("month") ? "month" : "week");
+  }, [searchParams]);
+
   // Mini calendar state
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarMonth, setCalendarMonth] = useState(() => {
