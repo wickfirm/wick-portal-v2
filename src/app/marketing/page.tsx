@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 
 // SVG Icons
 const icons = {
@@ -84,20 +83,14 @@ const icons = {
   ),
 };
 
-// Omnixia Logo Component (original: 175x151)
+// Omnixia Logo Component
 function OmnixiaLogo({ height = 40 }: { height?: number }) {
-  const width = Math.round((175 / 151) * height); // maintain aspect ratio
   return (
-    <Image
+    <img
       src="/omnixia-logo.png"
       alt="Omnixia"
-      width={width}
       height={height}
-      style={{
-        objectFit: "contain",
-        filter: "brightness(0) invert(1)", // Makes any dark logo white
-      }}
-      priority
+      style={{ objectFit: "contain", height: `${height}px`, width: "auto" }}
     />
   );
 }

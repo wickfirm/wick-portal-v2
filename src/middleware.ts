@@ -30,6 +30,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Allow public folder static files (images, etc.)
+  if (pathname.match(/\.(png|jpg|jpeg|gif|svg|ico|webp|css|js|woff|woff2|ttf|eot)$/)) {
+    return NextResponse.next();
+  }
+
   // Get user session
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
