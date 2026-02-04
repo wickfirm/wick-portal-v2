@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy init to avoid build errors when API key is missing
+const getResend = () => {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  return new Resend(process.env.RESEND_API_KEY);
+};
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,8 +67,10 @@ export async function POST(request: NextRequest) {
     });
 
     // Send notification email via Resend
-    try {
-      await resend.emails.send({
+    const resend = getResend();
+    if (resend) {
+      try {
+        await resend.emails.send({
         from: "Omnixia <notifications@omnixia.ai>",
         to: ["mohamed@thewickfirm.com"], // Primary notification recipient
         subject: `New Lead: ${name} from ${company || "Unknown Company"}`,
@@ -114,14 +122,14 @@ export async function POST(request: NextRequest) {
           </div>
         `,
       });
-    } catch (emailError) {
-      // Log but don't fail the request if email fails
-      console.error("Failed to send notification email:", emailError);
-    }
+      } catch (emailError) {
+        // Log but don't fail the request if email fails
+        console.error("Failed to send notification email:", emailError);
+      }
 
-    // Send confirmation email to the lead
-    try {
-      await resend.emails.send({
+      // Send confirmation email to the lead
+      try {
+        await resend.emails.send({
         from: "Omnixia <hello@omnixia.ai>",
         to: [email],
         subject: "Thanks for reaching out to Omnixia!",
@@ -160,9 +168,10 @@ export async function POST(request: NextRequest) {
           </div>
         `,
       });
-    } catch (emailError) {
-      // Log but don't fail if confirmation email fails
-      console.error("Failed to send confirmation email:", emailError);
+      } catch (emailError) {
+        // Log but don't fail if confirmation email fails
+        console.error("Failed to send confirmation email:", emailError);
+      }
     }
 
     return NextResponse.json({
