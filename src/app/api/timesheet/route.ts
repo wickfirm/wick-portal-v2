@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     const canViewOthers = ["SUPER_ADMIN", "ADMIN"].includes(dbUser.role || "");
     const viewUserId = canViewOthers && userIdParam ? userIdParam : dbUser.id;
 
-    console.log("Timesheet API - User:", dbUser.email, "Role:", dbUser.role, "canViewOthers:", canViewOthers, "agencyId:", dbUser.agencyId);
+    console.log("Timesheet API - User:", dbUser.email, "Role:", dbUser.role, "canViewOthers:", canViewOthers, "agencyId:", dbUser.agencyId, "userIdParam:", userIdParam, "viewUserId:", viewUserId);
 
     // Get team members if user can view others
     let teamMembers: any[] = [];
@@ -116,6 +116,7 @@ export async function GET(request: Request) {
         });
 
     // Fetch time entries for the date range (week or month)
+    console.log("Timesheet API - Fetching entries for userId:", viewUserId, "from:", rangeStart, "to:", rangeEnd);
     const timeEntries = await (prisma.timeEntry.findMany as any)({
       where: {
         userId: viewUserId,
@@ -163,6 +164,8 @@ export async function GET(request: Request) {
       },
       orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     }) as any[];
+
+    console.log("Timesheet API - Found", timeEntries.length, "time entries for user:", viewUserId);
 
     // Fetch clients based on role
     let clientFilter: any = { status: { in: ["ACTIVE", "ONBOARDING"] } };
