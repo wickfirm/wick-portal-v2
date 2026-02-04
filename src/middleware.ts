@@ -5,15 +5,27 @@ import { getSubdomainFromHost, canAccessSubdomain, getExpectedSubdomain } from '
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  
+
   // Get subdomain from hostname
   const hostname = request.headers.get('host') || '';
   const host = hostname.split(':')[0];
   const isLocalhost = host === 'localhost' || host === '127.0.0.1';
   const subdomain = getSubdomainFromHost(hostname);
 
+  // Check if this is the main omnixia.ai domain (no subdomain) - serve marketing site
+  const isMainDomain = host === 'omnixia.ai' || host === 'www.omnixia.ai';
+  if (isMainDomain) {
+    // Rewrite to marketing pages
+    const marketingPaths = ['/', '/about', '/features', '/contact', '/blog', '/pricing'];
+    if (marketingPaths.includes(pathname) || pathname.startsWith('/blog/')) {
+      const url = request.nextUrl.clone();
+      url.pathname = `/marketing${pathname === '/' ? '' : pathname}`;
+      return NextResponse.rewrite(url);
+    }
+  }
+
   // Skip middleware for ALL API routes, NextAuth, static files, signout, test page, widget, and public booking pages
-  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test', '/widget/', '/book/'];
+  const skipPaths = ['/api/', '/_next', '/favicon.ico', '/static', '/auth/signout', '/test', '/widget/', '/book/', '/marketing'];
   if (skipPaths.some(path => pathname.startsWith(path))) {
     return NextResponse.next();
   }
