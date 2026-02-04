@@ -553,6 +553,9 @@ export default function TimesheetPage() {
   const currentWeekStartKey = getWeekStartDate(startDate);
   const todayStr = new Date().toISOString().split("T")[0];
 
+  // Only show overtime alerts for ADMIN and SUPER_ADMIN
+  const canSeeOvertimeAlerts = ["ADMIN", "SUPER_ADMIN"].includes(currentUser.role);
+
   // Month summary charts data
   const monthSummary = data.monthSummary;
   const projectChartData = monthSummary?.totalsByProject?.map((p) => ({
@@ -669,7 +672,7 @@ export default function TimesheetPage() {
             label="Total Hours"
             value={formatDuration(totalSeconds)}
             subtitle={`${formatHoursReadable(totalSeconds)} logged`}
-            warning={hasOvertimeWeek}
+            warning={canSeeOvertimeAlerts && hasOvertimeWeek}
           />
           <StatCard
             icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>}
@@ -685,20 +688,23 @@ export default function TimesheetPage() {
             value={formatDuration(Math.round(dailyAvg))}
             subtitle={`${workingDays} working day${workingDays !== 1 ? "s" : ""}`}
           />
-          <StatCard
-            icon={hasOvertimeDay || hasOvertimeWeek
-              ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-              : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>}
-            iconBg={hasOvertimeDay || hasOvertimeWeek ? theme.colors.error : theme.colors.success}
-            label="Overtime"
-            value={hasOvertimeDay || hasOvertimeWeek ? "Detected" : "None"}
-            subtitle={hasOvertimeWeek ? `${formatDuration(totalSeconds - WEEKLY_OVERTIME_SECONDS)} over 40h` : hasOvertimeDay ? "8h+ on a day" : "Within limits"}
-            warning={hasOvertimeDay || hasOvertimeWeek}
-          />
+          {/* Overtime card - only shown to ADMIN and SUPER_ADMIN */}
+          {canSeeOvertimeAlerts && (
+            <StatCard
+              icon={hasOvertimeDay || hasOvertimeWeek
+                ? <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                : <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>}
+              iconBg={hasOvertimeDay || hasOvertimeWeek ? theme.colors.error : theme.colors.success}
+              label="Overtime"
+              value={hasOvertimeDay || hasOvertimeWeek ? "Detected" : "None"}
+              subtitle={hasOvertimeWeek ? `${formatDuration(totalSeconds - WEEKLY_OVERTIME_SECONDS)} over 40h` : hasOvertimeDay ? "8h+ on a day" : "Within limits"}
+              warning={hasOvertimeDay || hasOvertimeWeek}
+            />
+          )}
         </div>
 
-        {/* Overtime Banner */}
-        {hasOvertimeWeek && (
+        {/* Overtime Banner - only shown to ADMIN and SUPER_ADMIN */}
+        {canSeeOvertimeAlerts && hasOvertimeWeek && (
           <div style={{
             background: theme.colors.errorBg,
             border: "1px solid " + theme.colors.error + "40",
@@ -1124,7 +1130,8 @@ export default function TimesheetPage() {
                       onMouseEnter={(e) => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.08)"; }}
                       onMouseLeave={(e) => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
                     >
-                      {w.hasOvertime && (
+                      {/* Overtime indicator - only for admins */}
+                      {canSeeOvertimeAlerts && w.hasOvertime && (
                         <div style={{ position: "absolute", top: 12, right: 12, width: 8, height: 8, borderRadius: "50%", background: theme.colors.error }} title="Overtime week" />
                       )}
 
@@ -1139,7 +1146,7 @@ export default function TimesheetPage() {
                         fontFamily: "'DM Serif Display', serif",
                         fontSize: 28,
                         fontWeight: 400,
-                        color: w.hasOvertime ? theme.colors.error : theme.colors.textPrimary,
+                        color: canSeeOvertimeAlerts && w.hasOvertime ? theme.colors.error : theme.colors.textPrimary,
                         lineHeight: 1,
                         marginBottom: 6,
                       }}>
@@ -1153,7 +1160,7 @@ export default function TimesheetPage() {
 
                       <Sparkline
                         data={w.dailyHours}
-                        color={w.hasOvertime ? theme.colors.error : theme.colors.primary}
+                        color={canSeeOvertimeAlerts && w.hasOvertime ? theme.colors.error : theme.colors.primary}
                         width={248}
                         height={24}
                       />
