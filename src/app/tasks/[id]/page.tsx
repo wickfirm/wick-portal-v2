@@ -4,9 +4,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import ReactMarkdown from "react-markdown";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
+
+// Dynamic import for RichTextEditor to avoid SSR issues
+const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
+  ssr: false,
+  loading: () => <div style={{ padding: 16, background: "#f9fafb", borderRadius: 8 }}>Loading editor...</div>,
+});
 
 interface Task {
   id: string;
@@ -1065,194 +1071,14 @@ export default function TaskDetailPage() {
               {user?.name ? getInitials(user.name) : "U"}
             </div>
 
-            <div style={{ flex: 1, position: "relative" }}>
-              {/* Toolbar */}
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 4,
-                padding: "8px 12px",
-                background: "#f9fafb",
-                borderTopLeftRadius: 8,
-                borderTopRightRadius: 8,
-                borderBottom: "1px solid #e5e7eb",
-              }}>
-                {/* Bold */}
-                <button
-                  onClick={() => handleToolbarAction("bold")}
-                  title="Bold (Ctrl+B)"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontWeight: 700 }}
-                >
-                  B
-                </button>
-                {/* Italic */}
-                <button
-                  onClick={() => handleToolbarAction("italic")}
-                  title="Italic (Ctrl+I)"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontStyle: "italic" }}
-                >
-                  I
-                </button>
-                {/* Strikethrough */}
-                <button
-                  onClick={() => handleToolbarAction("strikethrough")}
-                  title="Strikethrough"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, textDecoration: "line-through" }}
-                >
-                  S
-                </button>
-                {/* Link */}
-                <button
-                  onClick={() => handleToolbarAction("link")}
-                  title="Insert Link (Ctrl+K)"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                  </svg>
-                </button>
-                {/* Highlight */}
-                <button
-                  onClick={() => handleToolbarAction("highlight")}
-                  title="Highlight"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
-                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
-                    <path d="M2 2l7.586 7.586" />
-                    <circle cx="11" cy="11" r="2" />
-                  </svg>
-                </button>
-                {/* Heading */}
-                <button
-                  onClick={() => handleToolbarAction("heading")}
-                  title="Heading"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontWeight: 600 }}
-                >
-                  T
-                </button>
-                {/* Quote */}
-                <button
-                  onClick={() => handleToolbarAction("quote")}
-                  title="Quote"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 16, color: "#6b7280", borderRadius: 4 }}
-                >
-                  "
-                </button>
-                {/* Divider */}
-                <button
-                  onClick={() => handleToolbarAction("divider")}
-                  title="Divider"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  ―
-                </button>
-                {/* Code */}
-                <button
-                  onClick={() => handleToolbarAction("code")}
-                  title="Code"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 12, color: "#6b7280", borderRadius: 4, fontFamily: "monospace" }}
-                >
-                  {"</>"}
-                </button>
-                {/* Ordered List */}
-                <button
-                  onClick={() => handleToolbarAction("orderedList")}
-                  title="Numbered List"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="10" y1="6" x2="21" y2="6" />
-                    <line x1="10" y1="12" x2="21" y2="12" />
-                    <line x1="10" y1="18" x2="21" y2="18" />
-                    <path d="M4 6h1v4" />
-                    <path d="M4 10h2" />
-                    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
-                  </svg>
-                </button>
-                {/* Unordered List */}
-                <button
-                  onClick={() => handleToolbarAction("unorderedList")}
-                  title="Bullet List"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <line x1="9" y1="6" x2="20" y2="6" />
-                    <line x1="9" y1="12" x2="20" y2="12" />
-                    <line x1="9" y1="18" x2="20" y2="18" />
-                    <circle cx="4" cy="6" r="1.5" fill="currentColor" />
-                    <circle cx="4" cy="12" r="1.5" fill="currentColor" />
-                    <circle cx="4" cy="18" r="1.5" fill="currentColor" />
-                  </svg>
-                </button>
-                {/* Attach */}
-                <button
-                  onClick={() => handleToolbarAction("attach")}
-                  title="Attach File"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                  </svg>
-                </button>
-                <input
-                  ref={toolbarFileInputRef}
-                  type="file"
-                  multiple
-                  onChange={(e) => handleFileUpload(e.target.files)}
-                  style={{ display: "none" }}
-                />
-                <div style={{ flex: 1 }} />
-                {/* Undo */}
-                <button
-                  onClick={() => document.execCommand("undo")}
-                  title="Undo"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", color: "#9ca3af", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 7v6h6" />
-                    <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" />
-                  </svg>
-                </button>
-                {/* Redo */}
-                <button
-                  onClick={() => document.execCommand("redo")}
-                  title="Redo"
-                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", color: "#9ca3af", borderRadius: 4 }}
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M21 7v6h-6" />
-                    <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7" />
-                  </svg>
-                </button>
-              </div>
-
-              {/* Textarea */}
-              <textarea
-                ref={commentInputRef}
-                value={newComment}
-                onChange={handleCommentChange}
-                onKeyDown={handleKeyDown}
-                placeholder="Type your comment here..."
-                rows={5}
-                style={{
-                  width: "100%",
-                  border: "1px solid #e5e7eb",
-                  borderTop: "none",
-                  borderBottomLeftRadius: 8,
-                  borderBottomRightRadius: 8,
-                  padding: 16,
-                  fontSize: 15,
-                  resize: "none",
-                  outline: "none",
-                  fontFamily: "inherit",
-                  lineHeight: 1.6,
-                  boxSizing: "border-box",
-                }}
-                onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-                onBlur={(e) => e.target.style.borderColor = "#e5e7eb"}
+            <div style={{ flex: 1 }}>
+              {/* Rich Text Editor */}
+              <RichTextEditor
+                content={newComment}
+                onChange={setNewComment}
+                placeholder="Type your comment here... (Ctrl+Enter to submit)"
+                onSubmit={submitComment}
+                minHeight={120}
               />
 
               {/* Upload Progress Bar */}
@@ -1310,87 +1136,20 @@ export default function TaskDetailPage() {
                 </div>
               )}
 
-              {/* Mentions Dropdown - FIXED POSITION */}
-              {showMentions && filteredMembers.length > 0 && (
-                <div
-                  ref={mentionDropdownRef}
-                  style={{
-                    position: "absolute",
-                    top: 50,
-                    left: 16,
-                    background: "white",
-                    border: "1px solid #e5e7eb",
-                    borderRadius: 8,
-                    boxShadow: "0 10px 40px rgba(0,0,0,0.15)",
-                    maxHeight: 300,
-                    overflowY: "auto",
-                    zIndex: 1000,
-                    minWidth: 300,
-                  }}
-                >
-                  <div style={{
-                    padding: "10px 14px",
-                    borderBottom: "1px solid #f3f4f6",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    color: "#9ca3af",
-                    textTransform: "uppercase",
-                  }}>
-                    Team Members
-                  </div>
-                  {filteredMembers.map((member, index) => (
-                    <button
-                      key={member.id}
-                      onClick={() => insertMention(member)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 12,
-                        width: "100%",
-                        padding: "12px 16px",
-                        background: index === selectedMentionIndex ? "#f3f4f6" : "white",
-                        border: "none",
-                        textAlign: "left",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <div style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: "50%",
-                        background: `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.primaryDark})`,
-                        color: "white",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 13,
-                        fontWeight: 600,
-                      }}>
-                        {getInitials(member.name)}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 15, fontWeight: 500, color: "#111" }}>{member.name}</div>
-                        <div style={{ fontSize: 13, color: "#9ca3af" }}>{member.email}</div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* Submit button */}
               <div style={{ marginTop: 12, display: "flex", justifyContent: "center" }}>
                 <button
                   onClick={submitComment}
-                  disabled={!newComment.trim() || submittingComment}
+                  disabled={!newComment || newComment === "<p></p>" || submittingComment}
                   style={{
                     padding: "12px 24px",
-                    background: newComment.trim() ? "#22c55e" : "#e5e7eb",
-                    color: newComment.trim() ? "white" : "#9ca3af",
+                    background: newComment && newComment !== "<p></p>" ? "#22c55e" : "#e5e7eb",
+                    color: newComment && newComment !== "<p></p>" ? "white" : "#9ca3af",
                     border: "none",
                     borderRadius: 20,
                     fontSize: 15,
                     fontWeight: 600,
-                    cursor: newComment.trim() ? "pointer" : "not-allowed",
+                    cursor: newComment && newComment !== "<p></p>" ? "pointer" : "not-allowed",
                   }}
                 >
                   {submittingComment ? "Posting..." : "Add this comment"}
@@ -1439,9 +1198,11 @@ export default function TaskDetailPage() {
                         </button>
                       )}
                     </div>
-                    <div style={{ fontSize: 15, color: "#374151", lineHeight: 1.6 }}>
-                      {renderCommentContent(comment.content)}
-                    </div>
+                    <div
+                      className="comment-content"
+                      style={{ fontSize: 15, color: "#374151", lineHeight: 1.6 }}
+                      dangerouslySetInnerHTML={{ __html: comment.content }}
+                    />
                   </div>
                 </div>
               </div>
@@ -1488,6 +1249,92 @@ export default function TaskDetailPage() {
           </div>
         )}
       </main>
+
+      {/* Styles for comment content */}
+      <style jsx global>{`
+        .comment-content p {
+          margin: 0.5em 0;
+        }
+        .comment-content p:first-child {
+          margin-top: 0;
+        }
+        .comment-content p:last-child {
+          margin-bottom: 0;
+        }
+        .comment-content strong {
+          font-weight: 600;
+        }
+        .comment-content em {
+          font-style: italic;
+        }
+        .comment-content s {
+          text-decoration: line-through;
+          color: #9ca3af;
+        }
+        .comment-content a {
+          color: #7c3aed;
+          text-decoration: underline;
+        }
+        .comment-content code {
+          background: #f3f4f6;
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-family: monospace;
+          font-size: 0.9em;
+        }
+        .comment-content pre {
+          background: #1f2937;
+          color: #f3f4f6;
+          padding: 12px 16px;
+          border-radius: 8px;
+          overflow-x: auto;
+          font-family: monospace;
+          font-size: 0.9em;
+          margin: 0.5em 0;
+        }
+        .comment-content pre code {
+          background: none;
+          padding: 0;
+          color: inherit;
+        }
+        .comment-content blockquote {
+          border-left: 3px solid #d1d5db;
+          padding-left: 1em;
+          margin: 0.5em 0;
+          color: #6b7280;
+          font-style: italic;
+        }
+        .comment-content ul, .comment-content ol {
+          padding-left: 1.5em;
+          margin: 0.5em 0;
+        }
+        .comment-content li {
+          margin: 0.25em 0;
+        }
+        .comment-content h1, .comment-content h2, .comment-content h3 {
+          font-weight: 600;
+          margin: 0.75em 0 0.5em;
+        }
+        .comment-content h1 { font-size: 1.5em; }
+        .comment-content h2 { font-size: 1.3em; }
+        .comment-content h3 { font-size: 1.1em; }
+        .comment-content hr {
+          border: none;
+          border-top: 1px solid #e5e7eb;
+          margin: 1em 0;
+        }
+        .comment-content mark {
+          background: #fef08a;
+          padding: 1px 4px;
+          border-radius: 2px;
+        }
+        .comment-content img {
+          max-width: 100%;
+          height: auto;
+          border-radius: 8px;
+          margin: 0.5em 0;
+        }
+      `}</style>
     </div>
   );
 }
