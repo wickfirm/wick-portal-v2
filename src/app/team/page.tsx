@@ -50,11 +50,48 @@ const icons = {
   power: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18.36 6.64a9 9 0 1 1-12.73 0" /><line x1="12" y1="2" x2="12" y2="12" /></svg>,
   trash: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>,
   chevron: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>,
+  usersEmpty: <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>,
 };
 
-const avatarColors = ["#76527c", "#5f4263", "#3d6b73", "#8a6030", "#34a853"];
+const avatarColors = [
+  "linear-gradient(135deg, #7c3aed, #6d28d9)",
+  "linear-gradient(135deg, #ec4899, #be185d)",
+  "linear-gradient(135deg, #06b6d4, #0891b2)",
+  "linear-gradient(135deg, #f59e0b, #d97706)",
+  "linear-gradient(135deg, #22c55e, #16a34a)",
+  "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+];
 function getAvatarColor(name: string): string {
   return avatarColors[name.charCodeAt(0) % avatarColors.length];
+}
+
+// Animated number component
+function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+  const [hasAnimated, setHasAnimated] = useState(false);
+
+  useEffect(() => {
+    if (hasAnimated) return;
+    setHasAnimated(true);
+
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      setDisplayValue(Math.floor(easeOut * value));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration, hasAnimated]);
+
+  return <>{displayValue}</>;
 }
 
 export default function TeamPage() {
@@ -101,7 +138,10 @@ export default function TeamPage() {
   const isClientRole = currentUser?.role === "CLIENT";
   const isExternalPartner = currentUser?.agencyId === null && currentUser?.role !== "PLATFORM_ADMIN";
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    const timer = setTimeout(() => setMounted(true), 50);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Redirect external partners - they shouldn't access team management
   useEffect(() => {
@@ -109,19 +149,6 @@ export default function TeamPage() {
       window.location.href = "/dashboard";
     }
   }, [isExternalPartner]);
-
-  const anim = (delay: number) => ({
-    opacity: mounted ? 1 : 0,
-    transform: `translateY(${mounted ? 0 : 20}px)`,
-    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
-  });
-
-  // Row animation for list items - staggered effect
-  const rowAnim = (index: number, baseDelay: number = 0.2) => ({
-    opacity: mounted ? 1 : 0,
-    transform: `translateX(${mounted ? 0 : -12}px)`,
-    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${baseDelay + Math.min(index * 0.04, 0.4)}s`,
-  });
 
   // Fetch team data with React Query
   const { data, isLoading: loading, refetch } = useQuery({
@@ -387,147 +414,539 @@ export default function TeamPage() {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
-      <Header />
+    <>
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(30px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateX(-20px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes scaleIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        .team-page {
+          min-height: 100vh;
+          background: ${theme.colors.bgPrimary};
+        }
+        .team-main {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 28px 24px 48px;
+        }
+        .page-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 28px;
+          opacity: 0;
+          animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .page-header.mounted { animation-delay: 0s; }
+        .page-title {
+          font-family: 'DM Serif Display', serif;
+          font-size: 32px;
+          font-weight: 400;
+          color: ${theme.colors.textPrimary};
+          margin: 0 0 6px 0;
+        }
+        .page-subtitle {
+          color: ${theme.colors.textMuted};
+          font-size: 14px;
+          margin: 0;
+        }
+        .add-user-btn {
+          background: ${theme.gradients.primary};
+          color: white;
+          padding: 12px 24px;
+          border-radius: 12px;
+          border: none;
+          font-weight: 500;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          box-shadow: 0 4px 20px rgba(118, 82, 124, 0.3);
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          cursor: pointer;
+        }
+        .add-user-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 30px rgba(118, 82, 124, 0.4);
+        }
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 28px;
+        }
+        .stat-card {
+          background: ${theme.colors.bgSecondary};
+          padding: 20px;
+          border-radius: 16px;
+          border: 1px solid ${theme.colors.borderLight};
+          opacity: 0;
+          animation: scaleIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          cursor: default;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .stat-card:hover {
+          transform: translateY(-4px);
+          box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+          border-color: ${theme.colors.primary}30;
+        }
+        .stat-card.mounted:nth-child(1) { animation-delay: 0.1s; }
+        .stat-card.mounted:nth-child(2) { animation-delay: 0.15s; }
+        .stat-card.mounted:nth-child(3) { animation-delay: 0.2s; }
+        .stat-card.mounted:nth-child(4) { animation-delay: 0.25s; }
+        .stat-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+          transition: transform 0.3s ease;
+        }
+        .stat-card:hover .stat-icon {
+          transform: scale(1.1);
+        }
+        .stat-value {
+          font-family: 'DM Serif Display', serif;
+          font-size: 36px;
+          font-weight: 700;
+          color: ${theme.colors.textPrimary};
+          line-height: 1;
+        }
+        .stat-label {
+          font-size: 13px;
+          color: ${theme.colors.textSecondary};
+          font-weight: 500;
+          margin-top: 8px;
+        }
+        .filters-row {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 20px;
+          align-items: center;
+          flex-wrap: wrap;
+          opacity: 0;
+          animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .filters-row.mounted { animation-delay: 0.3s; }
+        .search-wrapper {
+          flex: 1;
+          position: relative;
+          min-width: 220px;
+        }
+        .search-icon {
+          position: absolute;
+          left: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: ${theme.colors.textMuted};
+          display: flex;
+          align-items: center;
+        }
+        .search-input {
+          width: 100%;
+          padding: 12px 16px 12px 42px;
+          border-radius: 12px;
+          border: 1px solid ${theme.colors.borderLight};
+          background: ${theme.colors.bgSecondary};
+          color: ${theme.colors.textPrimary};
+          font-size: 14px;
+          outline: none;
+          transition: all 0.2s ease;
+          box-sizing: border-box;
+        }
+        .search-input:focus {
+          border-color: ${theme.colors.primary};
+          box-shadow: 0 0 0 3px ${theme.colors.primary}15;
+        }
+        .filter-btn {
+          padding: 12px 20px;
+          border-radius: 12px;
+          border: 1px solid ${theme.colors.borderLight};
+          background: ${theme.colors.bgSecondary};
+          color: ${theme.colors.textSecondary};
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          white-space: nowrap;
+        }
+        .filter-btn:hover {
+          background: ${theme.colors.bgTertiary};
+        }
+        .filter-btn.active {
+          background: ${theme.gradients.primary};
+          border: none;
+          color: white;
+          box-shadow: 0 4px 15px rgba(118, 82, 124, 0.3);
+        }
+        .team-list {
+          background: ${theme.colors.bgSecondary};
+          border-radius: 20px;
+          border: 1px solid ${theme.colors.borderLight};
+          overflow: hidden;
+          opacity: 0;
+          animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .team-list.mounted { animation-delay: 0.35s; }
+        .team-row {
+          padding: 20px 24px;
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          border-bottom: 1px solid ${theme.colors.bgTertiary};
+          cursor: pointer;
+          opacity: 0;
+          animation: slideIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .team-row:last-child { border-bottom: none; }
+        .team-row:hover {
+          background: linear-gradient(90deg, ${theme.colors.primaryBg}50, transparent);
+          padding-left: 28px;
+        }
+        .team-row:hover .team-avatar {
+          transform: scale(1.08);
+        }
+        .team-row:hover .chevron-icon {
+          transform: translateX(4px);
+          opacity: 1;
+        }
+        .team-avatar {
+          width: 52px;
+          height: 52px;
+          border-radius: 14px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: white;
+          font-weight: 600;
+          font-size: 20px;
+          flex-shrink: 0;
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .chevron-icon {
+          color: ${theme.colors.textMuted};
+          flex-shrink: 0;
+          opacity: 0.5;
+          transition: all 0.3s ease;
+        }
+        .empty-state {
+          padding: 80px;
+          text-align: center;
+        }
+        .add-form {
+          background: ${theme.colors.bgSecondary};
+          padding: 24px;
+          border-radius: 14px;
+          border: 1px solid ${theme.colors.borderLight};
+          margin-bottom: 20px;
+          opacity: 0;
+          animation: scaleIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @media (max-width: 900px) {
+          .stats-grid { grid-template-columns: repeat(2, 1fr); }
+          .filters-row { flex-wrap: wrap; }
+        }
+        @media (max-width: 600px) {
+          .stats-grid { grid-template-columns: 1fr; }
+          .page-header { flex-direction: column; gap: 16px; align-items: flex-start; }
+        }
+      `}</style>
 
-      <main style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
-        {/* Page Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, ...anim(0.05) }}>
-          <div>
-            <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, margin: "0 0 4px 0" }}>
-              {isClientRole ? "Your Team" : "Team"}
-            </h1>
-            <p style={{ color: theme.colors.textMuted, fontSize: 14, margin: 0 }}>
-              {isClientRole ? "Agency team members working on your projects" : "Manage your team members"}
-            </p>
-          </div>
-          {!isClientRole && (
-            <button
-              onClick={() => setShowForm(!showForm)}
-              style={{
-                background: theme.gradients.primary,
-                color: "white",
-                padding: "10px 22px",
-                borderRadius: 10,
-                border: "none",
-                fontWeight: 500,
-                fontSize: 14,
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                boxShadow: theme.shadows.button,
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-              }}
-            >
-              {icons.plus} Add User
-            </button>
-          )}
-        </div>
+      <div className="team-page">
+        <Header />
 
-        {/* Stat Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
-          {statCards.map((card, cardIdx) => (
-            <div
-              key={card.label}
-              style={{
-                background: theme.colors.bgSecondary,
-                padding: "18px 20px",
-                borderRadius: 14,
-                border: `1px solid ${theme.colors.borderLight}`,
-                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                cursor: "default",
-                ...anim(0.08 + cardIdx * 0.05),
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 10 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 11, background: card.bg, display: "flex", alignItems: "center", justifyContent: "center", color: card.color, flexShrink: 0 }}>
-                  {card.icon}
-                </div>
-                <div style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 700, color: theme.colors.textPrimary, lineHeight: 1 }}>
-                  {card.value}
-                </div>
-              </div>
-              <div style={{ fontSize: 13, color: theme.colors.textSecondary, fontWeight: 500 }}>{card.label}</div>
+        <main className="team-main">
+          {/* Page Header */}
+          <div className={`page-header ${mounted ? 'mounted' : ''}`}>
+            <div>
+              <h1 className="page-title">{isClientRole ? "Your Team" : "Team"}</h1>
+              <p className="page-subtitle">
+                {isClientRole ? "Agency team members working on your projects" : "Manage your team members"}
+              </p>
             </div>
-          ))}
-        </div>
-
-        {/* Search & Filters */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap", ...anim(0.15) }}>
-          <div style={{ flex: 1, position: "relative", minWidth: 220 }}>
-            <div style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", color: theme.colors.textMuted, display: "flex", alignItems: "center" }}>
-              {icons.search}
-            </div>
-            <input
-              type="text"
-              placeholder="Search by name, email, agency, or client..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "10px 16px 10px 40px",
-                borderRadius: 10,
-                border: `1px solid ${theme.colors.borderLight}`,
-                background: theme.colors.bgSecondary,
-                color: theme.colors.textPrimary,
-                fontSize: 14,
-                outline: "none",
-                transition: "border-color 0.15s",
-                boxSizing: "border-box" as const,
-              }}
-              onFocus={e => e.currentTarget.style.borderColor = theme.colors.primary}
-              onBlur={e => e.currentTarget.style.borderColor = theme.colors.borderLight}
-            />
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {Object.entries(roleLabels).map(([role, label]) => (
-              <button
-                key={role}
-                onClick={() => setRoleFilter(role)}
-                style={{
-                  padding: "10px 18px",
-                  borderRadius: 10,
-                  border: roleFilter === role ? "none" : `1px solid ${theme.colors.borderLight}`,
-                  background: roleFilter === role ? theme.gradients.primary : theme.colors.bgSecondary,
-                  color: roleFilter === role ? "white" : theme.colors.textSecondary,
-                  fontSize: 13,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.15s ease",
-                  boxShadow: roleFilter === role ? theme.shadows.button : "none",
-                  whiteSpace: "nowrap" as const,
-                }}
-              >
-                {label}
+            {!isClientRole && (
+              <button onClick={() => setShowForm(!showForm)} className="add-user-btn">
+                {icons.plus} Add User
               </button>
+            )}
+          </div>
+
+          {/* Stat Cards */}
+          <div className="stats-grid">
+            {statCards.map((card) => (
+              <div key={card.label} className={`stat-card ${mounted ? 'mounted' : ''}`}>
+                <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 12 }}>
+                  <div className="stat-icon" style={{ background: card.bg, color: card.color }}>
+                    {card.icon}
+                  </div>
+                  <div className="stat-value">
+                    <AnimatedNumber value={card.value} />
+                  </div>
+                </div>
+                <div className="stat-label">{card.label}</div>
+              </div>
             ))}
           </div>
-        </div>
 
-        {/* Add User Form */}
-        {showForm && !isClientRole && (
-          <div style={{ background: theme.colors.bgSecondary, padding: 24, borderRadius: 14, border: `1px solid ${theme.colors.borderLight}`, marginBottom: 20, ...anim(0.15) }}>
-            <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Add New User</h3>
-            <form onSubmit={addUser}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email *</label>
-                  <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} required style={inputStyle} placeholder="user@example.com" />
+          {/* Search & Filters */}
+          <div className={`filters-row ${mounted ? 'mounted' : ''}`}>
+            <div className="search-wrapper">
+              <div className="search-icon">{icons.search}</div>
+              <input
+                type="text"
+                placeholder="Search by name, email, agency, or client..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="search-input"
+              />
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+              {Object.entries(roleLabels).map(([role, label]) => (
+                <button
+                  key={role}
+                  onClick={() => setRoleFilter(role)}
+                  className={`filter-btn ${roleFilter === role ? 'active' : ''}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Add User Form */}
+          {showForm && !isClientRole && (
+            <div className="add-form">
+              <h3 style={{ fontSize: 16, fontWeight: 600, marginTop: 0, marginBottom: 20 }}>Add New User</h3>
+              <form onSubmit={addUser}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email *</label>
+                    <input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} required style={inputStyle} placeholder="user@example.com" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
+                    <input value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} style={inputStyle} placeholder="John Smith" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Password *</label>
+                    <input type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} required style={inputStyle} placeholder="********" />
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
+                    <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <option value="MEMBER">Member</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="ADMIN">Admin</option>
+                      <option value="SUPER_ADMIN">Super Admin</option>
+                      <option value="CLIENT">Client</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Agency</label>
+                    <select value={newUser.agencyId} onChange={e => setNewUser({ ...newUser, agencyId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                      <option value="">No Agency</option>
+                      {agencies.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
-                  <input value={newUser.name} onChange={e => setNewUser({ ...newUser, name: e.target.value })} style={inputStyle} placeholder="John Smith" />
+
+                {/* Client Assignments */}
+                <div style={{ marginBottom: 20 }}>
+                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Clients</label>
+                  <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 150, overflow: "auto", background: theme.colors.bgPrimary }}>
+                    {clients.length === 0 ? (
+                      <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No clients available</div>
+                    ) : clients.map((client: any) => (
+                      <label key={client.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: newUser.clientIds.includes(client.id) ? theme.colors.successBg : "transparent" }}>
+                        <input type="checkbox" checked={newUser.clientIds.includes(client.id)} onChange={() => toggleClientSelection(client.id)} style={{ cursor: "pointer" }} />
+                        <span style={{ fontSize: 14 }}>{client.nickname || client.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {newUser.clientIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{newUser.clientIds.length} client(s) selected</div>}
                 </div>
-                <div>
-                  <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Password *</label>
-                  <input type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} required style={inputStyle} placeholder="********" />
+
+                {/* Project Assignments */}
+                {newUser.clientIds.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Projects</label>
+                    {loadingProjects ? (
+                      <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>Loading projects...</div>
+                    ) : (
+                      <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 200, overflow: "auto", background: theme.colors.bgPrimary }}>
+                        {availableProjects.length === 0 ? (
+                          <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No projects available for selected clients</div>
+                        ) : (() => {
+                          const projectsByClient: Record<string, any[]> = {};
+                          availableProjects.forEach(project => { if (!projectsByClient[project.clientId]) projectsByClient[project.clientId] = []; projectsByClient[project.clientId].push(project); });
+                          return Object.entries(projectsByClient).map(([clientId, projects]) => {
+                            const client = clients.find((c: any) => c.id === clientId);
+                            return (
+                              <div key={clientId} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+                                <div style={{ padding: "8px 12px", background: theme.colors.bgTertiary, fontWeight: 600, fontSize: 13 }}>{client?.nickname || client?.name}</div>
+                                {projects.map(project => (
+                                  <label key={project.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px 8px 24px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: newUser.projectIds.includes(project.id) ? theme.colors.successBg : "transparent" }}>
+                                    <input type="checkbox" checked={newUser.projectIds.includes(project.id)} onChange={() => toggleProjectSelection(project.id)} style={{ cursor: "pointer" }} />
+                                    <span style={{ fontSize: 13 }}>{project.name}</span>
+                                  </label>
+                                ))}
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+                    {newUser.projectIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{newUser.projectIds.length} project(s) selected</div>}
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 12 }}>
+                  <button type="submit" disabled={adding} style={{ padding: "10px 20px", background: adding ? theme.colors.bgTertiary : theme.colors.primary, color: adding ? theme.colors.textMuted : "white", border: "none", borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: adding ? "not-allowed" : "pointer" }}>
+                    {adding ? "Adding..." : "Add User"}
+                  </button>
+                  <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 20px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+                    Cancel
+                  </button>
                 </div>
+              </form>
+            </div>
+          )}
+
+          {/* Team List */}
+          <div className={`team-list ${mounted ? 'mounted' : ''}`}>
+            {filteredUsers.length === 0 ? (
+              <div className="empty-state">
+                <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
+                  {icons.usersEmpty}
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
+                  {searchQuery || roleFilter !== "ALL" ? "No members found" : "No team members yet"}
+                </div>
+                <div style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+                  {searchQuery || roleFilter !== "ALL" ? "Try adjusting your search or filters" : "Add your first team member to get started"}
+                </div>
+              </div>
+            ) : (
+              filteredUsers.map((user: any, idx: number) => {
+                const displayName = user.name || user.email.split("@")[0];
+                const avatarBg = getAvatarColor(displayName);
+                const validAssignments = (user.clientAssignments || []).filter((ca: any) => ca.client);
+
+                return (
+                  <div
+                    key={user.id}
+                    onClick={() => navigateToUser(user.id)}
+                    className="team-row"
+                    style={{ animationDelay: mounted ? `${0.4 + idx * 0.05}s` : '0s' }}
+                  >
+                    {/* Avatar */}
+                    <div className="team-avatar" style={{ background: avatarBg }}>
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+
+                    {/* User Info */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>{user.name || "Unnamed"}</span>
+                        <span style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: ROLE_STYLES[user.role]?.bg || theme.colors.bgTertiary, color: ROLE_STYLES[user.role]?.color || theme.colors.textSecondary }}>
+                          {user.role.replace("_", " ")}
+                        </span>
+                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: user.isActive ? theme.colors.success : theme.colors.error, display: "inline-block", flexShrink: 0 }} title={user.isActive ? "Active" : "Inactive"} />
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 13, color: theme.colors.textMuted }}>
+                        <span>{user.email}</span>
+                        {user.agency && (
+                          <Link href={`/agencies/${user.agency.id}`} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4, color: theme.colors.info, textDecoration: "none", fontSize: 13 }}>
+                            {user.agency.name}
+                          </Link>
+                        )}
+                        {user.agencyId === null && user.role !== "PLATFORM_ADMIN" && (
+                          <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, background: "#f0f9ff", color: "#0284c7" }}>External</span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Client Pills */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200, justifyContent: "flex-end" }}>
+                      {validAssignments.length > 0 && (
+                        <>
+                          {validAssignments.slice(0, 2).map((ca: any) => (
+                            <Link key={ca.id} href={`/clients/${ca.client.id}`} onClick={e => e.stopPropagation()} style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: theme.colors.successBg, color: theme.colors.success, textDecoration: "none", transition: "opacity 150ms", whiteSpace: "nowrap" as const }}
+                              onMouseEnter={e => e.currentTarget.style.opacity = "0.8"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
+                              {ca.client.nickname || ca.client.name}
+                            </Link>
+                          ))}
+                          {validAssignments.length > 2 && <span style={{ fontSize: 11, color: theme.colors.textMuted, padding: "3px 4px" }}>+{validAssignments.length - 2}</span>}
+                        </>
+                      )}
+                    </div>
+
+                    {/* Action Buttons */}
+                    {!isClientRole && (
+                      <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                        <button onClick={() => openEditModal(user)} title="Edit" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = theme.colors.infoBg; e.currentTarget.style.color = theme.colors.info; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
+                          {icons.edit}
+                        </button>
+                        <button onClick={() => toggleActive(user)} title={user.isActive ? "Deactivate" : "Activate"} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = theme.colors.warningBg; e.currentTarget.style.color = theme.colors.warning; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
+                          {icons.power}
+                        </button>
+                        <button onClick={() => deleteUser(user)} title="Delete" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
+                          onMouseEnter={e => { e.currentTarget.style.background = theme.colors.errorBg; e.currentTarget.style.color = theme.colors.error; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
+                          {icons.trash}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Chevron */}
+                    <div className="chevron-icon">{icons.chevron}</div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </main>
+
+        {/* Edit Modal */}
+        {editingUser && (
+          <>
+            <div onClick={() => setEditingUser(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000 }} />
+            <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: theme.colors.bgSecondary, borderRadius: 16, padding: 32, width: 500, maxHeight: "90vh", overflow: "auto", zIndex: 1001, boxShadow: theme.shadows.lg }}>
+              <h3 style={{ margin: "0 0 24px 0", fontSize: 20, fontWeight: 600 }}>Edit User</h3>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email</label>
+                <input value={editingUser.email} disabled style={{ ...inputStyle, background: theme.colors.bgTertiary, color: theme.colors.textMuted }} />
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
+                <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} style={inputStyle} placeholder="John Smith" />
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
-                  <select value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
                     <option value="MEMBER">Member</option>
                     <option value="MANAGER">Manager</option>
                     <option value="ADMIN">Admin</option>
@@ -537,31 +956,30 @@ export default function TeamPage() {
                 </div>
                 <div>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Agency</label>
-                  <select value={newUser.agencyId} onChange={e => setNewUser({ ...newUser, agencyId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
+                  <select value={editForm.agencyId} onChange={e => setEditForm({ ...editForm, agencyId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
                     <option value="">No Agency</option>
                     {agencies.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
                   </select>
                 </div>
               </div>
 
-              {/* Client Assignments */}
-              <div style={{ marginBottom: 20 }}>
+              <div style={{ marginBottom: 24 }}>
                 <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Clients</label>
-                <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 150, overflow: "auto", background: theme.colors.bgPrimary }}>
+                <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 200, overflow: "auto", background: theme.colors.bgPrimary }}>
                   {clients.length === 0 ? (
                     <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No clients available</div>
                   ) : clients.map((client: any) => (
-                    <label key={client.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: newUser.clientIds.includes(client.id) ? theme.colors.successBg : "transparent" }}>
-                      <input type="checkbox" checked={newUser.clientIds.includes(client.id)} onChange={() => toggleClientSelection(client.id)} style={{ cursor: "pointer" }} />
+                    <label key={client.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: editForm.clientIds.includes(client.id) ? theme.colors.successBg : "transparent" }}>
+                      <input type="checkbox" checked={editForm.clientIds.includes(client.id)} onChange={() => toggleClientSelection(client.id, true)} style={{ cursor: "pointer" }} />
                       <span style={{ fontSize: 14 }}>{client.nickname || client.name}</span>
                     </label>
                   ))}
                 </div>
-                {newUser.clientIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{newUser.clientIds.length} client(s) selected</div>}
+                {editForm.clientIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{editForm.clientIds.length} client(s) selected</div>}
               </div>
 
               {/* Project Assignments */}
-              {newUser.clientIds.length > 0 && (
+              {editForm.clientIds.length > 0 && (
                 <div style={{ marginBottom: 20 }}>
                   <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Projects</label>
                   {loadingProjects ? (
@@ -579,8 +997,8 @@ export default function TeamPage() {
                             <div key={clientId} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
                               <div style={{ padding: "8px 12px", background: theme.colors.bgTertiary, fontWeight: 600, fontSize: 13 }}>{client?.nickname || client?.name}</div>
                               {projects.map(project => (
-                                <label key={project.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px 8px 24px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: newUser.projectIds.includes(project.id) ? theme.colors.successBg : "transparent" }}>
-                                  <input type="checkbox" checked={newUser.projectIds.includes(project.id)} onChange={() => toggleProjectSelection(project.id)} style={{ cursor: "pointer" }} />
+                                <label key={project.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px 8px 24px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: editForm.projectIds.includes(project.id) ? theme.colors.successBg : "transparent" }}>
+                                  <input type="checkbox" checked={editForm.projectIds.includes(project.id)} onChange={() => toggleProjectSelection(project.id, true)} style={{ cursor: "pointer" }} />
                                   <span style={{ fontSize: 13 }}>{project.name}</span>
                                 </label>
                               ))}
@@ -590,228 +1008,22 @@ export default function TeamPage() {
                       })()}
                     </div>
                   )}
-                  {newUser.projectIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{newUser.projectIds.length} project(s) selected</div>}
+                  {editForm.projectIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{editForm.projectIds.length} project(s) selected</div>}
                 </div>
               )}
 
               <div style={{ display: "flex", gap: 12 }}>
-                <button type="submit" disabled={adding} style={{ padding: "10px 20px", background: adding ? theme.colors.bgTertiary : theme.colors.primary, color: adding ? theme.colors.textMuted : "white", border: "none", borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: adding ? "not-allowed" : "pointer" }}>
-                  {adding ? "Adding..." : "Add User"}
-                </button>
-                <button type="button" onClick={() => setShowForm(false)} style={{ padding: "10px 20px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+                <button onClick={() => setEditingUser(null)} style={{ flex: 1, padding: "12px 20px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, fontWeight: 500, cursor: "pointer" }}>
                   Cancel
                 </button>
+                <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: "12px 20px", background: saving ? theme.colors.bgTertiary : theme.colors.primary, color: saving ? theme.colors.textMuted : "white", border: "none", borderRadius: 8, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer" }}>
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
               </div>
-            </form>
-          </div>
+            </div>
+          </>
         )}
-
-        {/* Team List */}
-        <div style={{ background: theme.colors.bgSecondary, borderRadius: 16, border: `1px solid ${theme.colors.borderLight}`, overflow: "hidden", ...anim(0.2) }}>
-          {filteredUsers.length === 0 ? (
-            <div style={{ padding: 64, textAlign: "center" }}>
-              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
-                {searchQuery || roleFilter !== "ALL" ? "No members found" : "No team members yet"}
-              </div>
-              <div style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
-                {searchQuery || roleFilter !== "ALL" ? "Try adjusting your search or filters" : "Add your first team member to get started"}
-              </div>
-            </div>
-          ) : (
-            filteredUsers.map((user: any, idx: number) => {
-              const displayName = user.name || user.email.split("@")[0];
-              const avatarBg = getAvatarColor(displayName);
-              const validAssignments = (user.clientAssignments || []).filter((ca: any) => ca.client);
-
-              return (
-                <div
-                  key={user.id}
-                  onClick={() => navigateToUser(user.id)}
-                  style={{
-                    padding: "18px 22px",
-                    borderBottom: idx < filteredUsers.length - 1 ? `1px solid ${theme.colors.bgTertiary}` : "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 14,
-                    cursor: "pointer",
-                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                    ...rowAnim(idx),
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.background = theme.colors.bgPrimary; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
-                >
-                  {/* Avatar */}
-                  <div style={{ width: 48, height: 48, borderRadius: 12, background: avatarBg, display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: 600, fontSize: 18, flexShrink: 0 }}>
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
-
-                  {/* User Info */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
-                      <span style={{ fontSize: 15, fontWeight: 600, color: theme.colors.textPrimary }}>{user.name || "Unnamed"}</span>
-                      <span style={{ fontSize: 11, fontWeight: 500, padding: "3px 10px", borderRadius: 20, background: ROLE_STYLES[user.role]?.bg || theme.colors.bgTertiary, color: ROLE_STYLES[user.role]?.color || theme.colors.textSecondary }}>
-                        {user.role.replace("_", " ")}
-                      </span>
-                      <span style={{ width: 8, height: 8, borderRadius: "50%", background: user.isActive ? theme.colors.success : theme.colors.error, display: "inline-block", flexShrink: 0 }} title={user.isActive ? "Active" : "Inactive"} />
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 14, fontSize: 13, color: theme.colors.textMuted }}>
-                      <span>{user.email}</span>
-                      {user.agency && (
-                        <Link href={`/agencies/${user.agency.id}`} onClick={e => e.stopPropagation()} style={{ display: "flex", alignItems: "center", gap: 4, color: theme.colors.info, textDecoration: "none", fontSize: 13 }}>
-                          {user.agency.name}
-                        </Link>
-                      )}
-                      {user.agencyId === null && user.role !== "PLATFORM_ADMIN" && (
-                        <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, background: "#f0f9ff", color: "#0284c7" }}>External</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Client Pills */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200, justifyContent: "flex-end" }}>
-                    {validAssignments.length > 0 && (
-                      <>
-                        {validAssignments.slice(0, 2).map((ca: any) => (
-                          <Link key={ca.id} href={`/clients/${ca.client.id}`} onClick={e => e.stopPropagation()} style={{ padding: "3px 8px", borderRadius: 6, fontSize: 11, fontWeight: 500, background: theme.colors.successBg, color: theme.colors.success, textDecoration: "none", transition: "opacity 150ms", whiteSpace: "nowrap" as const }}
-                            onMouseEnter={e => e.currentTarget.style.opacity = "0.8"} onMouseLeave={e => e.currentTarget.style.opacity = "1"}>
-                            {ca.client.nickname || ca.client.name}
-                          </Link>
-                        ))}
-                        {validAssignments.length > 2 && <span style={{ fontSize: 11, color: theme.colors.textMuted, padding: "3px 4px" }}>+{validAssignments.length - 2}</span>}
-                      </>
-                    )}
-                  </div>
-
-                  {/* Action Buttons */}
-                  {!isClientRole && (
-                    <div style={{ display: "flex", gap: 4, flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-                      <button onClick={() => openEditModal(user)} title="Edit" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = theme.colors.infoBg; e.currentTarget.style.color = theme.colors.info; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
-                        {icons.edit}
-                      </button>
-                      <button onClick={() => toggleActive(user)} title={user.isActive ? "Deactivate" : "Activate"} style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = theme.colors.warningBg; e.currentTarget.style.color = theme.colors.warning; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
-                        {icons.power}
-                      </button>
-                      <button onClick={() => deleteUser(user)} title="Delete" style={{ width: 32, height: 32, borderRadius: 8, border: "none", background: "transparent", color: theme.colors.textMuted, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
-                        onMouseEnter={e => { e.currentTarget.style.background = theme.colors.errorBg; e.currentTarget.style.color = theme.colors.error; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = theme.colors.textMuted; }}>
-                        {icons.trash}
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Chevron */}
-                  <div style={{ color: theme.colors.textMuted, flexShrink: 0, opacity: 0.5 }}>{icons.chevron}</div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </main>
-
-      {/* Edit Modal */}
-      {editingUser && (
-        <>
-          <div onClick={() => setEditingUser(null)} style={{ position: "fixed", top: 0, left: 0, right: 0, bottom: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", zIndex: 1000 }} />
-          <div style={{ position: "fixed", top: "50%", left: "50%", transform: "translate(-50%, -50%)", background: theme.colors.bgSecondary, borderRadius: 16, padding: 32, width: 500, maxHeight: "90vh", overflow: "auto", zIndex: 1001, boxShadow: theme.shadows.lg }}>
-            <h3 style={{ margin: "0 0 24px 0", fontSize: 20, fontWeight: 600 }}>Edit User</h3>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Email</label>
-              <input value={editingUser.email} disabled style={{ ...inputStyle, background: theme.colors.bgTertiary, color: theme.colors.textMuted }} />
-            </div>
-
-            <div style={{ marginBottom: 20 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Name</label>
-              <input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} style={inputStyle} placeholder="John Smith" />
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
-              <div>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Role</label>
-                <select value={editForm.role} onChange={e => setEditForm({ ...editForm, role: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="MEMBER">Member</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="ADMIN">Admin</option>
-                  <option value="SUPER_ADMIN">Super Admin</option>
-                  <option value="CLIENT">Client</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Agency</label>
-                <select value={editForm.agencyId} onChange={e => setEditForm({ ...editForm, agencyId: e.target.value })} style={{ ...inputStyle, cursor: "pointer" }}>
-                  <option value="">No Agency</option>
-                  {agencies.map((a: any) => <option key={a.id} value={a.id}>{a.name}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 24 }}>
-              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Clients</label>
-              <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 200, overflow: "auto", background: theme.colors.bgPrimary }}>
-                {clients.length === 0 ? (
-                  <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No clients available</div>
-                ) : clients.map((client: any) => (
-                  <label key={client.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: editForm.clientIds.includes(client.id) ? theme.colors.successBg : "transparent" }}>
-                    <input type="checkbox" checked={editForm.clientIds.includes(client.id)} onChange={() => toggleClientSelection(client.id, true)} style={{ cursor: "pointer" }} />
-                    <span style={{ fontSize: 14 }}>{client.nickname || client.name}</span>
-                  </label>
-                ))}
-              </div>
-              {editForm.clientIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{editForm.clientIds.length} client(s) selected</div>}
-            </div>
-
-            {/* Project Assignments */}
-            {editForm.clientIds.length > 0 && (
-              <div style={{ marginBottom: 20 }}>
-                <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>Assign to Projects</label>
-                {loadingProjects ? (
-                  <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>Loading projects...</div>
-                ) : (
-                  <div style={{ border: `1px solid ${theme.colors.borderMedium}`, borderRadius: 8, maxHeight: 200, overflow: "auto", background: theme.colors.bgPrimary }}>
-                    {availableProjects.length === 0 ? (
-                      <div style={{ padding: 16, color: theme.colors.textMuted, fontSize: 13 }}>No projects available for selected clients</div>
-                    ) : (() => {
-                      const projectsByClient: Record<string, any[]> = {};
-                      availableProjects.forEach(project => { if (!projectsByClient[project.clientId]) projectsByClient[project.clientId] = []; projectsByClient[project.clientId].push(project); });
-                      return Object.entries(projectsByClient).map(([clientId, projects]) => {
-                        const client = clients.find((c: any) => c.id === clientId);
-                        return (
-                          <div key={clientId} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
-                            <div style={{ padding: "8px 12px", background: theme.colors.bgTertiary, fontWeight: 600, fontSize: 13 }}>{client?.nickname || client?.name}</div>
-                            {projects.map(project => (
-                              <label key={project.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px 8px 24px", cursor: "pointer", borderBottom: `1px solid ${theme.colors.borderLight}`, background: editForm.projectIds.includes(project.id) ? theme.colors.successBg : "transparent" }}>
-                                <input type="checkbox" checked={editForm.projectIds.includes(project.id)} onChange={() => toggleProjectSelection(project.id, true)} style={{ cursor: "pointer" }} />
-                                <span style={{ fontSize: 13 }}>{project.name}</span>
-                              </label>
-                            ))}
-                          </div>
-                        );
-                      });
-                    })()}
-                  </div>
-                )}
-                {editForm.projectIds.length > 0 && <div style={{ marginTop: 8, fontSize: 12, color: theme.colors.textMuted }}>{editForm.projectIds.length} project(s) selected</div>}
-              </div>
-            )}
-
-            <div style={{ display: "flex", gap: 12 }}>
-              <button onClick={() => setEditingUser(null)} style={{ flex: 1, padding: "12px 20px", background: theme.colors.bgTertiary, color: theme.colors.textSecondary, border: "none", borderRadius: 8, fontWeight: 500, cursor: "pointer" }}>
-                Cancel
-              </button>
-              <button onClick={saveEdit} disabled={saving} style={{ flex: 1, padding: "12px 20px", background: saving ? theme.colors.bgTertiary : theme.colors.primary, color: saving ? theme.colors.textMuted : "white", border: "none", borderRadius: 8, fontWeight: 500, cursor: saving ? "not-allowed" : "pointer" }}>
-                {saving ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        </>
-      )}
-    </div>
+      </div>
+    </>
   );
 }

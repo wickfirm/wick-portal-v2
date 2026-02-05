@@ -25,19 +25,28 @@ export async function GET() {
 
     // Build client filter based on role
     let clientFilter: any = {};
-    const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN";
+    const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || currentUser.role === "PLATFORM_ADMIN";
 
     if (isAdmin) {
       // ADMINs and SUPER_ADMINs see all clients that belong to their agency
       // They can see all statuses including CHURNED (filtered on frontend)
       if (currentUser.agencyId) {
+        // Check both the direct agencyId field AND the agencies relation
         clientFilter = {
-          agencies: {
-            some: {
-              agencyId: currentUser.agencyId
+          OR: [
+            { agencyId: currentUser.agencyId },
+            {
+              agencies: {
+                some: {
+                  agencyId: currentUser.agencyId
+                }
+              }
             }
-          }
+          ]
         };
+      } else if (currentUser.role === "PLATFORM_ADMIN") {
+        // Platform admins with no agencyId can see all clients
+        clientFilter = {};
       }
     } else if (currentUser.role === "MEMBER") {
       // MEMBERs see ONLY ACTIVE clients they're personally assigned to

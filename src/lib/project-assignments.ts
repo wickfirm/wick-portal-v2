@@ -18,9 +18,9 @@ export async function getUserAssignedProjects(userId: string): Promise<string[]>
 
 /**
  * Get project filter for a user based on their role and assignments
- * 
+ *
  * Logic:
- * - ADMIN/SUPER_ADMIN: See all projects in their agency
+ * - ADMIN/SUPER_ADMIN/PLATFORM_ADMIN: See all projects in their agency
  * - MEMBER with project assignments: See only assigned projects
  * - MEMBER without project assignments: See all projects from assigned clients (fallback)
  */
@@ -29,18 +29,28 @@ export async function getProjectFilterForUser(
   role: string,
   agencyId: string | null
 ): Promise<any> {
-  
-  // ADMIN and SUPER_ADMIN see all agency projects
-  if (role === "ADMIN" || role === "SUPER_ADMIN") {
-    if (!agencyId) return {};
-    
+
+  // ADMIN, SUPER_ADMIN, and PLATFORM_ADMIN see all agency projects
+  if (role === "ADMIN" || role === "SUPER_ADMIN" || role === "PLATFORM_ADMIN") {
+    if (!agencyId) {
+      // PLATFORM_ADMIN with no agencyId sees all projects
+      if (role === "PLATFORM_ADMIN") return {};
+      return {};
+    }
+
+    // Check both the direct agencyId field AND the agencies relation
     return {
       client: {
-        agencies: {
-          some: {
-            agencyId: agencyId
+        OR: [
+          { agencyId: agencyId },
+          {
+            agencies: {
+              some: {
+                agencyId: agencyId
+              }
+            }
           }
-        }
+        ]
       }
     };
   }

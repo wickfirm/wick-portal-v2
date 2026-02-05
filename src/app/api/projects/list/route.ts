@@ -24,7 +24,7 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN";
+    const isAdmin = currentUser.role === "ADMIN" || currentUser.role === "SUPER_ADMIN" || currentUser.role === "PLATFORM_ADMIN";
 
     // Get project filter using helper function
     const projectFilter = await getProjectFilterForUser(
