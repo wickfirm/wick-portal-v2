@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { theme, STATUS_STYLES } from "@/lib/theme";
 
@@ -42,6 +42,17 @@ const icons = {
 };
 
 export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  // Staggered row animation
+  const rowAnim = (index: number, baseDelay: number = 0) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateY(${mounted ? 0 : 12}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${baseDelay + Math.min(index * 0.05, 0.4)}s`,
+  });
+
   const projectsByClient = projects.reduce((acc, project) => {
     const clientId = project.client.id;
     if (!acc[clientId]) {
@@ -86,7 +97,7 @@ export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) 
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-      {clientGroups.map(({ client, projects: clientProjects }) => {
+      {clientGroups.map(({ client, projects: clientProjects }, groupIdx) => {
         const isExpanded = expandedClients[client.id];
         const completedCount = clientProjects.filter((p) => p.status === "COMPLETED").length;
         const inProgressCount = clientProjects.filter((p) => p.status === "IN_PROGRESS").length;
@@ -96,6 +107,7 @@ export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) 
           <div key={client.id} style={{
             background: theme.colors.bgSecondary, borderRadius: 14,
             border: `1px solid ${theme.colors.borderLight}`, overflow: "hidden",
+            ...rowAnim(groupIdx),
           }}>
             {/* Client Header */}
             <div

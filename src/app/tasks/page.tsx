@@ -15,8 +15,8 @@ export default function TasksPage() {
 
   const anim = (delay: number) => ({
     opacity: mounted ? 1 : 0,
-    transform: `translateY(${mounted ? 0 : 16}px)`,
-    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+    transform: `translateY(${mounted ? 0 : 20}px)`,
+    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
   });
 
   useEffect(() => { setMounted(true); }, []);

@@ -207,8 +207,15 @@ export default function ClientsPage() {
 
   const anim = (delay: number) => ({
     opacity: mounted ? 1 : 0,
-    transform: `translateY(${mounted ? 0 : 16}px)`,
-    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+    transform: `translateY(${mounted ? 0 : 20}px)`,
+    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
+
+  // Row animation for list items - staggered effect
+  const rowAnim = (index: number, baseDelay: number = 0.2) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateX(${mounted ? 0 : -12}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${baseDelay + Math.min(index * 0.04, 0.4)}s`,
   });
 
   useEffect(() => {
@@ -329,8 +336,8 @@ export default function ClientsPage() {
         </div>
 
         {/* Stats Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28, ...anim(0.1) }}>
-          {statCards.map((card) => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+          {statCards.map((card, cardIdx) => (
             <div
               key={card.label}
               style={{
@@ -338,7 +345,8 @@ export default function ClientsPage() {
                 padding: "18px 20px",
                 borderRadius: 14,
                 border: `1px solid ${theme.colors.borderLight}`,
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+                ...anim(0.08 + cardIdx * 0.05),
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-2px)";
@@ -503,7 +511,7 @@ export default function ClientsPage() {
             {filteredClients.map((client, idx) => {
               const activeProjects = client.projects.filter(p => p.status === "IN_PROGRESS").length;
               return (
-                <Link key={client.id} href={`/clients/${client.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                <Link key={client.id} href={`/clients/${client.id}`} style={{ textDecoration: "none", color: "inherit", display: "block", ...rowAnim(idx) }}>
                   <div
                     style={{
                       padding: "18px 22px",
@@ -511,7 +519,7 @@ export default function ClientsPage() {
                       display: "flex",
                       alignItems: "center",
                       gap: 14,
-                      transition: "all 0.15s ease",
+                      transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = theme.colors.bgPrimary;

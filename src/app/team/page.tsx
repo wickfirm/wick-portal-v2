@@ -112,8 +112,15 @@ export default function TeamPage() {
 
   const anim = (delay: number) => ({
     opacity: mounted ? 1 : 0,
-    transform: `translateY(${mounted ? 0 : 16}px)`,
-    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+    transform: `translateY(${mounted ? 0 : 20}px)`,
+    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+  });
+
+  // Row animation for list items - staggered effect
+  const rowAnim = (index: number, baseDelay: number = 0.2) => ({
+    opacity: mounted ? 1 : 0,
+    transform: `translateX(${mounted ? 0 : -12}px)`,
+    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${baseDelay + Math.min(index * 0.04, 0.4)}s`,
   });
 
   // Fetch team data with React Query
@@ -419,8 +426,8 @@ export default function TeamPage() {
         </div>
 
         {/* Stat Cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28, ...anim(0.1) }}>
-          {statCards.map(card => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14, marginBottom: 28 }}>
+          {statCards.map((card, cardIdx) => (
             <div
               key={card.label}
               style={{
@@ -428,8 +435,9 @@ export default function TeamPage() {
                 padding: "18px 20px",
                 borderRadius: 14,
                 border: `1px solid ${theme.colors.borderLight}`,
-                transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                 cursor: "default",
+                ...anim(0.08 + cardIdx * 0.05),
               }}
               onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)"; }}
               onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "none"; }}
@@ -629,7 +637,8 @@ export default function TeamPage() {
                     alignItems: "center",
                     gap: 14,
                     cursor: "pointer",
-                    transition: "all 0.12s ease",
+                    transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                    ...rowAnim(idx),
                   }}
                   onMouseEnter={e => { e.currentTarget.style.background = theme.colors.bgPrimary; }}
                   onMouseLeave={e => { e.currentTarget.style.background = "transparent"; }}
