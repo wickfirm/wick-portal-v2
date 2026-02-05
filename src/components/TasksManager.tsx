@@ -6,6 +6,7 @@ import Link from "next/link";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 import TasksLoadingSkeleton from "./TasksLoadingSkeleton";
 import TasksKanbanBoard from "./TasksKanbanBoard";
+import TasksCalendarView from "./TasksCalendarView";
 import TaskViewToggle from "./TaskViewToggle";
 
 type Task = {
@@ -1800,22 +1801,21 @@ export default function TasksManager({
           loading={loading}
         />
       ) : activeView === "calendar" ? (
-        /* Calendar View - Coming Soon */
-        <div style={{
-          background: theme.colors.bgSecondary,
-          border: "1px solid " + theme.colors.borderLight,
-          borderRadius: 14,
-          padding: 48,
-          textAlign: "center",
-        }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
-          <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
-            Calendar View Coming Soon
-          </h3>
-          <p style={{ fontSize: 14, color: theme.colors.textMuted }}>
-            View tasks organized by due date in a calendar layout
-          </p>
-        </div>
+        /* Calendar View */
+        <TasksCalendarView
+          tasks={tasks.filter(matchesFilters).map(t => ({
+            id: t.id,
+            name: t.name,
+            status: t.status,
+            priority: t.priority,
+            dueDate: t.dueDate,
+            assignee: t.assignee,
+          }))}
+          onTaskClick={(taskId) => {
+            window.location.href = `/tasks/${taskId}`;
+          }}
+          loading={loading}
+        />
       ) : (
         /* Table View (default) */
         context === "general" ? (
