@@ -118,6 +118,7 @@ export default function TaskDetailPage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState("");
+  const [uploadLocation, setUploadLocation] = useState<"task" | "comment">("task"); // Track where upload is happening
   const [showActivity, setShowActivity] = useState(false);
   const [commentAttachments, setCommentAttachments] = useState<any[]>([]);
 
@@ -322,6 +323,7 @@ export default function TaskDetailPage() {
           try {
             // Show upload progress
             setUploadingFile(true);
+            setUploadLocation("comment"); // Mark as comment upload
             setUploadFileName(att.file.name);
             setUploadProgress(0);
 
@@ -400,6 +402,7 @@ export default function TaskDetailPage() {
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploadingFile(true);
+    setUploadLocation("task"); // Mark as task-level upload
 
     const fileArray = Array.from(files);
     for (let i = 0; i < fileArray.length; i++) {
@@ -1118,26 +1121,133 @@ export default function TaskDetailPage() {
           {attachments.length > 0 && (
             <div style={{ marginTop: 24, marginLeft: 136 }}>
               <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                {attachments.map(att => (
-                  <div key={att.id} style={{
-                    padding: "10px 14px",
-                    background: "#f9fafb",
-                    borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 10,
-                    fontSize: 13,
-                  }}>
-                    <span>{getFileIcon(att.mimeType)}</span>
-                    <span style={{ color: "#374151" }}>{att.originalName}</span>
-                    <button
-                      onClick={() => deleteAttachment(att.id)}
-                      style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 2 }}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                ))}
+                {attachments.map(att => {
+                  const isImage = att.mimeType?.startsWith("image/");
+                  const isVideo = att.mimeType?.startsWith("video/");
+
+                  return (
+                    <div key={att.id} style={{
+                      background: "#f9fafb",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      border: "1px solid #e5e7eb",
+                      position: "relative",
+                      maxWidth: isImage || isVideo ? 200 : "auto",
+                    }}>
+                      {/* Preview for images/videos */}
+                      {isImage && att.r2Key && (
+                        <div style={{ width: 200, height: 120, background: "#e5e7eb" }}>
+                          <img
+                            src={`/api/tasks/${taskId}/attachments/${att.id}/preview`}
+                            alt={att.originalName}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        </div>
+                      )}
+                      {isVideo && (
+                        <div style={{
+                          width: 200,
+                          height: 120,
+                          background: "#1f2937",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          <span style={{ fontSize: 40 }}>🎬</span>
+                        </div>
+                      )}
+                      {/* File info */}
+                      <div style={{
+                        padding: "10px 14px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        fontSize: 13,
+                      }}>
+                        {!isImage && !isVideo && <span>{getFileIcon(att.mimeType)}</span>}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            color: "#374151",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}>
+                            {att.originalName}
+                          </div>
+                          <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                            {formatFileSize(att.size)}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => deleteAttachment(att.id)}
+                          style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 2 }}
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Upload Progress Bar - for task attachments */}
+          {uploadingFile && uploadLocation === "task" && (
+            <div style={{
+              marginTop: 16,
+              marginLeft: 136,
+              padding: "12px 16px",
+              background: "#f0f9ff",
+              borderRadius: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              maxWidth: 400,
+            }}>
+              <div style={{
+                width: 32,
+                height: 32,
+                borderRadius: 6,
+                background: "#dbeafe",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 16,
+              }}>
+                📄
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 6,
+                }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                    {uploadFileName}
+                  </span>
+                  <span style={{ fontSize: 12, color: "#6b7280" }}>
+                    {uploadProgress}%
+                  </span>
+                </div>
+                <div style={{
+                  height: 6,
+                  background: "#e5e7eb",
+                  borderRadius: 3,
+                  overflow: "hidden",
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${uploadProgress}%`,
+                    background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                    borderRadius: 3,
+                    transition: "width 0.2s ease",
+                  }} />
+                </div>
               </div>
             </div>
           )}
@@ -1153,18 +1263,19 @@ export default function TaskDetailPage() {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
+              disabled={uploadingFile}
               style={{
                 background: "none",
                 border: "none",
-                color: "#6b7280",
+                color: uploadingFile ? "#9ca3af" : "#6b7280",
                 fontSize: 13,
-                cursor: "pointer",
+                cursor: uploadingFile ? "not-allowed" : "pointer",
                 display: "flex",
                 alignItems: "center",
                 gap: 6,
               }}
             >
-              📎 {uploadingFile ? "Uploading..." : "Attach files"}
+              📎 Attach files
             </button>
           </div>
         </div>
@@ -1210,8 +1321,8 @@ export default function TaskDetailPage() {
                 showAttachButton={true}
               />
 
-              {/* Upload Progress Bar */}
-              {uploadingFile && (
+              {/* Upload Progress Bar - for comment attachments */}
+              {uploadingFile && uploadLocation === "comment" && (
                 <div style={{
                   padding: "12px 16px",
                   background: "#f0f9ff",
