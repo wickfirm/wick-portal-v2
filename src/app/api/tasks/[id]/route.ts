@@ -147,8 +147,8 @@ export async function PATCH(
       await prisma.taskModification.createMany({
         data: modifications.map((mod) => ({
           taskId,
-          userId: user.id,
-          fieldChanged: mod.field,
+          modifiedBy: user.id,
+          changeType: mod.field,
           oldValue: mod.oldValue,
           newValue: mod.newValue,
         })),
