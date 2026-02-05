@@ -1276,11 +1276,27 @@ export default function TaskDetailPage() {
                     {comment.attachments && comment.attachments.length > 0 && (
                       <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
                         {comment.attachments.map((att: CommentAttachment) => {
-                          const isImage = att.mimeType?.startsWith("image/");
-                          const isVideo = att.mimeType?.startsWith("video/");
+                          const fileName = att.originalName?.toLowerCase() || "";
+                          const mimeType = att.mimeType?.toLowerCase() || "";
+                          const isImage = mimeType.startsWith("image/") ||
+                                          fileName.endsWith(".jpg") ||
+                                          fileName.endsWith(".jpeg") ||
+                                          fileName.endsWith(".png") ||
+                                          fileName.endsWith(".gif") ||
+                                          fileName.endsWith(".webp");
+                          const isVideo = mimeType.startsWith("video/") ||
+                                          fileName.endsWith(".mp4") ||
+                                          fileName.endsWith(".mov") ||
+                                          fileName.endsWith(".webm") ||
+                                          fileName.endsWith(".avi") ||
+                                          fileName.endsWith(".mkv") ||
+                                          fileName.endsWith(".3gp");
                           const fileUrl = att.downloadUrl;
 
-                          if (isVideo && fileUrl) {
+                          // Debug logging
+                          console.log("Attachment:", att.originalName, "mimeType:", att.mimeType, "isVideo:", isVideo, "isImage:", isImage, "hasUrl:", !!fileUrl);
+
+                          if (isVideo) {
                             return (
                               <div key={att.id} style={{
                                 borderRadius: 8,
@@ -1288,14 +1304,26 @@ export default function TaskDetailPage() {
                                 background: "#000",
                                 maxWidth: 500,
                               }}>
-                                <video
-                                  controls
-                                  style={{ width: "100%", display: "block" }}
-                                  preload="metadata"
-                                >
-                                  <source src={fileUrl} type={att.mimeType} />
-                                  Your browser does not support video playback.
-                                </video>
+                                {fileUrl ? (
+                                  <video
+                                    controls
+                                    style={{ width: "100%", display: "block", minHeight: 200 }}
+                                    preload="metadata"
+                                    playsInline
+                                  >
+                                    <source src={fileUrl} type={att.mimeType || "video/mp4"} />
+                                    Your browser does not support video playback.
+                                  </video>
+                                ) : (
+                                  <div style={{
+                                    padding: 40,
+                                    textAlign: "center",
+                                    color: "#fff",
+                                    background: "#374151",
+                                  }}>
+                                    🎬 Video loading...
+                                  </div>
+                                )}
                                 <div style={{
                                   padding: "10px 14px",
                                   background: "#f9fafb",
@@ -1304,10 +1332,10 @@ export default function TaskDetailPage() {
                                   justifyContent: "space-between",
                                 }}>
                                   <span style={{ fontSize: 13, color: "#374151" }}>
-                                    {att.originalName} ({formatFileSize(att.size)})
+                                    🎬 {att.originalName} ({formatFileSize(att.size)})
                                   </span>
                                   <a
-                                    href={att.forceDownloadUrl || fileUrl}
+                                    href={att.forceDownloadUrl || fileUrl || "#"}
                                     download={att.originalName}
                                     style={{
                                       fontSize: 13,
