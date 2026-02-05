@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import ReactMarkdown from "react-markdown";
 import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
@@ -553,20 +554,101 @@ export default function TaskDetailPage() {
   };
 
   const renderCommentContent = (content: string) => {
-    return content.split(/(@\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
-      const match = part.match(/@\[([^\]]+)\]\(([^)]+)\)/);
-      if (match) {
-        return (
-          <span key={i} style={{
-            color: theme.colors.primary,
-            fontWeight: 500,
-            background: theme.colors.primaryBg,
-            padding: "2px 6px",
-            borderRadius: 4,
-          }}>
-            @{match[1]}
-          </span>
-        );
+    // First, convert @mentions to styled spans
+    // Then render markdown
+    const processedContent = content.replace(
+      /@\[([^\]]+)\]\(([^)]+)\)/g,
+      '**@$1**'
+    );
+
+    return (
+      <ReactMarkdown
+        components={{
+          // Style bold text (including @mentions)
+          strong: ({ children }) => {
+            const text = String(children);
+            if (text.startsWith('@')) {
+              return (
+                <span style={{
+                  color: theme.colors.primary,
+                  fontWeight: 500,
+                  background: theme.colors.primaryBg,
+                  padding: "2px 6px",
+                  borderRadius: 4,
+                }}>
+                  {text}
+                </span>
+              );
+            }
+            return <strong style={{ fontWeight: 600 }}>{children}</strong>;
+          },
+          em: ({ children }) => <em style={{ fontStyle: 'italic' }}>{children}</em>,
+          del: ({ children }) => <del style={{ textDecoration: 'line-through', color: '#9ca3af' }}>{children}</del>,
+          a: ({ href, children }) => (
+            <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: theme.colors.primary, textDecoration: 'underline' }}>
+              {children}
+            </a>
+          ),
+          code: ({ children }) => (
+            <code style={{
+              background: '#f3f4f6',
+              padding: '2px 6px',
+              borderRadius: 4,
+              fontSize: '0.9em',
+              fontFamily: 'monospace',
+            }}>
+              {children}
+            </code>
+          ),
+          pre: ({ children }) => (
+            <pre style={{
+              background: '#f3f4f6',
+              padding: 12,
+              borderRadius: 6,
+              overflow: 'auto',
+              fontSize: '0.9em',
+            }}>
+              {children}
+            </pre>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote style={{
+              borderLeft: '3px solid #d1d5db',
+              paddingLeft: 12,
+              margin: '8px 0',
+              color: '#6b7280',
+              fontStyle: 'italic',
+            }}>
+              {children}
+            </blockquote>
+          ),
+          ul: ({ children }) => <ul style={{ paddingLeft: 20, margin: '8px 0' }}>{children}</ul>,
+          ol: ({ children }) => <ol style={{ paddingLeft: 20, margin: '8px 0' }}>{children}</ol>,
+          li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+          h1: ({ children }) => <h1 style={{ fontSize: '1.5em', fontWeight: 600, margin: '8px 0' }}>{children}</h1>,
+          h2: ({ children }) => <h2 style={{ fontSize: '1.3em', fontWeight: 600, margin: '8px 0' }}>{children}</h2>,
+          h3: ({ children }) => <h3 style={{ fontSize: '1.1em', fontWeight: 600, margin: '8px 0' }}>{children}</h3>,
+          hr: () => <hr style={{ border: 'none', borderTop: '1px solid #e5e7eb', margin: '12px 0' }} />,
+          p: ({ children }) => <p style={{ margin: '4px 0' }}>{children}</p>,
+          // Handle highlight syntax ==text==
+          mark: ({ children }) => (
+            <mark style={{ background: '#fef08a', padding: '1px 4px', borderRadius: 2 }}>{children}</mark>
+          ),
+        }}
+      >
+        {processedContent}
+      </ReactMarkdown>
+    );
+  };
+
+  // Pre-process content to render highlights as styled spans
+  const preprocessHighlights = (text: string) => {
+    // Split by highlight markers and render
+    const parts = text.split(/(==.*?==)/g);
+    return parts.map((part, i) => {
+      if (part.startsWith('==') && part.endsWith('==')) {
+        const highlighted = part.slice(2, -2);
+        return <mark key={i} style={{ background: '#fef08a', padding: '1px 4px', borderRadius: 2 }}>{highlighted}</mark>;
       }
       return part;
     });
