@@ -58,9 +58,29 @@ export async function generateDownloadUrl(options: DownloadUrlOptions): Promise<
   const command = new GetObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
-    ResponseContentDisposition: downloadFilename 
+    ResponseContentDisposition: downloadFilename
       ? `attachment; filename="${downloadFilename}"`
       : undefined,
+  });
+
+  const url = await getSignedUrl(r2Client, command, {
+    expiresIn,
+  });
+
+  return url;
+}
+
+/**
+ * Generate presigned URL for streaming/viewing a file inline (no download disposition)
+ * Use this for videos, images, etc. that should be displayed in the browser
+ */
+export async function generateStreamUrl(options: { key: string; expiresIn?: number }): Promise<string> {
+  const { key, expiresIn = 3600 } = options;
+
+  const command = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    // No ResponseContentDisposition - allows inline display
   });
 
   const url = await getSignedUrl(r2Client, command, {

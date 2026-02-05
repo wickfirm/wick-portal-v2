@@ -44,7 +44,8 @@ interface CommentAttachment {
   mimeType: string;
   size: number;
   r2Key: string;
-  downloadUrl?: string;
+  downloadUrl?: string;       // Stream URL for viewing inline
+  forceDownloadUrl?: string;  // Force download URL
 }
 
 interface Comment {
@@ -176,7 +177,11 @@ export default function TaskDetailPage() {
                     );
                     if (urlRes.ok) {
                       const urlData = await urlRes.json();
-                      return { ...att, downloadUrl: urlData.downloadUrl };
+                      return {
+                        ...att,
+                        downloadUrl: urlData.downloadUrl,
+                        forceDownloadUrl: urlData.forceDownloadUrl,
+                      };
                     }
                   } catch (e) {
                     console.error("Error fetching attachment URL:", e);
@@ -1302,7 +1307,7 @@ export default function TaskDetailPage() {
                                     {att.originalName} ({formatFileSize(att.size)})
                                   </span>
                                   <a
-                                    href={fileUrl}
+                                    href={att.forceDownloadUrl || fileUrl}
                                     download={att.originalName}
                                     style={{
                                       fontSize: 13,
@@ -1354,7 +1359,7 @@ export default function TaskDetailPage() {
                                       View full-size
                                     </a>
                                     <a
-                                      href={fileUrl}
+                                      href={att.forceDownloadUrl || fileUrl}
                                       download={att.originalName}
                                       style={{
                                         fontSize: 13,
@@ -1390,9 +1395,9 @@ export default function TaskDetailPage() {
                                   {formatFileSize(att.size)}
                                 </div>
                               </div>
-                              {fileUrl && (
+                              {(att.forceDownloadUrl || fileUrl) && (
                                 <a
-                                  href={fileUrl}
+                                  href={att.forceDownloadUrl || fileUrl}
                                   download={att.originalName}
                                   style={{
                                     padding: "6px 12px",
