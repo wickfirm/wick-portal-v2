@@ -54,6 +54,9 @@ model User {
   reviewedLeaves       LeaveRequest[]       @relation("LeaveReviewer")
   client               Client?              @relation("UserClient", fields: [clientId], references: [id])
   bookings             Booking[]            @relation("UserBookings")
+  taskComments         TaskComment[]        @relation("UserTaskComments")
+  commentAttachments   TaskCommentAttachment[] @relation("UserCommentAttachments")
+  taskAttachments      TaskAttachment[]     @relation("UserTaskAttachments")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -350,6 +353,8 @@ model ClientTask {
   timeEntries       TimeEntry[]
   notes             Note[]        @relation("TaskNotes")
   pinned            Boolean       @default(false)
+  comments          TaskComment[] @relation("TaskComments")
+  attachments       TaskAttachment[] @relation("TaskAttachments")
 
   @@index([status])
   @@index([clientId])
@@ -909,6 +914,7 @@ model MediaFile {
   client         Client?         @relation(fields: [clientId], references: [id], onDelete: Cascade)
   folder         MediaFolder     @relation(fields: [folderId], references: [id], onDelete: Cascade)
   uploader       User            @relation("FileUploader", fields: [uploadedBy], references: [id])
+  taskAttachments TaskAttachment[] @relation("MediaFileTaskAttachments")
 
   @@index([agencyId, clientId, isDeleted])
   @@index([folderId, isDeleted])
@@ -1808,4 +1814,72 @@ model PasswordResetToken {
   @@index([email])
   @@index([token])
   @@map("password_reset_tokens")
+}
+
+// Task Comments - Conversational thread on tasks
+model TaskComment {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskId      String    @map("task_id")
+  authorId    String    @map("author_id")
+  content     String    // Markdown/rich text content
+  parentId    String?   @map("parent_id") // For threaded replies
+  mentions    String[]  // Array of user IDs mentioned
+  isEdited    Boolean   @default(false) @map("is_edited")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  task        ClientTask      @relation("TaskComments", fields: [taskId], references: [id], onDelete: Cascade)
+  author      User            @relation("UserTaskComments", fields: [authorId], references: [id])
+  parent      TaskComment?    @relation("CommentReplies", fields: [parentId], references: [id])
+  replies     TaskComment[]   @relation("CommentReplies")
+  attachments TaskCommentAttachment[]
+
+  @@index([taskId])
+  @@index([authorId])
+  @@index([parentId])
+  @@index([createdAt])
+  @@map("task_comments")
+}
+
+// Task Comment Attachments - Files attached to comments
+model TaskCommentAttachment {
+  id           String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  commentId    String    @map("comment_id")
+  filename     String
+  originalName String    @map("original_name")
+  mimeType     String    @map("mime_type")
+  size         BigInt
+  r2Key        String    @map("r2_key") // Cloudflare R2 storage key
+  uploadedBy   String    @map("uploaded_by")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  comment      TaskComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  uploader     User        @relation("UserCommentAttachments", fields: [uploadedBy], references: [id])
+
+  @@index([commentId])
+  @@index([uploadedBy])
+  @@map("task_comment_attachments")
+}
+
+// Task Attachments - Direct file attachments on tasks (from Media Hub)
+model TaskAttachment {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  taskId      String    @map("task_id")
+  mediaFileId String?   @map("media_file_id") // Link to Media Hub file
+  filename    String
+  originalName String   @map("original_name")
+  mimeType    String    @map("mime_type")
+  size        BigInt
+  r2Key       String    @map("r2_key")
+  uploadedBy  String    @map("uploaded_by")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  task        ClientTask  @relation("TaskAttachments", fields: [taskId], references: [id], onDelete: Cascade)
+  mediaFile   MediaFile?  @relation("MediaFileTaskAttachments", fields: [mediaFileId], references: [id])
+  uploader    User        @relation("UserTaskAttachments", fields: [uploadedBy], references: [id])
+
+  @@index([taskId])
+  @@index([mediaFileId])
+  @@index([uploadedBy])
+  @@map("task_attachments")
 }

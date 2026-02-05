@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 import TasksLoadingSkeleton from "./TasksLoadingSkeleton";
 
@@ -601,8 +603,8 @@ export default function TasksManager({
       >
         {/* Task Number & Name */}
         <td style={{ padding: "10px 12px" }}>
-          <div
-            onClick={() => openTaskPanel(task)}
+          <Link
+            href={`/tasks/${task.id}`}
             style={{
               display: "flex",
               alignItems: "center",
@@ -626,7 +628,7 @@ export default function TasksManager({
             #{index + 1}
           </span>
           <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{task.name}</span>
-        </div>
+        </Link>
       </td>
 
       {/* Assignee */}
