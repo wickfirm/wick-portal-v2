@@ -396,7 +396,7 @@ export default function TaskDetailPage() {
     }
   };
 
-  // File upload with progress
+  // File upload with progress using presigned URLs (direct browser-to-R2)
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploadingFile(true);
@@ -407,11 +407,25 @@ export default function TaskDetailPage() {
       setUploadFileName(file.name);
       setUploadProgress(0);
 
-      const formData = new FormData();
-      formData.append("file", file);
-
       try {
-        // Use XMLHttpRequest for progress tracking
+        // Step 1: Get presigned upload URL
+        const urlRes = await fetch(`/api/tasks/${taskId}/attachments/upload-url`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            filename: file.name,
+            size: file.size,
+            contentType: file.type,
+          }),
+        });
+
+        if (!urlRes.ok) {
+          throw new Error("Failed to get upload URL");
+        }
+
+        const { uploadUrl, mimeType } = await urlRes.json();
+
+        // Step 2: Upload directly to R2 using presigned URL with progress tracking
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
 
@@ -426,14 +440,15 @@ export default function TaskDetailPage() {
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve();
             } else {
-              reject(new Error("Upload failed"));
+              reject(new Error(`Upload failed with status ${xhr.status}`));
             }
           });
 
           xhr.addEventListener("error", () => reject(new Error("Upload failed")));
 
-          xhr.open("POST", `/api/tasks/${taskId}/attachments`);
-          xhr.send(formData);
+          xhr.open("PUT", uploadUrl);
+          xhr.setRequestHeader("Content-Type", mimeType);
+          xhr.send(file);
         });
 
         fetchAttachments();
