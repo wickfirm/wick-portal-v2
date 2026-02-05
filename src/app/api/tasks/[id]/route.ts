@@ -22,7 +22,7 @@ export async function GET(
     const task = await prisma.clientTask.findFirst({
       where: {
         id: taskId,
-        ...(user.agencyId ? { agencyId: user.agencyId } : {}),
+        ...(user.agencyId ? { client: { agencyId: user.agencyId } } : {}),
       },
       include: {
         category: {
@@ -73,7 +73,7 @@ export async function PATCH(
     const existingTask = await prisma.clientTask.findFirst({
       where: {
         id: taskId,
-        ...(user.agencyId ? { agencyId: user.agencyId } : {}),
+        ...(user.agencyId ? { client: { agencyId: user.agencyId } } : {}),
       },
     });
 
