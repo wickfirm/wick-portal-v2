@@ -111,6 +111,22 @@ export default function TaskDetailPage() {
   const [editedTitle, setEditedTitle] = useState("");
   const [editingDescription, setEditingDescription] = useState(false);
   const [editedDescription, setEditedDescription] = useState("");
+
+  // Local state for manual save fields (ETA, notes, links, etc.)
+  const [localEtaHours, setLocalEtaHours] = useState<string>("");
+  const [localEtaMinutes, setLocalEtaMinutes] = useState<string>("");
+  const [localInternalNotes, setLocalInternalNotes] = useState<string>("");
+  const [localNextSteps, setLocalNextSteps] = useState<string>("");
+  const [localExternalLink, setLocalExternalLink] = useState<string>("");
+  const [localExternalLinkLabel, setLocalExternalLinkLabel] = useState<string>("");
+  const [localInternalLink, setLocalInternalLink] = useState<string>("");
+  const [localInternalLinkLabel, setLocalInternalLinkLabel] = useState<string>("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savingChanges, setSavingChanges] = useState(false);
+
+  // Categories and Projects
+  const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
   const [isWatching, setIsWatching] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -155,6 +171,22 @@ export default function TaskDetailPage() {
         setTask(data);
         setEditedTitle(data.name);
         setEditedDescription(data.description || "");
+        // Initialize local ETA state
+        if (data.estimatedMinutes) {
+          setLocalEtaHours(String(Math.floor(data.estimatedMinutes / 60)));
+          setLocalEtaMinutes(String(data.estimatedMinutes % 60));
+        } else {
+          setLocalEtaHours("");
+          setLocalEtaMinutes("");
+        }
+        // Initialize other local fields
+        setLocalInternalNotes(data.internalNotes || "");
+        setLocalNextSteps(data.nextSteps || "");
+        setLocalExternalLink(data.externalLink || "");
+        setLocalExternalLinkLabel(data.externalLinkLabel || "");
+        setLocalInternalLink(data.internalLink || "");
+        setLocalInternalLinkLabel(data.internalLinkLabel || "");
+        setHasUnsavedChanges(false);
       }
     } catch (error) {
       console.error("Error fetching task:", error);
@@ -280,6 +312,28 @@ export default function TaskDetailPage() {
     }
   };
 
+  const fetchCategories = async () => {
+    try {
+      const res = await fetch("/api/task-categories");
+      if (res.ok) {
+        setCategories(await res.json());
+      }
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch("/api/projects");
+      if (res.ok) {
+        setProjects(await res.json());
+      }
+    } catch (error) {
+      console.error("Error fetching projects:", error);
+    }
+  };
+
   useEffect(() => {
     if (sessionStatus === "unauthenticated") {
       router.push("/login");
@@ -289,6 +343,8 @@ export default function TaskDetailPage() {
       // Fetch task options
       fetchStatusOptions();
       fetchPriorityOptions();
+      fetchCategories();
+      fetchProjects();
 
       Promise.all([
         fetchTask(),
@@ -312,7 +368,7 @@ export default function TaskDetailPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [mediaModal]);
 
-  // Update task
+  // Update task (for auto-save fields: status, priority, assignee, due date, pinned)
   const updateTask = async (field: string, value: any) => {
     try {
       const res = await fetch(`/api/tasks/${taskId}`, {
@@ -328,6 +384,88 @@ export default function TaskDetailPage() {
     } catch (error) {
       console.error("Error updating task:", error);
     }
+  };
+
+  // Save manual fields (ETA, description/notes, links, etc.)
+  const saveManualChanges = async () => {
+    if (!hasUnsavedChanges) return;
+    setSavingChanges(true);
+
+    try {
+      // Calculate ETA in minutes
+      const hours = parseInt(localEtaHours) || 0;
+      const minutes = parseInt(localEtaMinutes) || 0;
+      const estimatedMinutes = hours * 60 + minutes || null;
+
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimatedMinutes,
+          description: editedDescription || null,
+          internalNotes: localInternalNotes || null,
+          nextSteps: localNextSteps || null,
+          externalLink: localExternalLink || null,
+          externalLinkLabel: localExternalLinkLabel || null,
+          internalLink: localInternalLink || null,
+          internalLinkLabel: localInternalLinkLabel || null,
+        }),
+      });
+
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTask(updatedTask);
+        setHasUnsavedChanges(false);
+        fetchActivity();
+      }
+    } catch (error) {
+      console.error("Error saving changes:", error);
+    }
+    setSavingChanges(false);
+  };
+
+  // Track changes to manual fields
+  const handleEtaHoursChange = (value: string) => {
+    setLocalEtaHours(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleEtaMinutesChange = (value: string) => {
+    setLocalEtaMinutes(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleDescriptionChange = (value: string) => {
+    setEditedDescription(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const clearEta = () => {
+    setLocalEtaHours("");
+    setLocalEtaMinutes("");
+    setHasUnsavedChanges(true);
+  };
+
+  const handleInternalNotesChange = (value: string) => {
+    setLocalInternalNotes(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleNextStepsChange = (value: string) => {
+    setLocalNextSteps(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleExternalLinkChange = (url: string, label: string) => {
+    setLocalExternalLink(url);
+    setLocalExternalLinkLabel(label);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleInternalLinkChange = (url: string, label: string) => {
+    setLocalInternalLink(url);
+    setLocalInternalLinkLabel(label);
+    setHasUnsavedChanges(true);
   };
 
   const toggleWatch = async () => {
@@ -1103,7 +1241,7 @@ export default function TaskDetailPage() {
               />
             </div>
 
-            {/* ETA (Estimated Time) */}
+            {/* ETA (Estimated Time) - manual save */}
             <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
               <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
                 ETA
@@ -1112,12 +1250,8 @@ export default function TaskDetailPage() {
                 <input
                   type="number"
                   min="0"
-                  value={task.estimatedMinutes ? Math.floor(task.estimatedMinutes / 60) : ""}
-                  onChange={(e) => {
-                    const hours = parseInt(e.target.value) || 0;
-                    const currentMinutes = (task.estimatedMinutes || 0) % 60;
-                    updateTask("estimatedMinutes", hours * 60 + currentMinutes || null);
-                  }}
+                  value={localEtaHours}
+                  onChange={(e) => handleEtaHoursChange(e.target.value)}
                   placeholder="0"
                   style={{
                     border: "1px solid #e5e7eb",
@@ -1133,12 +1267,8 @@ export default function TaskDetailPage() {
                   type="number"
                   min="0"
                   max="59"
-                  value={task.estimatedMinutes ? task.estimatedMinutes % 60 : ""}
-                  onChange={(e) => {
-                    const minutes = parseInt(e.target.value) || 0;
-                    const currentHours = Math.floor((task.estimatedMinutes || 0) / 60);
-                    updateTask("estimatedMinutes", currentHours * 60 + minutes || null);
-                  }}
+                  value={localEtaMinutes}
+                  onChange={(e) => handleEtaMinutesChange(e.target.value)}
                   placeholder="0"
                   style={{
                     border: "1px solid #e5e7eb",
@@ -1150,9 +1280,9 @@ export default function TaskDetailPage() {
                   }}
                 />
                 <span style={{ fontSize: 13, color: "#666" }}>m</span>
-                {task.estimatedMinutes && (
+                {(localEtaHours || localEtaMinutes) && (
                   <button
-                    onClick={() => updateTask("estimatedMinutes", null)}
+                    onClick={clearEta}
                     style={{
                       background: "none",
                       border: "none",
@@ -1214,6 +1344,50 @@ export default function TaskDetailPage() {
               </select>
             </div>
 
+            {/* Category - auto-save */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
+                Category
+              </span>
+              <select
+                value={task.category?.id || ""}
+                onChange={(e) => updateTask("categoryId", e.target.value || null)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 14,
+                  color: task.category ? "#111" : "#9ca3af",
+                  cursor: "pointer",
+                  padding: "4px 0",
+                }}
+              >
+                <option value="">Select category...</option>
+                {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+              </select>
+            </div>
+
+            {/* Project - auto-save */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
+                Project
+              </span>
+              <select
+                value={task.project?.id || ""}
+                onChange={(e) => updateTask("projectId", e.target.value || null)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 14,
+                  color: task.project ? "#111" : "#9ca3af",
+                  cursor: "pointer",
+                  padding: "4px 0",
+                }}
+              >
+                <option value="">Select project...</option>
+                {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+
             {/* Watch / Pin */}
             <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 20, marginLeft: 136 }}>
               <button
@@ -1255,54 +1429,237 @@ export default function TaskDetailPage() {
             </div>
           </div>
 
-          {/* Description / Notes */}
-          <div style={{ marginBottom: 30 }}>
+          {/* Description / Notes - manual save */}
+          <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "flex-start" }}>
               <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16, paddingTop: 4 }}>
                 Notes
               </span>
               <div style={{ flex: 1 }}>
-                {editingDescription ? (
-                  <textarea
-                    value={editedDescription}
-                    onChange={(e) => setEditedDescription(e.target.value)}
-                    onBlur={() => {
-                      updateTask("description", editedDescription || null);
-                      setEditingDescription(false);
-                    }}
-                    placeholder="Add a description or notes..."
-                    rows={4}
+                <textarea
+                  value={editedDescription}
+                  onChange={(e) => handleDescriptionChange(e.target.value)}
+                  placeholder="Add a description or notes..."
+                  rows={3}
+                  style={{
+                    width: "100%",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: 12,
+                    fontSize: 14,
+                    outline: "none",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Internal Notes - manual save */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "flex-start" }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16, paddingTop: 4 }}>
+                Internal Notes
+              </span>
+              <div style={{ flex: 1 }}>
+                <textarea
+                  value={localInternalNotes}
+                  onChange={(e) => handleInternalNotesChange(e.target.value)}
+                  placeholder="Private notes (not visible to clients)..."
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: 12,
+                    fontSize: 14,
+                    outline: "none",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
+                    background: "#fffbeb",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Next Steps - manual save */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "flex-start" }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16, paddingTop: 4 }}>
+                Next Steps
+              </span>
+              <div style={{ flex: 1 }}>
+                <textarea
+                  value={localNextSteps}
+                  onChange={(e) => handleNextStepsChange(e.target.value)}
+                  placeholder="What needs to happen next..."
+                  rows={2}
+                  style={{
+                    width: "100%",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: 12,
+                    fontSize: 14,
+                    outline: "none",
+                    resize: "vertical",
+                    fontFamily: "inherit",
+                    lineHeight: 1.6,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* External Link - manual save */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
+                External Link
+              </span>
+              <div style={{ flex: 1, display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={localExternalLinkLabel}
+                  onChange={(e) => handleExternalLinkChange(localExternalLink, e.target.value)}
+                  placeholder="Label"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    fontSize: 14,
+                    width: 120,
+                  }}
+                />
+                <input
+                  type="url"
+                  value={localExternalLink}
+                  onChange={(e) => handleExternalLinkChange(e.target.value, localExternalLinkLabel)}
+                  placeholder="https://..."
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    fontSize: 14,
+                    flex: 1,
+                  }}
+                />
+                {localExternalLink && (
+                  <a
+                    href={localExternalLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     style={{
-                      width: "100%",
-                      border: "2px solid #3b82f6",
+                      padding: "6px 10px",
+                      background: "#f3f4f6",
                       borderRadius: 6,
-                      padding: 12,
-                      fontSize: 14,
-                      outline: "none",
-                      resize: "vertical",
-                      fontFamily: "inherit",
-                      lineHeight: 1.6,
-                    }}
-                    autoFocus
-                  />
-                ) : (
-                  <div
-                    onClick={() => setEditingDescription(true)}
-                    style={{
-                      fontSize: 14,
-                      color: task.description ? "#374151" : "#9ca3af",
-                      cursor: "pointer",
-                      lineHeight: 1.6,
-                      padding: "4px 0",
-                      whiteSpace: "pre-wrap",
+                      color: "#6b7280",
+                      textDecoration: "none",
+                      fontSize: 13,
                     }}
                   >
-                    {task.description || "Add a description or notes..."}
-                  </div>
+                    Open ↗
+                  </a>
                 )}
               </div>
             </div>
           </div>
+
+          {/* Internal Link - manual save */}
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
+                Internal Link
+              </span>
+              <div style={{ flex: 1, display: "flex", gap: 8 }}>
+                <input
+                  type="text"
+                  value={localInternalLinkLabel}
+                  onChange={(e) => handleInternalLinkChange(localInternalLink, e.target.value)}
+                  placeholder="Label"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    fontSize: 14,
+                    width: 120,
+                  }}
+                />
+                <input
+                  type="text"
+                  value={localInternalLink}
+                  onChange={(e) => handleInternalLinkChange(e.target.value, localInternalLinkLabel)}
+                  placeholder="/path/to/page"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "6px 10px",
+                    fontSize: 14,
+                    flex: 1,
+                  }}
+                />
+                {localInternalLink && (
+                  <Link
+                    href={localInternalLink}
+                    style={{
+                      padding: "6px 10px",
+                      background: "#f3f4f6",
+                      borderRadius: 6,
+                      color: "#6b7280",
+                      textDecoration: "none",
+                      fontSize: 13,
+                    }}
+                  >
+                    Go →
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Save Changes Button */}
+          {hasUnsavedChanges && (
+            <div style={{ marginLeft: 136, marginBottom: 20 }}>
+              <button
+                onClick={saveManualChanges}
+                disabled={savingChanges}
+                style={{
+                  padding: "10px 24px",
+                  background: savingChanges ? "#9ca3af" : theme.colors.primary,
+                  color: "white",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: savingChanges ? "not-allowed" : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {savingChanges ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                      <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32" />
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          )}
 
           {/* Added by */}
           <div style={{ fontSize: 13, color: "#9ca3af", marginLeft: 136 }}>
