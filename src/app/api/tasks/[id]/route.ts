@@ -79,6 +79,7 @@ export async function PATCH(
     const updateData: any = {};
     const allowedFields = [
       "name",
+      "description",
       "status",
       "priority",
       "dueDate",

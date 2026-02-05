@@ -326,6 +326,7 @@ model ServiceTypeOption {
 model ClientTask {
   id                String        @id @default(dbgenerated("(gen_random_uuid())::text"))
   name              String
+  description       String?       // Task description shown before discussion
   categoryId        String?
   clientId          String
   dueDate           DateTime?     @db.Timestamp(6)
