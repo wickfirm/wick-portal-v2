@@ -440,13 +440,27 @@ export default function TaskDetailPage() {
           {task.client && (
             <>
               <span style={{ color: theme.colors.textMuted }}>/</span>
-              <span style={{ color: theme.colors.textSecondary, fontSize: 14 }}>{task.client.nickname || task.client.name}</span>
+              <Link
+                href={`/clients/${task.client.id}`}
+                style={{ color: theme.colors.textSecondary, fontSize: 14, textDecoration: "none" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.accent}
+                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
+              >
+                {task.client.nickname || task.client.name}
+              </Link>
             </>
           )}
           {task.project && (
             <>
               <span style={{ color: theme.colors.textMuted }}>/</span>
-              <span style={{ color: theme.colors.textSecondary, fontSize: 14 }}>{task.project.name}</span>
+              <Link
+                href={`/projects/${task.project.id}`}
+                style={{ color: theme.colors.textSecondary, fontSize: 14, textDecoration: "none" }}
+                onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.accent}
+                onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textSecondary}
+              >
+                {task.project.name}
+              </Link>
             </>
           )}
         </div>
