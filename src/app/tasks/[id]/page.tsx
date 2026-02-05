@@ -127,6 +127,13 @@ export default function TaskDetailPage() {
   // Categories and Projects
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+
+  // Move to client modal
+  const [showMoveModal, setShowMoveModal] = useState(false);
+  const [allClients, setAllClients] = useState<Array<{ id: string; name: string; nickname: string | null }>>([]);
+  const [selectedClientId, setSelectedClientId] = useState<string>("");
+  const [movingTask, setMovingTask] = useState(false);
+  const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [isWatching, setIsWatching] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
@@ -334,6 +341,42 @@ export default function TaskDetailPage() {
     }
   };
 
+  const fetchAllClients = async () => {
+    try {
+      const res = await fetch("/api/clients");
+      if (res.ok) {
+        setAllClients(await res.json());
+      }
+    } catch (error) {
+      console.error("Error fetching clients:", error);
+    }
+  };
+
+  const moveTaskToClient = async () => {
+    if (!selectedClientId || selectedClientId === task?.client?.id) return;
+    setMovingTask(true);
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          clientId: selectedClientId,
+          projectId: null, // Clear project when moving to different client
+        }),
+      });
+      if (res.ok) {
+        const updatedTask = await res.json();
+        setTask(updatedTask);
+        setShowMoveModal(false);
+        setSelectedClientId("");
+        fetchActivity();
+      }
+    } catch (error) {
+      console.error("Error moving task:", error);
+    }
+    setMovingTask(false);
+  };
+
   useEffect(() => {
     if (sessionStatus === "unauthenticated") {
       router.push("/login");
@@ -345,6 +388,7 @@ export default function TaskDetailPage() {
       fetchPriorityOptions();
       fetchCategories();
       fetchProjects();
+      fetchAllClients();
 
       Promise.all([
         fetchTask(),
@@ -1179,22 +1223,115 @@ export default function TaskDetailPage() {
             </div>
 
             {/* More options */}
-            <button
-              style={{
-                background: "none",
-                border: "none",
-                padding: 8,
-                cursor: "pointer",
-                color: "#9ca3af",
-                borderRadius: 6,
-              }}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                <circle cx="12" cy="5" r="2" />
-                <circle cx="12" cy="12" r="2" />
-                <circle cx="12" cy="19" r="2" />
-              </svg>
-            </button>
+            <div style={{ position: "relative" }}>
+              <button
+                onClick={() => setShowOptionsMenu(!showOptionsMenu)}
+                style={{
+                  background: showOptionsMenu ? "#f3f4f6" : "none",
+                  border: "none",
+                  padding: 8,
+                  cursor: "pointer",
+                  color: "#9ca3af",
+                  borderRadius: 6,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="19" r="2" />
+                </svg>
+              </button>
+
+              {/* Options dropdown menu */}
+              {showOptionsMenu && (
+                <>
+                  {/* Backdrop to close menu */}
+                  <div
+                    onClick={() => setShowOptionsMenu(false)}
+                    style={{
+                      position: "fixed",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      zIndex: 99,
+                    }}
+                  />
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      right: 0,
+                      marginTop: 4,
+                      background: "white",
+                      borderRadius: 8,
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                      border: "1px solid #e5e7eb",
+                      minWidth: 180,
+                      zIndex: 100,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <button
+                      onClick={() => {
+                        setShowOptionsMenu(false);
+                        setShowMoveModal(true);
+                        setSelectedClientId(task.client?.id || "");
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "none",
+                        border: "none",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        color: "#374151",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f3f4f6"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                        <path d="M2 17l10 5 10-5" />
+                        <path d="M2 12l10 5 10-5" />
+                      </svg>
+                      Move to Client
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href);
+                        setShowOptionsMenu(false);
+                      }}
+                      style={{
+                        width: "100%",
+                        padding: "10px 14px",
+                        background: "none",
+                        border: "none",
+                        textAlign: "left",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        color: "#374151",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f3f4f6"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "none"}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                      </svg>
+                      Copy Link
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Task Details - Basecamp style */}
@@ -2372,6 +2509,171 @@ export default function TaskDetailPage() {
             fontSize: 12,
           }}>
             Click anywhere outside to close • Press ESC to close
+          </div>
+        </div>
+      )}
+
+      {/* Move to Client Modal */}
+      {showMoveModal && (
+        <div
+          onClick={() => setShowMoveModal(false)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 1000,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "white",
+              borderRadius: 12,
+              maxWidth: 450,
+              width: "100%",
+              overflow: "hidden",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+            }}
+          >
+            {/* Modal Header */}
+            <div style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid #e5e7eb",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 600 }}>Move Task to Another Client</h3>
+              <button
+                onClick={() => setShowMoveModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  padding: 4,
+                  color: "#9ca3af",
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div style={{ padding: 24 }}>
+              <p style={{ margin: "0 0 16px", color: "#6b7280", fontSize: 14 }}>
+                Select the client you want to move this task to. The task will be removed from{" "}
+                <strong>{task.client?.nickname || task.client?.name || "its current client"}</strong>.
+              </p>
+
+              <label style={{ display: "block", marginBottom: 8, fontWeight: 500, fontSize: 14 }}>
+                Select Client
+              </label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "12px 14px",
+                  border: "1px solid #d1d5db",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  outline: "none",
+                  marginBottom: 8,
+                }}
+              >
+                <option value="">Select a client...</option>
+                {allClients
+                  .filter(c => c.id !== task.client?.id)
+                  .map(client => (
+                    <option key={client.id} value={client.id}>
+                      {client.nickname || client.name}
+                    </option>
+                  ))}
+              </select>
+
+              {selectedClientId && selectedClientId !== task.client?.id && (
+                <p style={{ margin: "12px 0 0", color: "#f59e0b", fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+                  </svg>
+                  Note: Project assignment will be cleared when moving to a different client.
+                </p>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{
+              padding: "16px 24px",
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              justifyContent: "flex-end",
+              gap: 12,
+            }}>
+              <button
+                onClick={() => setShowMoveModal(false)}
+                style={{
+                  padding: "10px 20px",
+                  background: "#f3f4f6",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  color: "#374151",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={moveTaskToClient}
+                disabled={!selectedClientId || selectedClientId === task.client?.id || movingTask}
+                style={{
+                  padding: "10px 20px",
+                  background: !selectedClientId || selectedClientId === task.client?.id || movingTask
+                    ? "#9ca3af"
+                    : theme.colors.primary,
+                  color: "white",
+                  border: "none",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: 500,
+                  cursor: !selectedClientId || selectedClientId === task.client?.id || movingTask
+                    ? "not-allowed"
+                    : "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                {movingTask ? (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                      <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="32" />
+                    </svg>
+                    Moving...
+                  </>
+                ) : (
+                  <>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                      <path d="M2 17l10 5 10-5" />
+                      <path d="M2 12l10 5 10-5" />
+                    </svg>
+                    Move Task
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}
