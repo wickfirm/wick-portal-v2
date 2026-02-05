@@ -90,37 +90,68 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function activityIcon(type: string): string {
-  switch (type) {
-    case "sod": return "sunrise";
-    case "eod": return "sunset";
-    case "task_complete": return "check";
-    case "focus_change": return "focus";
-    default: return "activity";
-  }
+// Animated counter component
+function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: number }) {
+  const [displayValue, setDisplayValue] = useState(0);
+
+  useEffect(() => {
+    let startTime: number;
+    let animationFrame: number;
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      setDisplayValue(Math.floor(progress * value));
+      if (progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+
+    animationFrame = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrame);
+  }, [value, duration]);
+
+  return <>{displayValue}</>;
 }
 
-// Mini sparkline SVG component (decorative, shows a trend line)
-function Sparkline({ color, trend }: { color: string; trend: "up" | "down" | "flat" }) {
-  const paths = {
-    up: "M0 20 L8 16 L16 18 L24 12 L32 14 L40 8 L48 4",
-    down: "M0 4 L8 8 L16 6 L24 12 L32 14 L40 18 L48 20",
-    flat: "M0 12 L8 10 L16 14 L24 11 L32 13 L40 10 L48 12",
-  };
+// Circular progress component
+function CircularProgress({ value, max, size = 120, strokeWidth = 8, color = "#7c3aed" }: {
+  value: number;
+  max: number;
+  size?: number;
+  strokeWidth?: number;
+  color?: string;
+}) {
+  const radius = (size - strokeWidth) / 2;
+  const circumference = radius * 2 * Math.PI;
+  const percent = max > 0 ? (value / max) * 100 : 0;
+  const offset = circumference - (percent / 100) * circumference;
+
   return (
-    <svg width="48" height="24" viewBox="0 0 48 24" fill="none" style={{ opacity: 0.6 }}>
-      <path d={paths[trend]} stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke="rgba(255,255,255,0.1)"
+        strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        r={radius}
+        fill="none"
+        stroke={color}
+        strokeWidth={strokeWidth}
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        strokeLinecap="round"
+        style={{ transition: "stroke-dashoffset 1s ease-out" }}
+      />
     </svg>
   );
 }
-
-// Stat card accent configs
-const STAT_CONFIGS = [
-  { bg: "rgba(118,82,124,0.08)", border: "rgba(118,82,124,0.12)", color: "#76527c", trend: "up" as const },
-  { bg: "rgba(52,168,83,0.08)", border: "rgba(52,168,83,0.12)", color: "#34a853", trend: "up" as const },
-  { bg: "rgba(64,107,115,0.08)", border: "rgba(64,107,115,0.12)", color: "#3d6b73", trend: "flat" as const },
-  { bg: "rgba(138,96,48,0.08)", border: "rgba(138,96,48,0.12)", color: "#8a6030", trend: "up" as const },
-];
 
 export default function DashboardPage() {
   const { data: session, status } = useSession();
@@ -153,11 +184,11 @@ export default function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <div style={{ minHeight: "100vh", background: "#0a0a0f" }}>
         <Header />
-        <main style={{ maxWidth: 1200, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>
-            Loading...
+        <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
+          <div style={{ textAlign: "center", padding: 64, color: "rgba(255,255,255,0.5)" }}>
+            <div className="loading-spinner" />
           </div>
         </main>
       </div>
@@ -176,738 +207,878 @@ export default function DashboardPage() {
   const completedWeek = taskData?.taskSummary?.completedThisWeek || 0;
   const totalActive = taskData?.taskSummary?.total || 0;
 
-  const statCards = [
-    {
-      label: "Active Clients",
-      value: stats?.clientCount || 0,
-      href: "/clients",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
-        </svg>
-      ),
-      config: STAT_CONFIGS[0],
-    },
-    {
-      label: "Active Projects",
-      value: stats?.activeProjects || 0,
-      href: "/projects",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-        </svg>
-      ),
-      config: STAT_CONFIGS[1],
-    },
-    {
-      label: "Open Tasks",
-      value: totalActive,
-      href: "/tasks",
-      subtitle: overdueCount > 0 ? `${overdueCount} overdue` : undefined,
-      subtitleColor: overdueCount > 0 ? theme.colors.error : undefined,
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-      ),
-      config: STAT_CONFIGS[2],
-    },
-    {
-      label: isSuperAdmin ? "Team Members" : "Total Projects",
-      value: isSuperAdmin ? (stats?.teamCount || 0) : (stats?.projectCount || 0),
-      href: isSuperAdmin ? "/team" : "/projects",
-      icon: (
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          {isSuperAdmin ? (
-            <><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></>
-          ) : (
-            <><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="9" x2="21" y2="9" /><line x1="9" y1="21" x2="9" y2="9" /></>
-          )}
-        </svg>
-      ),
-      config: STAT_CONFIGS[3],
-    },
-  ];
-
   const anim = (delay: number) => ({
     opacity: mounted ? 1 : 0,
-    transform: `translateY(${mounted ? 0 : 16}px)`,
-    transition: `all 0.5s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
+    transform: `translateY(${mounted ? 0 : 20}px)`,
+    transition: `all 0.6s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
   });
 
   return (
     <>
       <style>{`
-        .db-main {
-          font-family: 'DM Sans', -apple-system, sans-serif;
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 24px 28px 48px;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+        .dash {
+          min-height: 100vh;
+          background: linear-gradient(180deg, #0a0a0f 0%, #0f0f18 50%, #0a0a0f 100%);
+          position: relative;
+          overflow-x: hidden;
         }
 
-        /* --- Top Section: Greeting + Quick Actions --- */
-        .db-top {
+        .dash::before {
+          content: '';
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 600px;
+          background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.15), transparent);
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .dash-main {
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 24px 32px 64px;
+          position: relative;
+          z-index: 1;
+        }
+
+        /* Header Section */
+        .dash-header {
           display: flex;
           justify-content: space-between;
           align-items: flex-start;
-          margin-bottom: 24px;
-        }
-        .db-greeting h1 {
-          font-family: 'DM Serif Display', serif;
-          font-size: 28px;
-          font-weight: 400;
-          color: ${theme.colors.textPrimary};
-          margin: 0 0 4px 0;
-        }
-        .db-greeting p {
-          font-size: 14px;
-          color: ${theme.colors.textMuted};
-          margin: 0;
-        }
-        .db-actions {
-          display: flex;
-          gap: 8px;
-        }
-        .db-action-btn {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 8px 16px;
-          background: ${theme.colors.bgSecondary};
-          border: 1px solid ${theme.colors.borderLight};
-          border-radius: 10px;
-          color: ${theme.colors.textSecondary};
-          font-size: 13px;
-          font-weight: 500;
-          font-family: inherit;
-          cursor: pointer;
-          text-decoration: none;
-          transition: all 0.15s ease;
-        }
-        .db-action-btn:hover {
-          border-color: ${theme.colors.primary};
-          color: ${theme.colors.primary};
-          box-shadow: 0 2px 8px rgba(118,82,124,0.1);
-        }
-        .db-action-btn.primary {
-          background: ${theme.colors.primary};
-          border-color: ${theme.colors.primary};
-          color: #fff;
-        }
-        .db-action-btn.primary:hover {
-          background: ${theme.colors.primaryDark};
-          border-color: ${theme.colors.primaryDark};
-          color: #fff;
-          box-shadow: 0 4px 12px rgba(118,82,124,0.25);
+          margin-bottom: 32px;
         }
 
-        /* --- Focus Banner (overdue/today summary) --- */
-        .db-focus {
-          display: flex;
-          gap: 12px;
-          margin-bottom: 24px;
+        .dash-greeting h1 {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 36px;
+          font-weight: 600;
+          color: #fff;
+          margin: 0 0 4px 0;
+          letter-spacing: -0.02em;
         }
-        .db-focus-card {
-          flex: 1;
+
+        .dash-greeting h1 span {
+          background: linear-gradient(135deg, #7c3aed, #a78bfa, #c4b5fd);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          background-clip: text;
+        }
+
+        .dash-greeting p {
+          font-size: 15px;
+          color: rgba(255,255,255,0.5);
+          margin: 0;
+        }
+
+        .dash-actions {
           display: flex;
+          gap: 10px;
+        }
+
+        .dash-btn {
+          display: inline-flex;
           align-items: center;
-          gap: 14px;
-          padding: 14px 18px;
+          gap: 8px;
+          padding: 10px 18px;
+          background: rgba(255,255,255,0.05);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 12px;
-          border: 1px solid;
+          color: rgba(255,255,255,0.8);
+          font-size: 14px;
+          font-weight: 500;
+          font-family: 'Inter', sans-serif;
+          cursor: pointer;
           text-decoration: none;
           transition: all 0.2s ease;
         }
-        .db-focus-card:hover {
+
+        .dash-btn:hover {
+          background: rgba(255,255,255,0.1);
+          border-color: rgba(255,255,255,0.2);
           transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-        }
-        .db-focus-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-shrink: 0;
-        }
-        .db-focus-num {
-          font-family: 'DM Serif Display', serif;
-          font-size: 22px;
-          line-height: 1;
-        }
-        .db-focus-label {
-          font-size: 12px;
-          margin-top: 2px;
         }
 
-        /* --- Stat Cards --- */
-        .db-stats {
-          display: grid;
-          grid-template-columns: repeat(4, 1fr);
-          gap: 16px;
-          margin-bottom: 24px;
+        .dash-btn.primary {
+          background: linear-gradient(135deg, #7c3aed, #6d28d9);
+          border-color: transparent;
+          color: #fff;
         }
-        .db-stat {
-          background: ${theme.colors.bgSecondary};
-          border-radius: 14px;
-          padding: 20px 22px;
-          text-decoration: none;
-          color: inherit;
-          border: 1px solid ${theme.colors.borderLight};
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+
+        .dash-btn.primary:hover {
+          background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+          box-shadow: 0 8px 32px rgba(124, 58, 237, 0.35);
+        }
+
+        /* Bento Grid */
+        .bento-grid {
+          display: grid;
+          grid-template-columns: repeat(12, 1fr);
+          grid-auto-rows: minmax(100px, auto);
+          gap: 16px;
+        }
+
+        .bento-card {
+          background: rgba(255,255,255,0.03);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 20px;
+          padding: 24px;
           position: relative;
           overflow: hidden;
+          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .db-stat:hover {
+
+        .bento-card::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+        }
+
+        .bento-card:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.1);
           transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-          border-color: transparent;
+          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
         }
-        .db-stat-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 14px;
+
+        .bento-card.clickable {
+          cursor: pointer;
         }
-        .db-stat-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 10px;
+
+        /* Stat Cards */
+        .stat-card {
+          grid-column: span 3;
+        }
+
+        .stat-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 14px;
           display: flex;
           align-items: center;
           justify-content: center;
+          margin-bottom: 16px;
         }
-        .db-stat-value {
-          font-family: 'DM Serif Display', serif;
-          font-size: 32px;
-          color: ${theme.colors.textPrimary};
+
+        .stat-value {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 42px;
+          font-weight: 600;
+          color: #fff;
           line-height: 1;
           margin-bottom: 4px;
         }
-        .db-stat-label {
-          font-size: 13px;
-          color: ${theme.colors.textMuted};
+
+        .stat-label {
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
         }
-        .db-stat-sub {
-          font-size: 11px;
-          font-weight: 500;
+
+        .stat-trend {
+          position: absolute;
+          top: 24px;
+          right: 24px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          font-size: 12px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 20px;
+        }
+
+        .stat-trend.up {
+          background: rgba(34, 197, 94, 0.15);
+          color: #22c55e;
+        }
+
+        .stat-trend.down {
+          background: rgba(239, 68, 68, 0.15);
+          color: #ef4444;
+        }
+
+        /* Time Card */
+        .time-card {
+          grid-column: span 4;
+          grid-row: span 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(139, 92, 246, 0.05));
+        }
+
+        .time-value {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 64px;
+          font-weight: 700;
+          color: #fff;
+          line-height: 1;
+          position: absolute;
+        }
+
+        .time-label {
+          font-size: 14px;
+          color: rgba(255,255,255,0.5);
+          margin-top: 16px;
+        }
+
+        .time-target {
+          font-size: 13px;
+          color: rgba(255,255,255,0.3);
           margin-top: 4px;
         }
 
-        /* --- Grid Layout: Main + Sidebar --- */
-        .db-grid {
-          display: grid;
-          grid-template-columns: 1fr 340px;
-          gap: 20px;
-        }
-        .db-grid-main {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        }
-        .db-grid-side {
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
+        /* Tasks Card */
+        .tasks-card {
+          grid-column: span 8;
+          grid-row: span 2;
         }
 
-        /* --- Section Cards --- */
-        .db-card {
-          background: ${theme.colors.bgSecondary};
-          border-radius: 14px;
-          border: 1px solid ${theme.colors.borderLight};
-          overflow: hidden;
-        }
-        .db-card-head {
-          padding: 16px 20px;
-          border-bottom: 1px solid ${theme.colors.bgTertiary};
+        .card-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
+          margin-bottom: 20px;
         }
-        .db-card-title {
-          font-size: 14px;
+
+        .card-title {
+          font-family: 'Space Grotesk', sans-serif;
+          font-size: 18px;
           font-weight: 600;
-          color: ${theme.colors.textPrimary};
+          color: #fff;
           margin: 0;
         }
-        .db-card-link {
-          font-size: 12px;
-          color: ${theme.colors.primary};
-          text-decoration: none;
-          font-weight: 500;
-          transition: color 0.15s;
-        }
-        .db-card-link:hover {
-          color: ${theme.colors.primaryDark};
-        }
 
-        /* --- Task Rows --- */
-        .db-task-row {
-          padding: 12px 20px;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          text-decoration: none;
-          color: inherit;
-          transition: background 0.12s;
-        }
-        .db-task-row:hover { background: ${theme.colors.bgPrimary}; }
-        .db-task-row + .db-task-row { border-top: 1px solid ${theme.colors.bgTertiary}; }
-        .db-task-dot {
-          width: 6px;
-          height: 6px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-        .db-task-name {
+        .card-link {
           font-size: 13px;
-          font-weight: 500;
-          color: ${theme.colors.textPrimary};
-          flex: 1;
-          min-width: 0;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        .db-task-client {
-          font-size: 11px;
-          color: ${theme.colors.textMuted};
-        }
-        .db-task-priority {
-          font-size: 10px;
-          font-weight: 600;
-          padding: 2px 8px;
-          border-radius: 4px;
-          text-transform: uppercase;
-          letter-spacing: 0.03em;
-          flex-shrink: 0;
-        }
-
-        /* --- Project Rows --- */
-        .db-proj-row {
-          padding: 14px 20px;
-          display: block;
+          color: #a78bfa;
           text-decoration: none;
-          color: inherit;
-          transition: background 0.12s;
-        }
-        .db-proj-row:hover { background: ${theme.colors.bgPrimary}; }
-        .db-proj-row + .db-proj-row { border-top: 1px solid ${theme.colors.bgTertiary}; }
-        .db-proj-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 8px;
-        }
-        .db-proj-name {
-          font-size: 13px;
           font-weight: 500;
-          color: ${theme.colors.textPrimary};
-        }
-        .db-proj-client {
-          font-size: 11px;
-          color: ${theme.colors.textMuted};
-          margin-top: 1px;
-        }
-        .db-badge {
-          font-size: 10px;
-          font-weight: 600;
-          padding: 3px 10px;
-          border-radius: 20px;
-          white-space: nowrap;
-          text-transform: uppercase;
-          letter-spacing: 0.02em;
-        }
-        .db-progress {
-          height: 4px;
-          background: ${theme.colors.bgTertiary};
-          border-radius: 2px;
-          overflow: hidden;
-        }
-        .db-progress-fill {
-          height: 100%;
-          background: linear-gradient(90deg, ${theme.colors.primary}, #d8ee91);
-          border-radius: 2px;
-          transition: width 0.4s ease;
+          transition: color 0.2s;
         }
 
-        /* --- Client Rows --- */
-        .db-client-row {
-          padding: 12px 20px;
+        .card-link:hover {
+          color: #c4b5fd;
+        }
+
+        .task-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .task-item {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
+          padding: 14px 16px;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.04);
+          border-radius: 12px;
           text-decoration: none;
-          color: inherit;
-          transition: background 0.12s;
-        }
-        .db-client-row:hover { background: ${theme.colors.bgPrimary}; }
-        .db-client-row + .db-client-row { border-top: 1px solid ${theme.colors.bgTertiary}; }
-        .db-avatar {
-          width: 36px;
-          height: 36px;
-          border-radius: 10px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: #fff;
-          font-weight: 600;
-          font-size: 14px;
-          flex-shrink: 0;
-        }
-        .db-client-name {
-          font-size: 13px;
-          font-weight: 500;
-          color: ${theme.colors.textPrimary};
-        }
-        .db-client-sub {
-          font-size: 11px;
-          color: ${theme.colors.textMuted};
+          transition: all 0.2s ease;
         }
 
-        /* --- Activity Feed --- */
-        .db-activity-row {
-          padding: 10px 20px;
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
+        .task-item:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.08);
+          transform: translateX(4px);
         }
-        .db-activity-row + .db-activity-row { border-top: 1px solid ${theme.colors.bgTertiary}; }
-        .db-activity-dot {
+
+        .task-dot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: ${theme.colors.primary};
           flex-shrink: 0;
-          margin-top: 5px;
         }
-        .db-activity-text {
-          font-size: 12px;
-          color: ${theme.colors.textSecondary};
-          line-height: 1.4;
+
+        .task-dot.overdue { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
+        .task-dot.today { background: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+        .task-dot.normal { background: #22c55e; }
+
+        .task-content {
+          flex: 1;
+          min-width: 0;
         }
-        .db-activity-text strong {
-          color: ${theme.colors.textPrimary};
+
+        .task-name {
+          font-size: 14px;
           font-weight: 500;
+          color: #fff;
+          margin-bottom: 2px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
-        .db-activity-time {
-          font-size: 11px;
-          color: ${theme.colors.textMuted};
+
+        .task-meta {
+          font-size: 12px;
+          color: rgba(255,255,255,0.4);
+        }
+
+        .task-priority {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 6px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+
+        /* Projects Card */
+        .projects-card {
+          grid-column: span 6;
+          grid-row: span 2;
+        }
+
+        .project-item {
+          display: block;
+          padding: 16px;
+          background: rgba(255,255,255,0.02);
+          border: 1px solid rgba(255,255,255,0.04);
+          border-radius: 12px;
+          text-decoration: none;
+          margin-bottom: 10px;
+          transition: all 0.2s ease;
+        }
+
+        .project-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .project-item:hover {
+          background: rgba(255,255,255,0.05);
+          border-color: rgba(255,255,255,0.08);
+        }
+
+        .project-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 12px;
+        }
+
+        .project-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #fff;
+        }
+
+        .project-client {
+          font-size: 12px;
+          color: rgba(255,255,255,0.4);
           margin-top: 2px;
         }
 
-        /* --- Hours Card --- */
-        .db-hours {
-          padding: 22px 20px;
-          text-align: center;
+        .project-badge {
+          font-size: 10px;
+          font-weight: 600;
+          padding: 4px 10px;
+          border-radius: 20px;
+          text-transform: uppercase;
+          letter-spacing: 0.03em;
         }
-        .db-hours-value {
-          font-family: 'DM Serif Display', serif;
-          font-size: 36px;
-          color: ${theme.colors.primary};
-          line-height: 1;
-        }
-        .db-hours-label {
-          font-size: 12px;
-          color: ${theme.colors.textMuted};
-          margin-top: 6px;
-        }
-        .db-hours-bar {
-          margin-top: 16px;
-          height: 6px;
-          background: ${theme.colors.bgTertiary};
-          border-radius: 3px;
+
+        .project-progress {
+          height: 4px;
+          background: rgba(255,255,255,0.1);
+          border-radius: 2px;
           overflow: hidden;
         }
-        .db-hours-fill {
+
+        .project-progress-fill {
           height: 100%;
-          border-radius: 3px;
-          transition: width 0.5s ease;
+          background: linear-gradient(90deg, #7c3aed, #a78bfa);
+          border-radius: 2px;
+          transition: width 0.6s ease;
         }
 
-        /* --- Empty State --- */
-        .db-empty {
-          padding: 36px 20px;
-          text-align: center;
-          color: ${theme.colors.textMuted};
+        .project-progress-text {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 6px;
+          font-size: 11px;
+          color: rgba(255,255,255,0.4);
+        }
+
+        /* Clients Card */
+        .clients-card {
+          grid-column: span 6;
+          grid-row: span 2;
+        }
+
+        .client-item {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          padding: 12px 0;
+          text-decoration: none;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+          transition: all 0.2s ease;
+        }
+
+        .client-item:last-child {
+          border-bottom: none;
+        }
+
+        .client-item:hover {
+          padding-left: 8px;
+        }
+
+        .client-avatar {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-weight: 600;
+          font-size: 16px;
+          color: #fff;
+          flex-shrink: 0;
+        }
+
+        .client-name {
+          font-size: 14px;
+          font-weight: 500;
+          color: #fff;
+        }
+
+        .client-industry {
+          font-size: 12px;
+          color: rgba(255,255,255,0.4);
+          margin-top: 2px;
+        }
+
+        /* Activity Card */
+        .activity-card {
+          grid-column: span 4;
+          grid-row: span 2;
+        }
+
+        .activity-item {
+          display: flex;
+          gap: 12px;
+          padding: 12px 0;
+          border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .activity-item:last-child {
+          border-bottom: none;
+        }
+
+        .activity-dot {
+          width: 8px;
+          height: 8px;
+          border-radius: 50%;
+          margin-top: 6px;
+          flex-shrink: 0;
+        }
+
+        .activity-text {
           font-size: 13px;
+          color: rgba(255,255,255,0.7);
+          line-height: 1.5;
         }
 
-        /* --- Responsive --- */
-        @media (max-width: 1024px) {
-          .db-grid { grid-template-columns: 1fr; }
-          .db-grid-side { flex-direction: row; }
-          .db-grid-side > * { flex: 1; }
+        .activity-text strong {
+          color: #fff;
+          font-weight: 500;
         }
+
+        .activity-time {
+          font-size: 11px;
+          color: rgba(255,255,255,0.3);
+          margin-top: 4px;
+        }
+
+        /* Alert Banner */
+        .alert-banner {
+          grid-column: span 12;
+          display: flex;
+          gap: 16px;
+          padding: 20px 24px;
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+          border: 1px solid rgba(239, 68, 68, 0.2);
+          border-radius: 16px;
+          align-items: center;
+        }
+
+        .alert-icon {
+          width: 48px;
+          height: 48px;
+          border-radius: 12px;
+          background: rgba(239, 68, 68, 0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .alert-content {
+          flex: 1;
+        }
+
+        .alert-title {
+          font-size: 16px;
+          font-weight: 600;
+          color: #fff;
+          margin-bottom: 4px;
+        }
+
+        .alert-text {
+          font-size: 14px;
+          color: rgba(255,255,255,0.6);
+        }
+
+        .alert-action {
+          padding: 10px 20px;
+          background: rgba(239, 68, 68, 0.2);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 10px;
+          color: #fca5a5;
+          font-size: 14px;
+          font-weight: 500;
+          text-decoration: none;
+          transition: all 0.2s;
+        }
+
+        .alert-action:hover {
+          background: rgba(239, 68, 68, 0.3);
+          border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        /* Empty State */
+        .empty-state {
+          text-align: center;
+          padding: 40px 20px;
+          color: rgba(255,255,255,0.4);
+          font-size: 14px;
+        }
+
+        /* Loading Spinner */
+        .loading-spinner {
+          width: 40px;
+          height: 40px;
+          border: 3px solid rgba(255,255,255,0.1);
+          border-top-color: #7c3aed;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto;
+        }
+
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+          .stat-card { grid-column: span 6; }
+          .time-card { grid-column: span 6; }
+          .tasks-card { grid-column: span 6; }
+          .projects-card { grid-column: span 6; }
+          .clients-card { grid-column: span 6; }
+          .activity-card { grid-column: span 6; }
+        }
+
         @media (max-width: 768px) {
-          .db-stats { grid-template-columns: repeat(2, 1fr); }
-          .db-top { flex-direction: column; gap: 16px; }
-          .db-focus { flex-direction: column; }
-          .db-grid-side { flex-direction: column; }
+          .dash-header { flex-direction: column; gap: 20px; }
+          .stat-card { grid-column: span 6; }
+          .time-card { grid-column: span 12; }
+          .tasks-card { grid-column: span 12; }
+          .projects-card { grid-column: span 12; }
+          .clients-card { grid-column: span 12; }
+          .activity-card { grid-column: span 12; }
+          .alert-banner { grid-column: span 12; flex-direction: column; text-align: center; }
         }
       `}</style>
 
-      <div style={{ minHeight: "100vh", background: theme.colors.bgPrimary }}>
+      <div className="dash">
         <Header />
 
-        <main className="db-main">
-          {/* Top: Greeting + Quick Actions */}
-          <div className="db-top" style={anim(0.05)}>
-            <div className="db-greeting">
-              <h1>{getGreeting()}, {firstName}</h1>
+        <main className="dash-main">
+          {/* Header */}
+          <div className="dash-header" style={anim(0.05)}>
+            <div className="dash-greeting">
+              <h1>{getGreeting()}, <span>{firstName}</span></h1>
               <p>{getDateString()}</p>
             </div>
-            <div className="db-actions">
+            <div className="dash-actions">
               {isAdmin && (
-                <Link href="/clients/new" className="db-action-btn primary">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                <Link href="/clients/new" className="dash-btn primary">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
                   New Client
                 </Link>
               )}
-              <Link href="/tasks" className="db-action-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/></svg>
+              <Link href="/tasks" className="dash-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
                 Tasks
               </Link>
-              <Link href="/timesheet" className="db-action-btn">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <Link href="/timesheet" className="dash-btn">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
                 Timesheet
               </Link>
             </div>
           </div>
 
-          {/* Focus Banner: Overdue + Due Today + Completed This Week */}
-          {!loading && (overdueCount > 0 || todayCount > 0 || completedWeek > 0) && (
-            <div className="db-focus" style={anim(0.1)}>
-              {overdueCount > 0 && (
-                <Link href="/tasks" className="db-focus-card" style={{ background: theme.colors.errorBg, borderColor: "rgba(234,67,53,0.15)" }}>
-                  <div className="db-focus-icon" style={{ background: "rgba(234,67,53,0.12)" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.colors.error} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
-                  </div>
-                  <div>
-                    <div className="db-focus-num" style={{ color: theme.colors.error }}>{overdueCount}</div>
-                    <div className="db-focus-label" style={{ color: "#c62828" }}>Overdue tasks</div>
-                  </div>
-                </Link>
-              )}
-              {todayCount > 0 && (
-                <Link href="/tasks" className="db-focus-card" style={{ background: theme.colors.warningBg, borderColor: "rgba(249,171,0,0.15)" }}>
-                  <div className="db-focus-icon" style={{ background: "rgba(249,171,0,0.12)" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.colors.warning} strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                  </div>
-                  <div>
-                    <div className="db-focus-num" style={{ color: "#92400E" }}>{todayCount}</div>
-                    <div className="db-focus-label" style={{ color: "#92400E" }}>Due today</div>
-                  </div>
-                </Link>
-              )}
-              {completedWeek > 0 && (
-                <Link href="/tasks" className="db-focus-card" style={{ background: theme.colors.successBg, borderColor: "rgba(52,168,83,0.15)" }}>
-                  <div className="db-focus-icon" style={{ background: "rgba(52,168,83,0.12)" }}>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.colors.success} strokeWidth="2" strokeLinecap="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22 4 12 14.01 9 11.01" /></svg>
-                  </div>
-                  <div>
-                    <div className="db-focus-num" style={{ color: theme.colors.success }}>{completedWeek}</div>
-                    <div className="db-focus-label" style={{ color: "#1b5e20" }}>Completed this week</div>
-                  </div>
-                </Link>
-              )}
-            </div>
-          )}
-
-          {/* Stat Cards */}
-          <div className="db-stats" style={anim(0.15)}>
-            {statCards.map((s, i) => (
-              <Link key={i} href={s.href} className="db-stat">
-                <div className="db-stat-top">
-                  <div className="db-stat-icon" style={{ background: s.config.bg }}>
-                    <span style={{ color: s.config.color }}>{s.icon}</span>
-                  </div>
-                  <Sparkline color={s.config.color} trend={s.config.trend} />
+          {/* Bento Grid */}
+          <div className="bento-grid">
+            {/* Alert Banner (if overdue tasks) */}
+            {!loading && overdueCount > 0 && (
+              <div className="alert-banner" style={anim(0.1)}>
+                <div className="alert-icon">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
                 </div>
-                <div className="db-stat-value">{loading ? "-" : s.value}</div>
-                <div className="db-stat-label">{s.label}</div>
-                {"subtitle" in s && s.subtitle && (
-                  <div className="db-stat-sub" style={{ color: s.subtitleColor }}>{s.subtitle}</div>
-                )}
-              </Link>
-            ))}
-          </div>
+                <div className="alert-content">
+                  <div className="alert-title">{overdueCount} Overdue Task{overdueCount > 1 ? 's' : ''}</div>
+                  <div className="alert-text">You have tasks that need immediate attention</div>
+                </div>
+                <Link href="/tasks" className="alert-action">View Tasks</Link>
+              </div>
+            )}
 
-          {/* Main Grid: Content + Sidebar */}
-          <div className="db-grid" style={anim(0.25)}>
-            {/* --- Left Column --- */}
-            <div className="db-grid-main">
-              {/* Task Alerts (combined) */}
-              {!loading && taskData && (taskData.overdueTasks.length > 0 || taskData.dueTodayTasks.length > 0) && (
-                <div className="db-card">
-                  <div className="db-card-head">
-                    <h3 className="db-card-title">
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={theme.colors.error} strokeWidth="2" strokeLinecap="round" style={{ verticalAlign: -2, marginRight: 8 }}>
-                        <circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" />
-                      </svg>
-                      Needs Attention
-                    </h3>
-                    <Link href="/tasks" className="db-card-link">View all &rarr;</Link>
-                  </div>
-                  {taskData.overdueTasks.slice(0, 5).map((task) => (
-                    <Link key={task.id} href={`/clients/${task.client.id}`} className="db-task-row">
-                      <div className="db-task-dot" style={{ background: theme.colors.error }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="db-task-name">{task.name}</div>
-                        <div className="db-task-client">{task.client.name} &middot; {task.dueDate ? `Due ${new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "No date"}</div>
+            {/* Stat Cards */}
+            <Link href="/clients" className="bento-card stat-card clickable" style={anim(0.15)}>
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(139, 92, 246, 0.1))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                  <circle cx="12" cy="7" r="4" />
+                </svg>
+              </div>
+              <div className="stat-value">{loading ? "-" : <AnimatedNumber value={stats?.clientCount || 0} />}</div>
+              <div className="stat-label">Active Clients</div>
+              <div className="stat-trend up">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                </svg>
+                +12%
+              </div>
+            </Link>
+
+            <Link href="/projects" className="bento-card stat-card clickable" style={anim(0.2)}>
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(74, 222, 128, 0.1))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+              </div>
+              <div className="stat-value">{loading ? "-" : <AnimatedNumber value={stats?.activeProjects || 0} />}</div>
+              <div className="stat-label">Active Projects</div>
+              <div className="stat-trend up">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+                </svg>
+                +8%
+              </div>
+            </Link>
+
+            <Link href="/tasks" className="bento-card stat-card clickable" style={anim(0.25)}>
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.1))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2">
+                  <path d="M9 11l3 3L22 4" />
+                  <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                </svg>
+              </div>
+              <div className="stat-value">{loading ? "-" : <AnimatedNumber value={totalActive} />}</div>
+              <div className="stat-label">Open Tasks</div>
+              {todayCount > 0 && (
+                <div className="stat-trend down" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }}>
+                  {todayCount} due today
+                </div>
+              )}
+            </Link>
+
+            {/* Time Logged Today */}
+            <div className="bento-card time-card" style={anim(0.3)}>
+              <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CircularProgress value={timeToday} max={8} size={160} strokeWidth={10} color="#7c3aed" />
+                <div className="time-value">{loading ? "-" : timeToday}h</div>
+              </div>
+              <div className="time-label">Logged Today</div>
+              <div className="time-target">8h daily target</div>
+            </div>
+
+            {/* Tasks Needing Attention */}
+            <div className="bento-card tasks-card" style={anim(0.35)}>
+              <div className="card-header">
+                <h3 className="card-title">Needs Attention</h3>
+                <Link href="/tasks" className="card-link">View all →</Link>
+              </div>
+              {loading ? (
+                <div className="empty-state"><div className="loading-spinner" /></div>
+              ) : !taskData || (taskData.overdueTasks.length === 0 && taskData.dueTodayTasks.length === 0) ? (
+                <div className="empty-state">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" style={{ marginBottom: 12 }}>
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
+                  </svg>
+                  <div>All caught up! No urgent tasks.</div>
+                </div>
+              ) : (
+                <div className="task-list">
+                  {taskData.overdueTasks.slice(0, 4).map((task) => (
+                    <Link key={task.id} href={`/tasks/${task.id}`} className="task-item">
+                      <div className="task-dot overdue" />
+                      <div className="task-content">
+                        <div className="task-name">{task.name}</div>
+                        <div className="task-meta">{task.client.name} · Overdue</div>
                       </div>
                       {task.priority && (
-                        <span className="db-task-priority" style={{
-                          background: PRIORITY_STYLES[task.priority]?.bg || "#f5f5f5",
-                          color: PRIORITY_STYLES[task.priority]?.color || "#666",
+                        <span className="task-priority" style={{
+                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(255,255,255,0.1)",
+                          color: PRIORITY_STYLES[task.priority]?.color || "#fff",
                         }}>{task.priority}</span>
                       )}
                     </Link>
                   ))}
                   {taskData.dueTodayTasks.slice(0, 3).map((task) => (
-                    <Link key={task.id} href={`/clients/${task.client.id}`} className="db-task-row">
-                      <div className="db-task-dot" style={{ background: theme.colors.warning }} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div className="db-task-name">{task.name}</div>
-                        <div className="db-task-client">{task.client.name} &middot; Due today</div>
+                    <Link key={task.id} href={`/tasks/${task.id}`} className="task-item">
+                      <div className="task-dot today" />
+                      <div className="task-content">
+                        <div className="task-name">{task.name}</div>
+                        <div className="task-meta">{task.client.name} · Due today</div>
                       </div>
                       {task.priority && (
-                        <span className="db-task-priority" style={{
-                          background: PRIORITY_STYLES[task.priority]?.bg || "#f5f5f5",
-                          color: PRIORITY_STYLES[task.priority]?.color || "#666",
+                        <span className="task-priority" style={{
+                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(255,255,255,0.1)",
+                          color: PRIORITY_STYLES[task.priority]?.color || "#fff",
                         }}>{task.priority}</span>
                       )}
                     </Link>
                   ))}
                 </div>
               )}
-
-              {/* Recent Projects */}
-              <div className="db-card">
-                <div className="db-card-head">
-                  <h3 className="db-card-title">Recent Projects</h3>
-                  <Link href="/projects" className="db-card-link">View all &rarr;</Link>
-                </div>
-                {loading ? (
-                  <div className="db-empty">Loading...</div>
-                ) : !recentData?.recentProjects?.length ? (
-                  <div className="db-empty">No projects yet</div>
-                ) : (
-                  recentData.recentProjects.map((project) => {
-                    const completed = project.stages.filter((s) => s.isCompleted).length;
-                    const total = project.stages.length;
-                    const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
-                    return (
-                      <Link key={project.id} href={`/projects/${project.id}`} className="db-proj-row">
-                        <div className="db-proj-top">
-                          <div>
-                            <div className="db-proj-name">{project.name}</div>
-                            <div className="db-proj-client">{project.client.nickname || project.client.name}</div>
-                          </div>
-                          <span className="db-badge" style={{
-                            background: STATUS_STYLES[project.status]?.bg || "#f5f5f5",
-                            color: STATUS_STYLES[project.status]?.color || "#666",
-                          }}>{project.status.replace(/_/g, " ")}</span>
-                        </div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                          <div className="db-progress" style={{ flex: 1 }}>
-                            <div className="db-progress-fill" style={{ width: `${pct}%` }} />
-                          </div>
-                          <span style={{ fontSize: 11, color: theme.colors.textMuted, fontWeight: 500, minWidth: 28, textAlign: "right" }}>{pct}%</span>
-                        </div>
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
             </div>
 
-            {/* --- Right Sidebar --- */}
-            <div className="db-grid-side">
-              {/* Hours Logged Today */}
-              <div className="db-card">
-                <div className="db-hours">
-                  <div className="db-hours-value">{loading ? "-" : timeToday}h</div>
-                  <div className="db-hours-label">Logged today</div>
-                  <div className="db-hours-bar">
-                    <div className="db-hours-fill" style={{
-                      width: `${Math.min((timeToday / 8) * 100, 100)}%`,
-                      background: timeToday >= 8
-                        ? theme.colors.success
-                        : timeToday >= 4
-                          ? `linear-gradient(90deg, ${theme.colors.primary}, #d8ee91)`
-                          : theme.colors.textMuted,
-                    }} />
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                    <span style={{ fontSize: 10, color: theme.colors.textMuted }}>0h</span>
-                    <span style={{ fontSize: 10, color: theme.colors.textMuted }}>8h target</span>
-                  </div>
-                </div>
+            {/* Recent Projects */}
+            <div className="bento-card projects-card" style={anim(0.4)}>
+              <div className="card-header">
+                <h3 className="card-title">Recent Projects</h3>
+                <Link href="/projects" className="card-link">View all →</Link>
               </div>
-
-              {/* Recent Clients */}
-              <div className="db-card">
-                <div className="db-card-head">
-                  <h3 className="db-card-title">Recent Clients</h3>
-                  <Link href="/clients" className="db-card-link">View all &rarr;</Link>
-                </div>
-                {loading ? (
-                  <div className="db-empty">Loading...</div>
-                ) : !recentData?.recentClients?.length ? (
-                  <div className="db-empty">No clients yet</div>
-                ) : (
-                  recentData.recentClients.map((client) => {
-                    const avatarColors = ["#76527c", "#5f4263", "#3d6b73", "#8a6030", "#34a853"];
-                    const colorIdx = client.name.charCodeAt(0) % avatarColors.length;
-                    return (
-                      <Link key={client.id} href={`/clients/${client.id}`} className="db-client-row">
-                        <div className="db-avatar" style={{ background: avatarColors[colorIdx] }}>
-                          {client.name.charAt(0).toUpperCase()}
+              {loading ? (
+                <div className="empty-state"><div className="loading-spinner" /></div>
+              ) : !recentData?.recentProjects?.length ? (
+                <div className="empty-state">No projects yet</div>
+              ) : (
+                recentData.recentProjects.slice(0, 3).map((project) => {
+                  const completed = project.stages.filter((s) => s.isCompleted).length;
+                  const total = project.stages.length;
+                  const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+                  return (
+                    <Link key={project.id} href={`/projects/${project.id}`} className="project-item">
+                      <div className="project-top">
+                        <div>
+                          <div className="project-name">{project.name}</div>
+                          <div className="project-client">{project.client.nickname || project.client.name}</div>
                         </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="db-client-name">{client.nickname || client.name}</div>
-                          <div className="db-client-sub">{client.industry || client.status}</div>
-                        </div>
-                      </Link>
-                    );
-                  })
-                )}
-              </div>
-
-              {/* Activity Feed */}
-              <div className="db-card">
-                <div className="db-card-head">
-                  <h3 className="db-card-title">Activity</h3>
-                </div>
-                {!activity || activity.length === 0 ? (
-                  <div className="db-empty">No recent activity</div>
-                ) : (
-                  activity.slice(0, 6).map((a) => (
-                    <div key={a.id} className="db-activity-row">
-                      <div className="db-activity-dot" style={{
-                        background: a.activityType === "task_complete" ? theme.colors.success
-                          : a.activityType === "sod" ? theme.colors.primary
-                          : a.activityType === "eod" ? theme.colors.warning
-                          : theme.colors.textMuted,
-                      }} />
-                      <div>
-                        <div className="db-activity-text">
-                          <strong>{a.user.name || "Someone"}</strong>{" "}
-                          {a.activityType === "sod" ? "started their day"
-                            : a.activityType === "eod" ? "wrapped up for the day"
-                            : a.activityType === "task_complete" ? "completed a task"
-                            : a.activityType === "focus_change" ? "changed focus"
-                            : a.content || "did something"}
-                        </div>
-                        <div className="db-activity-time">{timeAgo(a.createdAt)}</div>
+                        <span className="project-badge" style={{
+                          background: STATUS_STYLES[project.status]?.bg || "rgba(255,255,255,0.1)",
+                          color: STATUS_STYLES[project.status]?.color || "#fff",
+                        }}>{project.status.replace(/_/g, " ")}</span>
                       </div>
-                    </div>
-                  ))
-                )}
+                      <div className="project-progress">
+                        <div className="project-progress-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      <div className="project-progress-text">
+                        <span>{completed} of {total} stages</span>
+                        <span>{pct}%</span>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Recent Clients */}
+            <div className="bento-card clients-card" style={anim(0.45)}>
+              <div className="card-header">
+                <h3 className="card-title">Recent Clients</h3>
+                <Link href="/clients" className="card-link">View all →</Link>
               </div>
+              {loading ? (
+                <div className="empty-state"><div className="loading-spinner" /></div>
+              ) : !recentData?.recentClients?.length ? (
+                <div className="empty-state">No clients yet</div>
+              ) : (
+                recentData.recentClients.slice(0, 4).map((client) => {
+                  const colors = [
+                    "linear-gradient(135deg, #7c3aed, #6d28d9)",
+                    "linear-gradient(135deg, #ec4899, #be185d)",
+                    "linear-gradient(135deg, #06b6d4, #0891b2)",
+                    "linear-gradient(135deg, #f59e0b, #d97706)",
+                    "linear-gradient(135deg, #22c55e, #16a34a)",
+                  ];
+                  const colorIdx = client.name.charCodeAt(0) % colors.length;
+                  return (
+                    <Link key={client.id} href={`/clients/${client.id}`} className="client-item">
+                      <div className="client-avatar" style={{ background: colors[colorIdx] }}>
+                        {client.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div className="client-name">{client.nickname || client.name}</div>
+                        <div className="client-industry">{client.industry || client.status}</div>
+                      </div>
+                    </Link>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Activity Feed */}
+            <div className="bento-card activity-card" style={anim(0.5)}>
+              <div className="card-header">
+                <h3 className="card-title">Activity</h3>
+              </div>
+              {!activity || activity.length === 0 ? (
+                <div className="empty-state">No recent activity</div>
+              ) : (
+                activity.slice(0, 5).map((a) => (
+                  <div key={a.id} className="activity-item">
+                    <div className="activity-dot" style={{
+                      background: a.activityType === "task_complete" ? "#22c55e"
+                        : a.activityType === "sod" ? "#7c3aed"
+                        : a.activityType === "eod" ? "#f59e0b"
+                        : "rgba(255,255,255,0.3)",
+                    }} />
+                    <div>
+                      <div className="activity-text">
+                        <strong>{a.user.name || "Someone"}</strong>{" "}
+                        {a.activityType === "sod" ? "started their day"
+                          : a.activityType === "eod" ? "wrapped up"
+                          : a.activityType === "task_complete" ? "completed a task"
+                          : a.activityType === "focus_change" ? "changed focus"
+                          : a.content || "did something"}
+                      </div>
+                      <div className="activity-time">{timeAgo(a.createdAt)}</div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </main>
