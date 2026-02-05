@@ -1134,7 +1134,7 @@ export default function TaskDetailPage() {
                       position: "relative",
                       maxWidth: isImage || isVideo ? 200 : "auto",
                     }}>
-                      {/* Preview for images/videos */}
+                      {/* Preview for images */}
                       {isImage && att.r2Key && (
                         <div style={{ width: 200, height: 120, background: "#e5e7eb" }}>
                           <img
@@ -1147,16 +1147,45 @@ export default function TaskDetailPage() {
                           />
                         </div>
                       )}
-                      {isVideo && (
+                      {/* Preview for videos - with actual video player */}
+                      {isVideo && att.r2Key && (
                         <div style={{
                           width: 200,
                           height: 120,
-                          background: "#1f2937",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
+                          background: "#000",
+                          position: "relative",
                         }}>
-                          <span style={{ fontSize: 40 }}>🎬</span>
+                          <video
+                            src={`/api/tasks/${taskId}/attachments/${att.id}/preview`}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                            muted
+                            preload="metadata"
+                            onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+                            onMouseLeave={(e) => {
+                              const video = e.target as HTMLVideoElement;
+                              video.pause();
+                              video.currentTime = 0;
+                            }}
+                          />
+                          {/* Play icon overlay */}
+                          <div style={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            width: 40,
+                            height: 40,
+                            background: "rgba(0,0,0,0.6)",
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            pointerEvents: "none",
+                          }}>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="white">
+                              <path d="M8 5v14l11-7z"/>
+                            </svg>
+                          </div>
                         </div>
                       )}
                       {/* File info */}
