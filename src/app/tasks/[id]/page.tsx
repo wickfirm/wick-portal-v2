@@ -108,6 +108,7 @@ export default function TaskDetailPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadFileName, setUploadFileName] = useState("");
   const [showActivity, setShowActivity] = useState(false);
+  const [commentAttachments, setCommentAttachments] = useState<any[]>([]);
 
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -247,7 +248,7 @@ export default function TaskDetailPage() {
 
   // Comments
   const submitComment = async () => {
-    if (!newComment.trim()) return;
+    if (!newComment || newComment === "<p></p>") return;
     setSubmittingComment(true);
     try {
       const mentionRegex = /@\[([^\]]+)\]\(([^)]+)\)/g;
@@ -257,16 +258,39 @@ export default function TaskDetailPage() {
         mentions.push(match[2]);
       }
 
+      // First, upload any attachments
+      const uploadedAttachmentIds: string[] = [];
+      for (const att of commentAttachments) {
+        const formData = new FormData();
+        formData.append("file", att.file);
+
+        const uploadRes = await fetch(`/api/tasks/${taskId}/attachments`, {
+          method: "POST",
+          body: formData,
+        });
+
+        if (uploadRes.ok) {
+          const uploadedAtt = await uploadRes.json();
+          uploadedAttachmentIds.push(uploadedAtt.id);
+        }
+      }
+
       const res = await fetch(`/api/tasks/${taskId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: newComment, mentions }),
+        body: JSON.stringify({
+          content: newComment,
+          mentions,
+          attachmentIds: uploadedAttachmentIds,
+        }),
       });
 
       if (res.ok) {
         setNewComment("");
+        setCommentAttachments([]);
         fetchComments();
         fetchActivity();
+        fetchAttachments();
       }
     } catch (error) {
       console.error("Error submitting comment:", error);
@@ -1079,6 +1103,9 @@ export default function TaskDetailPage() {
                 placeholder="Type your comment here... (Ctrl+Enter to submit)"
                 onSubmit={submitComment}
                 minHeight={120}
+                attachments={commentAttachments}
+                onAttachmentsChange={setCommentAttachments}
+                showAttachButton={true}
               />
 
               {/* Upload Progress Bar */}

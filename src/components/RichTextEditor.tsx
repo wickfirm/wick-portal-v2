@@ -7,7 +7,16 @@ import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import Image from "@tiptap/extension-image";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
+
+interface AttachmentPreview {
+  id: string;
+  file: File;
+  preview: string;
+  type: "image" | "video" | "file";
+  uploading?: boolean;
+  progress?: number;
+}
 
 interface RichTextEditorProps {
   content: string;
@@ -17,6 +26,9 @@ interface RichTextEditorProps {
   disabled?: boolean;
   minHeight?: number;
   onFileUpload?: (file: File) => Promise<string | null>;
+  attachments?: AttachmentPreview[];
+  onAttachmentsChange?: (attachments: AttachmentPreview[]) => void;
+  showAttachButton?: boolean;
 }
 
 export default function RichTextEditor({
@@ -27,9 +39,13 @@ export default function RichTextEditor({
   disabled = false,
   minHeight = 120,
   onFileUpload,
+  attachments = [],
+  onAttachmentsChange,
+  showAttachButton = true,
 }: RichTextEditorProps) {
   const [linkUrl, setLinkUrl] = useState("");
   const [showLinkInput, setShowLinkInput] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
@@ -94,17 +110,50 @@ export default function RichTextEditor({
     setLinkUrl("");
   }, [editor, linkUrl]);
 
-  const handleFileInput = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !onFileUpload || !editor) return;
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
 
-    const url = await onFileUpload(file);
-    if (url) {
+    const newAttachments: AttachmentPreview[] = [];
+
+    for (const file of Array.from(files)) {
+      const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      let type: "image" | "video" | "file" = "file";
+      let preview = "";
+
       if (file.type.startsWith("image/")) {
-        editor.chain().focus().setImage({ src: url }).run();
+        type = "image";
+        preview = URL.createObjectURL(file);
+      } else if (file.type.startsWith("video/")) {
+        type = "video";
+        preview = URL.createObjectURL(file);
       }
+
+      newAttachments.push({
+        id,
+        file,
+        preview,
+        type,
+        uploading: false,
+      });
     }
+
+    onAttachmentsChange?.([...attachments, ...newAttachments]);
     e.target.value = "";
+  };
+
+  const removeAttachment = (id: string) => {
+    const attachment = attachments.find(a => a.id === id);
+    if (attachment?.preview) {
+      URL.revokeObjectURL(attachment.preview);
+    }
+    onAttachmentsChange?.(attachments.filter(a => a.id !== id));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
   if (!editor) return null;
@@ -148,7 +197,7 @@ export default function RichTextEditor({
   );
 
   return (
-    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden" }}>
+    <div style={{ border: "1px solid #e5e7eb", borderRadius: 8, overflow: "hidden", position: "relative" }}>
       {/* Toolbar */}
       <div
         style={{
@@ -281,22 +330,25 @@ export default function RichTextEditor({
           </svg>
         </ToolbarButton>
 
-        {onFileUpload && (
+        {showAttachButton && (
           <>
             <div style={{ width: 1, height: 20, background: "#e5e7eb", margin: "0 4px" }} />
-            <label style={{ cursor: "pointer" }}>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleFileInput}
-                style={{ display: "none" }}
-              />
-              <ToolbarButton onClick={() => {}} title="Attach Image">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                </svg>
-              </ToolbarButton>
-            </label>
+            <ToolbarButton
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach Files"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+              </svg>
+            </ToolbarButton>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+              onChange={handleFileSelect}
+              style={{ display: "none" }}
+            />
           </>
         )}
 
@@ -321,17 +373,12 @@ export default function RichTextEditor({
       {showLinkInput && (
         <div
           style={{
-            position: "absolute",
-            top: "100%",
-            left: 0,
-            right: 0,
             padding: "12px",
-            background: "white",
+            background: "#f9fafb",
             borderBottom: "1px solid #e5e7eb",
             display: "flex",
             gap: 8,
             alignItems: "center",
-            zIndex: 10,
           }}
         >
           <input
@@ -395,6 +442,133 @@ export default function RichTextEditor({
 
       {/* Editor Content */}
       <EditorContent editor={editor} />
+
+      {/* Attachment Previews */}
+      {attachments.length > 0 && (
+        <div style={{
+          padding: "12px 16px",
+          borderTop: "1px solid #e5e7eb",
+          display: "flex",
+          flexWrap: "wrap",
+          gap: 12,
+        }}>
+          {attachments.map((att) => (
+            <div
+              key={att.id}
+              style={{
+                position: "relative",
+                borderRadius: 8,
+                overflow: "hidden",
+                border: "1px solid #e5e7eb",
+                background: "#f9fafb",
+              }}
+            >
+              {att.type === "image" && (
+                <div style={{ width: 150, height: 100 }}>
+                  <img
+                    src={att.preview}
+                    alt={att.file.name}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              )}
+              {att.type === "video" && (
+                <div style={{ width: 150, height: 100 }}>
+                  <video
+                    src={att.preview}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                </div>
+              )}
+              {att.type === "file" && (
+                <div style={{
+                  width: 150,
+                  height: 100,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  padding: 8,
+                }}>
+                  <span style={{ fontSize: 28, marginBottom: 4 }}>📄</span>
+                  <span style={{
+                    fontSize: 11,
+                    color: "#6b7280",
+                    textAlign: "center",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    width: "100%",
+                  }}>
+                    {att.file.name}
+                  </span>
+                </div>
+              )}
+              <div style={{
+                padding: "6px 8px",
+                background: "white",
+                borderTop: "1px solid #e5e7eb",
+                fontSize: 11,
+                color: "#6b7280",
+                textAlign: "center",
+              }}>
+                {att.file.name.length > 18 ? att.file.name.slice(0, 15) + "..." : att.file.name}
+                <div style={{ fontSize: 10, color: "#9ca3af" }}>
+                  {formatFileSize(att.file.size)}
+                </div>
+              </div>
+              {/* Remove button */}
+              <button
+                onClick={() => removeAttachment(att.id)}
+                style={{
+                  position: "absolute",
+                  top: 4,
+                  right: 4,
+                  width: 20,
+                  height: 20,
+                  borderRadius: "50%",
+                  background: "rgba(0,0,0,0.6)",
+                  color: "white",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                }}
+              >
+                ×
+              </button>
+              {/* Upload progress */}
+              {att.uploading && (
+                <div style={{
+                  position: "absolute",
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: 3,
+                  background: "#e5e7eb",
+                }}>
+                  <div style={{
+                    height: "100%",
+                    width: `${att.progress || 0}%`,
+                    background: "#3b82f6",
+                    transition: "width 0.2s",
+                  }} />
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       <style jsx global>{`
         .ProseMirror {
