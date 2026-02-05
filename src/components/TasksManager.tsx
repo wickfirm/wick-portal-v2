@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 import TasksLoadingSkeleton from "./TasksLoadingSkeleton";
+import TasksKanbanBoard from "./TasksKanbanBoard";
+import TaskViewToggle from "./TaskViewToggle";
 
 type Task = {
   id: string;
@@ -96,6 +98,11 @@ export default function TasksManager({
   const [statusOptions, setStatusOptions] = useState<string[]>([]);
   const [priorityOptions, setPriorityOptions] = useState<string[]>([]);
 
+  // View state (table, board, calendar)
+  type ViewType = "table" | "board" | "calendar";
+  const [activeView, setActiveView] = useState<ViewType>("table");
+  const [statusColumnsData, setStatusColumnsData] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
+
   // Timer state
   const [activeTimerTaskId, setActiveTimerTaskId] = useState<string | null>(null);
   const [startingTimerFor, setStartingTimerFor] = useState<string | null>(null);
@@ -172,9 +179,24 @@ export default function TasksManager({
         if (statusRes.ok) {
           const statuses = await statusRes.json();
           setStatusOptions(statuses.map((s: any) => s.name));
+          setStatusColumnsData(statuses.map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            color: s.color || "#6B7280",
+            order: s.order || 0,
+          })));
         } else {
           // Fallback to defaults if API fails
           setStatusOptions(["PENDING", "IN_PROGRESS", "ONGOING", "ON_HOLD", "COMPLETED", "FUTURE_PLAN", "BLOCKED"]);
+          setStatusColumnsData([
+            { id: "1", name: "PENDING", color: "#6B7280", order: 1 },
+            { id: "2", name: "IN_PROGRESS", color: "#3B82F6", order: 2 },
+            { id: "3", name: "ONGOING", color: "#8B5CF6", order: 3 },
+            { id: "4", name: "ON_HOLD", color: "#F59E0B", order: 4 },
+            { id: "5", name: "COMPLETED", color: "#10B981", order: 5 },
+            { id: "6", name: "FUTURE_PLAN", color: "#06B6D4", order: 6 },
+            { id: "7", name: "BLOCKED", color: "#EF4444", order: 7 },
+          ]);
         }
 
         if (priorityRes.ok) {
@@ -385,6 +407,26 @@ export default function TasksManager({
       }
     } catch (error) {
       console.error("Error updating task:", error);
+    }
+  }
+
+  // Handler for Kanban board task drag-and-drop
+  async function handleKanbanTaskMove(taskId: string, newStatus: string) {
+    try {
+      const res = await fetch(`/api/tasks/${taskId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (res.ok) {
+        // Optimistically update local state already happened in Kanban component
+        // Fetch to ensure consistency
+        await fetchTasks();
+      }
+    } catch (error) {
+      console.error("Error moving task:", error);
+      // Refresh to revert optimistic update
+      await fetchTasks();
     }
   }
 
@@ -1581,7 +1623,7 @@ export default function TasksManager({
         </div>
       )}
 
-      {/* Filters */}
+      {/* View Toggle & Filters */}
       <div style={{
         background: theme.colors.bgSecondary,
         border: "1px solid " + theme.colors.borderLight,
@@ -1589,6 +1631,15 @@ export default function TasksManager({
         padding: "16px 20px",
         marginBottom: 24,
       }}>
+        {/* View Toggle Row */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <TaskViewToggle activeView={activeView} onViewChange={setActiveView} />
+          <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
+            {tasks.filter(matchesFilters).length} tasks
+          </div>
+        </div>
+
+        {/* Filters Row */}
         <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
           {/* Filter dropdowns with consistent styling */}
           {[
@@ -1726,13 +1777,52 @@ export default function TasksManager({
       </div>
 
       {/* Tasks Display */}
-      {context === "general" ? (
-        renderByClient()
+      {activeView === "board" ? (
+        /* Kanban Board View */
+        <TasksKanbanBoard
+          tasks={tasks.filter(matchesFilters).map(t => ({
+            id: t.id,
+            name: t.name,
+            status: t.status,
+            priority: t.priority,
+            dueDate: t.dueDate,
+            assignee: t.assignee,
+            pinned: t.pinned,
+          }))}
+          statusColumns={statusColumnsData}
+          onTaskMove={handleKanbanTaskMove}
+          onTaskClick={(taskId) => {
+            window.location.href = `/tasks/${taskId}`;
+          }}
+          loading={loading}
+        />
+      ) : activeView === "calendar" ? (
+        /* Calendar View - Coming Soon */
+        <div style={{
+          background: theme.colors.bgSecondary,
+          border: "1px solid " + theme.colors.borderLight,
+          borderRadius: 14,
+          padding: 48,
+          textAlign: "center",
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+          <h3 style={{ fontSize: 18, fontWeight: 600, color: theme.colors.textPrimary, marginBottom: 8 }}>
+            Calendar View Coming Soon
+          </h3>
+          <p style={{ fontSize: 14, color: theme.colors.textMuted }}>
+            View tasks organized by due date in a calendar layout
+          </p>
+        </div>
       ) : (
-        <>
-          {sortedCategories.map(cat => renderCategorySection(cat.id, cat.name))}
-          {renderCategorySection(null, "Uncategorized")}
-        </>
+        /* Table View (default) */
+        context === "general" ? (
+          renderByClient()
+        ) : (
+          <>
+            {sortedCategories.map(cat => renderCategorySection(cat.id, cat.name))}
+            {renderCategorySection(null, "Uncategorized")}
+          </>
+        )
       )}
 
       {/* Edit Task Side Panel */}
