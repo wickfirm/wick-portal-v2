@@ -3,6 +3,19 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { createBulkNotifications } from "@/lib/notifications";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// Use Cloudflare R2
+const s3Client = new S3Client({
+  region: "auto",
+  endpoint: `https://${process.env.CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
+  },
+});
+
+const BUCKET_NAME = process.env.R2_BUCKET_NAME || "omnixia-media";
 
 // GET - Fetch comments for a task
 export async function GET(
@@ -16,7 +29,7 @@ export async function GET(
 
   try {
     const comments = await prisma.taskComment.findMany({
-      where: { taskId: params.id },
+      where: { taskId: params.id, parentId: null }, // Only top-level comments
       include: {
         author: {
           select: { id: true, name: true, email: true },
@@ -28,6 +41,7 @@ export async function GET(
             originalName: true,
             mimeType: true,
             size: true,
+            r2Key: true,
             createdAt: true,
           },
         },
@@ -43,6 +57,7 @@ export async function GET(
                 originalName: true,
                 mimeType: true,
                 size: true,
+                r2Key: true,
                 createdAt: true,
               },
             },
@@ -50,11 +65,26 @@ export async function GET(
           orderBy: { createdAt: "asc" },
         },
       },
-      where: { taskId: params.id, parentId: null }, // Only top-level comments
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(comments);
+    // Convert BigInt to Number for JSON serialization
+    const serializedComments = comments.map(comment => ({
+      ...comment,
+      attachments: comment.attachments.map(att => ({
+        ...att,
+        size: Number(att.size),
+      })),
+      replies: comment.replies.map(reply => ({
+        ...reply,
+        attachments: reply.attachments.map(att => ({
+          ...att,
+          size: Number(att.size),
+        })),
+      })),
+    }));
+
+    return NextResponse.json(serializedComments);
   } catch (error) {
     console.error("Error fetching comments:", error);
     return NextResponse.json(

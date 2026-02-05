@@ -37,13 +37,23 @@ interface Task {
   assignee: { id: string; name: string; email: string } | null;
 }
 
+interface CommentAttachment {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  r2Key: string;
+  downloadUrl?: string;
+}
+
 interface Comment {
   id: string;
   content: string;
   isEdited: boolean;
   createdAt: string;
   author: { id: string; name: string; email: string };
-  attachments: any[];
+  attachments: CommentAttachment[];
   replies: Comment[];
 }
 
@@ -151,7 +161,37 @@ export default function TaskDetailPage() {
   const fetchComments = async () => {
     try {
       const res = await fetch(`/api/tasks/${taskId}/comments`);
-      if (res.ok) setComments(await res.json());
+      if (res.ok) {
+        const commentsData = await res.json();
+
+        // Fetch download URLs for all attachments
+        const commentsWithUrls = await Promise.all(
+          commentsData.map(async (comment: Comment) => {
+            if (comment.attachments && comment.attachments.length > 0) {
+              const attachmentsWithUrls = await Promise.all(
+                comment.attachments.map(async (att: CommentAttachment) => {
+                  try {
+                    const urlRes = await fetch(
+                      `/api/tasks/${taskId}/comments/attachments/${att.id}`
+                    );
+                    if (urlRes.ok) {
+                      const urlData = await urlRes.json();
+                      return { ...att, downloadUrl: urlData.downloadUrl };
+                    }
+                  } catch (e) {
+                    console.error("Error fetching attachment URL:", e);
+                  }
+                  return att;
+                })
+              );
+              return { ...comment, attachments: attachmentsWithUrls };
+            }
+            return comment;
+          })
+        );
+
+        setComments(commentsWithUrls);
+      }
     } catch (error) {
       console.error("Error fetching comments:", error);
     }
@@ -258,39 +298,35 @@ export default function TaskDetailPage() {
         mentions.push(match[2]);
       }
 
-      // First, upload any attachments
-      const uploadedAttachmentIds: string[] = [];
-      for (const att of commentAttachments) {
-        const formData = new FormData();
-        formData.append("file", att.file);
-
-        const uploadRes = await fetch(`/api/tasks/${taskId}/attachments`, {
-          method: "POST",
-          body: formData,
-        });
-
-        if (uploadRes.ok) {
-          const uploadedAtt = await uploadRes.json();
-          uploadedAttachmentIds.push(uploadedAtt.id);
-        }
-      }
-
+      // First, create the comment
       const res = await fetch(`/api/tasks/${taskId}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           content: newComment,
           mentions,
-          attachmentIds: uploadedAttachmentIds,
         }),
       });
 
       if (res.ok) {
+        const createdComment = await res.json();
+
+        // Then upload attachments to the comment
+        for (const att of commentAttachments) {
+          const formData = new FormData();
+          formData.append("file", att.file);
+          formData.append("commentId", createdComment.id);
+
+          await fetch(`/api/tasks/${taskId}/comments/attachments`, {
+            method: "POST",
+            body: formData,
+          });
+        }
+
         setNewComment("");
         setCommentAttachments([]);
         fetchComments();
         fetchActivity();
-        fetchAttachments();
       }
     } catch (error) {
       console.error("Error submitting comment:", error);
@@ -1230,6 +1266,151 @@ export default function TaskDetailPage() {
                       style={{ fontSize: 15, color: "#374151", lineHeight: 1.6 }}
                       dangerouslySetInnerHTML={{ __html: comment.content }}
                     />
+
+                    {/* Comment Attachments */}
+                    {comment.attachments && comment.attachments.length > 0 && (
+                      <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                        {comment.attachments.map((att: CommentAttachment) => {
+                          const isImage = att.mimeType?.startsWith("image/");
+                          const isVideo = att.mimeType?.startsWith("video/");
+                          const fileUrl = att.downloadUrl;
+
+                          if (isVideo && fileUrl) {
+                            return (
+                              <div key={att.id} style={{
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                background: "#000",
+                                maxWidth: 500,
+                              }}>
+                                <video
+                                  controls
+                                  style={{ width: "100%", display: "block" }}
+                                  preload="metadata"
+                                >
+                                  <source src={fileUrl} type={att.mimeType} />
+                                  Your browser does not support video playback.
+                                </video>
+                                <div style={{
+                                  padding: "10px 14px",
+                                  background: "#f9fafb",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}>
+                                  <span style={{ fontSize: 13, color: "#374151" }}>
+                                    {att.originalName} ({formatFileSize(att.size)})
+                                  </span>
+                                  <a
+                                    href={fileUrl}
+                                    download={att.originalName}
+                                    style={{
+                                      fontSize: 13,
+                                      color: theme.colors.primary,
+                                      textDecoration: "none",
+                                    }}
+                                  >
+                                    Download
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          if (isImage && fileUrl) {
+                            return (
+                              <div key={att.id} style={{
+                                borderRadius: 8,
+                                overflow: "hidden",
+                                border: "1px solid #e5e7eb",
+                                maxWidth: 400,
+                              }}>
+                                <img
+                                  src={fileUrl}
+                                  alt={att.originalName}
+                                  style={{ width: "100%", display: "block" }}
+                                />
+                                <div style={{
+                                  padding: "10px 14px",
+                                  background: "#f9fafb",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}>
+                                  <span style={{ fontSize: 13, color: "#374151" }}>
+                                    {att.originalName} ({formatFileSize(att.size)})
+                                  </span>
+                                  <div style={{ display: "flex", gap: 12 }}>
+                                    <a
+                                      href={fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      style={{
+                                        fontSize: 13,
+                                        color: theme.colors.primary,
+                                        textDecoration: "none",
+                                      }}
+                                    >
+                                      View full-size
+                                    </a>
+                                    <a
+                                      href={fileUrl}
+                                      download={att.originalName}
+                                      style={{
+                                        fontSize: 13,
+                                        color: theme.colors.primary,
+                                        textDecoration: "none",
+                                      }}
+                                    >
+                                      Download
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+
+                          // Other file types
+                          return (
+                            <div key={att.id} style={{
+                              padding: "12px 16px",
+                              background: "#f9fafb",
+                              borderRadius: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 12,
+                              maxWidth: 400,
+                            }}>
+                              <span style={{ fontSize: 24 }}>{getFileIcon(att.mimeType)}</span>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 14, color: "#374151", fontWeight: 500 }}>
+                                  {att.originalName}
+                                </div>
+                                <div style={{ fontSize: 12, color: "#9ca3af" }}>
+                                  {formatFileSize(att.size)}
+                                </div>
+                              </div>
+                              {fileUrl && (
+                                <a
+                                  href={fileUrl}
+                                  download={att.originalName}
+                                  style={{
+                                    padding: "6px 12px",
+                                    background: theme.colors.primary,
+                                    color: "white",
+                                    borderRadius: 6,
+                                    fontSize: 13,
+                                    textDecoration: "none",
+                                  }}
+                                >
+                                  Download
+                                </a>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
