@@ -217,6 +217,8 @@ export default function ProjectsPage() {
       return res.json();
     },
     enabled: status === "authenticated",
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const handlePinToggle = async (projectId: string, pinned: boolean) => {

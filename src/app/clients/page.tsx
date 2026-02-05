@@ -250,6 +250,8 @@ export default function ClientsPage() {
       return res.json();
     },
     enabled: status === "authenticated",
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 
   const togglePin = async (clientId: string, currentPinned: boolean, e: React.MouseEvent) => {
