@@ -44,8 +44,8 @@ export async function GET() {
             }
           ]
         };
-      } else if (currentUser.role === "PLATFORM_ADMIN") {
-        // Platform admins with no agencyId can see all clients
+      } else {
+        // SUPER_ADMIN or PLATFORM_ADMIN with no agencyId can see all clients
         clientFilter = {};
       }
     } else if (currentUser.role === "MEMBER") {

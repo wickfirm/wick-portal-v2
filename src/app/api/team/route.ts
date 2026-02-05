@@ -55,32 +55,37 @@ export async function GET() {
   }
 
   // SUPER_ADMIN and ADMIN see users from their agency + external partners assigned to their clients
-  const users = await prisma.user.findMany({
-    where: {
-      OR: [
-        { agencyId: currentUser.agencyId }, // Users from same agency
-        {
-          AND: [
-            { agencyId: null }, // External partners
-            {
-              clientAssignments: {
-                some: {
-                  client: {
-                    teamMembers: {
-                      some: {
-                        user: {
-                          agencyId: currentUser.agencyId
+  // If no agencyId (SUPER_ADMIN or PLATFORM_ADMIN without agency), see all users
+  const userFilter = currentUser.agencyId
+    ? {
+        OR: [
+          { agencyId: currentUser.agencyId }, // Users from same agency
+          {
+            AND: [
+              { agencyId: null }, // External partners
+              {
+                clientAssignments: {
+                  some: {
+                    client: {
+                      teamMembers: {
+                        some: {
+                          user: {
+                            agencyId: currentUser.agencyId
+                          }
                         }
                       }
                     }
                   }
                 }
               }
-            }
-          ]
-        }
-      ]
-    },
+            ]
+          }
+        ]
+      }
+    : {}; // No agencyId means see all users
+
+  const users = await prisma.user.findMany({
+    where: userFilter,
     orderBy: { createdAt: "desc" },
     include: {
       agency: true,
