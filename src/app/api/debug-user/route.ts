@@ -41,7 +41,7 @@ export async function GET() {
     // Sample of agencies
     const agencies = await prisma.agency.findMany({
       take: 5,
-      select: { id: true, name: true, subdomain: true }
+      select: { id: true, name: true, slug: true }
     });
 
     return NextResponse.json({
