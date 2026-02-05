@@ -40,7 +40,13 @@ export async function GET(
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(attachments);
+    // Convert BigInt to Number for JSON serialization
+    const serializedAttachments = attachments.map(att => ({
+      ...att,
+      size: Number(att.size),
+    }));
+
+    return NextResponse.json(serializedAttachments);
   } catch (error) {
     console.error("Error fetching attachments:", error);
     return NextResponse.json(
@@ -117,7 +123,11 @@ export async function POST(
         },
       });
 
-      return NextResponse.json(attachment, { status: 201 });
+      // Convert BigInt to Number for JSON serialization
+      return NextResponse.json({
+        ...attachment,
+        size: Number(attachment.size),
+      }, { status: 201 });
     }
 
     // Upload new file
@@ -168,7 +178,11 @@ export async function POST(
       },
     });
 
-    return NextResponse.json(attachment, { status: 201 });
+    // Convert BigInt to Number for JSON serialization
+    return NextResponse.json({
+      ...attachment,
+      size: Number(attachment.size),
+    }, { status: 201 });
   } catch (error) {
     console.error("Error uploading attachment:", error);
     return NextResponse.json(
