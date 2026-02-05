@@ -19,11 +19,8 @@ export async function GET(
     const user = session.user as any;
     const taskId = params.id;
 
-    const task = await prisma.clientTask.findFirst({
-      where: {
-        id: taskId,
-        ...(user.agencyId ? { client: { agencyId: user.agencyId } } : {}),
-      },
+    const task = await prisma.clientTask.findUnique({
+      where: { id: taskId },
       include: {
         category: {
           select: { id: true, name: true },
@@ -69,12 +66,9 @@ export async function PATCH(
     const taskId = params.id;
     const body = await request.json();
 
-    // Verify task exists and user has access
-    const existingTask = await prisma.clientTask.findFirst({
-      where: {
-        id: taskId,
-        ...(user.agencyId ? { client: { agencyId: user.agencyId } } : {}),
-      },
+    // Verify task exists
+    const existingTask = await prisma.clientTask.findUnique({
+      where: { id: taskId },
     });
 
     if (!existingTask) {
