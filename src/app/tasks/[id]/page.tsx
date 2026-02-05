@@ -121,6 +121,12 @@ export default function TaskDetailPage() {
   const [uploadLocation, setUploadLocation] = useState<"task" | "comment">("task"); // Track where upload is happening
   const [showActivity, setShowActivity] = useState(false);
   const [commentAttachments, setCommentAttachments] = useState<any[]>([]);
+  const [mediaModal, setMediaModal] = useState<{
+    type: "image" | "video";
+    src: string;
+    name: string;
+    downloadUrl?: string;
+  } | null>(null);
 
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -262,6 +268,17 @@ export default function TaskDetailPage() {
       ]).finally(() => setLoading(false));
     }
   }, [sessionStatus, taskId, router, fetchTask]);
+
+  // Handle ESC key to close media modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && mediaModal) {
+        setMediaModal(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [mediaModal]);
 
   // Update task
   const updateTask = async (field: string, value: any) => {
@@ -475,6 +492,21 @@ export default function TaskDetailPage() {
       fetchActivity();
     } catch (error) {
       console.error("Error deleting attachment:", error);
+    }
+  };
+
+  // Open media in full-screen modal
+  const openMediaModal = (attachment: Attachment) => {
+    const isVideo = attachment.mimeType?.startsWith("video/");
+    const isImage = attachment.mimeType?.startsWith("image/");
+
+    if (isVideo || isImage) {
+      setMediaModal({
+        type: isVideo ? "video" : "image",
+        src: `/api/tasks/${taskId}/attachments/${attachment.id}/preview`,
+        name: attachment.originalName,
+        downloadUrl: `/api/tasks/${taskId}/attachments/${attachment.id}/preview`,
+      });
     }
   };
 
@@ -1134,9 +1166,12 @@ export default function TaskDetailPage() {
                       position: "relative",
                       maxWidth: isImage || isVideo ? 200 : "auto",
                     }}>
-                      {/* Preview for images */}
+                      {/* Preview for images - clickable to open modal */}
                       {isImage && att.r2Key && (
-                        <div style={{ width: 200, height: 120, background: "#e5e7eb" }}>
+                        <div
+                          onClick={() => openMediaModal(att)}
+                          style={{ width: 200, height: 120, background: "#e5e7eb", cursor: "pointer" }}
+                        >
                           <img
                             src={`/api/tasks/${taskId}/attachments/${att.id}/preview`}
                             alt={att.originalName}
@@ -1147,14 +1182,18 @@ export default function TaskDetailPage() {
                           />
                         </div>
                       )}
-                      {/* Preview for videos - with actual video player */}
+                      {/* Preview for videos - clickable to open modal */}
                       {isVideo && att.r2Key && (
-                        <div style={{
-                          width: 200,
-                          height: 120,
-                          background: "#000",
-                          position: "relative",
-                        }}>
+                        <div
+                          onClick={() => openMediaModal(att)}
+                          style={{
+                            width: 200,
+                            height: 120,
+                            background: "#000",
+                            position: "relative",
+                            cursor: "pointer",
+                          }}
+                        >
                           <video
                             src={`/api/tasks/${taskId}/attachments/${att.id}/preview`}
                             style={{ width: "100%", height: "100%", objectFit: "cover" }}
@@ -1691,6 +1730,131 @@ export default function TaskDetailPage() {
           </div>
         )}
       </main>
+
+      {/* Media Modal - Full screen video/image viewer */}
+      {mediaModal && (
+        <div
+          onClick={() => setMediaModal(null)}
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: "rgba(0,0,0,0.9)",
+            zIndex: 1000,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 20,
+          }}
+        >
+          {/* Close button */}
+          <button
+            onClick={() => setMediaModal(null)}
+            style={{
+              position: "absolute",
+              top: 20,
+              right: 20,
+              background: "rgba(255,255,255,0.1)",
+              border: "none",
+              color: "white",
+              width: 44,
+              height: 44,
+              borderRadius: "50%",
+              fontSize: 24,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            ✕
+          </button>
+
+          {/* Header with filename and download */}
+          <div style={{
+            position: "absolute",
+            top: 20,
+            left: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+          }}>
+            <span style={{ color: "white", fontSize: 14 }}>{mediaModal.name}</span>
+            <a
+              href={mediaModal.downloadUrl}
+              download={mediaModal.name}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: theme.colors.primary,
+                color: "white",
+                padding: "8px 16px",
+                borderRadius: 6,
+                fontSize: 13,
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+              }}
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Download
+            </a>
+          </div>
+
+          {/* Media content */}
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: "90vw",
+              maxHeight: "80vh",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            {mediaModal.type === "video" ? (
+              <video
+                src={mediaModal.src}
+                controls
+                autoPlay
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  borderRadius: 8,
+                }}
+              />
+            ) : (
+              <img
+                src={mediaModal.src}
+                alt={mediaModal.name}
+                style={{
+                  maxWidth: "100%",
+                  maxHeight: "80vh",
+                  borderRadius: 8,
+                  objectFit: "contain",
+                }}
+              />
+            )}
+          </div>
+
+          {/* Instructions */}
+          <div style={{
+            position: "absolute",
+            bottom: 20,
+            color: "rgba(255,255,255,0.5)",
+            fontSize: 12,
+          }}>
+            Click anywhere outside to close • Press ESC to close
+          </div>
+        </div>
+      )}
 
       {/* Styles for comment content */}
       <style jsx global>{`
