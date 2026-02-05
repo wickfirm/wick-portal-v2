@@ -422,6 +422,9 @@ export default function TasksManager({
         // Optimistically update local state already happened in Kanban component
         // Fetch to ensure consistency
         await fetchTasks();
+      } else {
+        console.error("Failed to update task status");
+        await fetchTasks(); // Revert optimistic update
       }
     } catch (error) {
       console.error("Error moving task:", error);

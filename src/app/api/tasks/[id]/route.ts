@@ -163,3 +163,11 @@ export async function PATCH(
     );
   }
 }
+
+// PUT /api/tasks/[id] - Update a task (alias for PATCH)
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  return PATCH(request, { params });
+}
