@@ -136,21 +136,14 @@ export default function TaskDetailPage() {
 
   const user = session?.user as any;
 
-  // Default options
-  const statusOptions = [
-    { value: "TODO", label: "To Do", color: "#6b7280" },
-    { value: "IN_PROGRESS", label: "In Progress", color: "#3b82f6" },
-    { value: "IN_REVIEW", label: "In Review", color: "#8b5cf6" },
-    { value: "BLOCKED", label: "Blocked", color: "#ef4444" },
-    { value: "COMPLETED", label: "Completed", color: "#22c55e" },
-  ];
-
-  const priorityOptions = [
+  // Dynamic status and priority options from API
+  const [statusOptions, setStatusOptions] = useState<Array<{ value: string; label: string; color: string }>>([]);
+  const [priorityOptions, setPriorityOptions] = useState<Array<{ value: string; label: string; color: string }>>([
     { value: "LOW", label: "Low", color: "#22c55e" },
     { value: "MEDIUM", label: "Medium", color: "#f59e0b" },
     { value: "HIGH", label: "High", color: "#ef4444" },
     { value: "URGENT", label: "Urgent", color: "#dc2626" },
-  ];
+  ]);
 
   // Fetch functions
   const fetchTask = useCallback(async () => {
@@ -253,12 +246,49 @@ export default function TaskDetailPage() {
     }
   };
 
+  // Fetch status and priority options from API
+  const fetchStatusOptions = async () => {
+    try {
+      const res = await fetch("/api/task-statuses");
+      if (res.ok) {
+        const statuses = await res.json();
+        setStatusOptions(statuses.map((s: any) => ({
+          value: s.name,
+          label: s.name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).replace(/\B\w+/g, (c: string) => c.toLowerCase()),
+          color: s.color || "#6b7280",
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching statuses:", error);
+    }
+  };
+
+  const fetchPriorityOptions = async () => {
+    try {
+      const res = await fetch("/api/task-priorities");
+      if (res.ok) {
+        const priorities = await res.json();
+        setPriorityOptions(priorities.map((p: any) => ({
+          value: p.name,
+          label: p.name.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()).replace(/\B\w+/g, (c: string) => c.toLowerCase()),
+          color: p.color || "#6b7280",
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching priorities:", error);
+    }
+  };
+
   useEffect(() => {
     if (sessionStatus === "unauthenticated") {
       router.push("/login");
       return;
     }
     if (sessionStatus === "authenticated" && taskId) {
+      // Fetch task options
+      fetchStatusOptions();
+      fetchPriorityOptions();
+
       Promise.all([
         fetchTask(),
         fetchComments(),

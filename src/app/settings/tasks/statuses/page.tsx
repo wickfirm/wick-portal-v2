@@ -17,7 +17,7 @@ type TaskStatus = {
 export default function TaskStatusesPage() {
   const { data: session } = useSession();
   const currentUser = session?.user as any;
-  
+
   const [statuses, setStatuses] = useState<TaskStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [newStatus, setNewStatus] = useState({ name: "", color: "#6B7280" });
@@ -25,6 +25,8 @@ export default function TaskStatusesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({ name: "", color: "" });
   const [saving, setSaving] = useState(false);
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
 
   useEffect(() => { fetchStatuses(); }, []);
 
@@ -83,6 +85,51 @@ export default function TaskStatusesPage() {
     fetchStatuses();
   }
 
+  // Drag and drop handlers
+  function handleDragStart(id: string) {
+    setDraggedId(id);
+  }
+
+  function handleDragOver(e: React.DragEvent, id: string) {
+    e.preventDefault();
+    if (id !== draggedId) setDragOverId(id);
+  }
+
+  function handleDragLeave() {
+    setDragOverId(null);
+  }
+
+  async function handleDrop(targetId: string) {
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      setDragOverId(null);
+      return;
+    }
+
+    const draggedIndex = statuses.findIndex(s => s.id === draggedId);
+    const targetIndex = statuses.findIndex(s => s.id === targetId);
+
+    const newStatuses = [...statuses];
+    const [removed] = newStatuses.splice(draggedIndex, 1);
+    newStatuses.splice(targetIndex, 0, removed);
+
+    setStatuses(newStatuses);
+    setDraggedId(null);
+    setDragOverId(null);
+
+    // Save new order
+    await fetch("/api/task-statuses/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderedIds: newStatuses.map(s => s.id) }),
+    });
+  }
+
+  function handleDragEnd() {
+    setDraggedId(null);
+    setDragOverId(null);
+  }
+
   const inputStyle = {
     padding: "12px 16px",
     border: "1px solid " + theme.colors.borderMedium,
@@ -104,7 +151,7 @@ export default function TaskStatusesPage() {
 
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: "'DM Serif Display', serif", fontSize: 28, fontWeight: 400, color: theme.colors.textPrimary, marginBottom: 4 }}>Task Statuses</h1>
-          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Configure task status options and their colors.</p>
+          <p style={{ color: theme.colors.textSecondary, fontSize: 15 }}>Configure task status options and their colors. Drag to reorder - the order here determines the column order in the Kanban board.</p>
         </div>
 
         {/* Add Status Form */}
@@ -136,8 +183,9 @@ export default function TaskStatusesPage() {
 
         {/* Statuses List */}
         <div style={{ background: theme.colors.bgSecondary, borderRadius: theme.borderRadius.lg, border: "1px solid " + theme.colors.borderLight, overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight }}>
+          <div style={{ padding: "16px 20px", background: theme.colors.bgPrimary, borderBottom: "1px solid " + theme.colors.borderLight, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <h3 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>Statuses ({statuses.length})</h3>
+            <span style={{ fontSize: 12, color: theme.colors.textMuted }}>Drag to reorder</span>
           </div>
 
           {statuses.length === 0 ? (
@@ -145,13 +193,26 @@ export default function TaskStatusesPage() {
           ) : (
             <div>
               {statuses.map((status, idx) => (
-                <div key={status.id} style={{
-                  padding: "16px 20px",
-                  borderBottom: idx < statuses.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center"
-                }}>
+                <div
+                  key={status.id}
+                  draggable={editingId !== status.id}
+                  onDragStart={() => handleDragStart(status.id)}
+                  onDragOver={(e) => handleDragOver(e, status.id)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={() => handleDrop(status.id)}
+                  onDragEnd={handleDragEnd}
+                  style={{
+                    padding: "16px 20px",
+                    borderBottom: idx < statuses.length - 1 ? "1px solid " + theme.colors.bgTertiary : "none",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    cursor: editingId === status.id ? "default" : "grab",
+                    background: dragOverId === status.id ? theme.colors.primaryBg || "rgba(118,82,124,0.08)" : draggedId === status.id ? theme.colors.bgTertiary : "transparent",
+                    opacity: draggedId === status.id ? 0.5 : 1,
+                    transition: "background 0.15s ease",
+                  }}
+                >
                   {editingId === status.id ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}>
                       <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} style={{ ...inputStyle, flex: 1 }} autoFocus />
@@ -162,6 +223,9 @@ export default function TaskStatusesPage() {
                   ) : (
                     <>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ color: theme.colors.textMuted, cursor: "grab" }} title="Drag to reorder">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>
+                        </div>
                         <div style={{ width: 16, height: 16, borderRadius: 4, background: status.color }} />
                         <span style={{ fontWeight: 500, color: theme.colors.textPrimary }}>{status.name.replace(/_/g, " ")}</span>
                         {status.isDefault && <span style={{ fontSize: 11, padding: "2px 8px", background: theme.colors.successBg, color: theme.colors.success, borderRadius: 10 }}>Default</span>}
