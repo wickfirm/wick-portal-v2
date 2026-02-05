@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
+// Next.js App Router route segment config
+export const maxDuration = 60; // 60 seconds timeout
+export const dynamic = "force-dynamic";
+
 // Use Cloudflare R2
 const s3Client = new S3Client({
   region: "auto",

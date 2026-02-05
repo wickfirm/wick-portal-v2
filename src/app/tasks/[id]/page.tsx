@@ -316,18 +316,64 @@ export default function TaskDetailPage() {
       if (res.ok) {
         const createdComment = await res.json();
 
-        // Then upload attachments to the comment
-        for (const att of commentAttachments) {
-          const formData = new FormData();
-          formData.append("file", att.file);
-          formData.append("commentId", createdComment.id);
+        // Upload attachments using presigned URLs (direct browser-to-R2)
+        for (let i = 0; i < commentAttachments.length; i++) {
+          const att = commentAttachments[i];
+          try {
+            // Show upload progress
+            setUploadingFile(true);
+            setUploadFileName(att.file.name);
+            setUploadProgress(0);
 
-          await fetch(`/api/tasks/${taskId}/comments/attachments`, {
-            method: "POST",
-            body: formData,
-          });
+            // Step 1: Get presigned upload URL
+            const urlRes = await fetch(`/api/tasks/${taskId}/comments/attachments/upload-url`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                commentId: createdComment.id,
+                filename: att.file.name,
+                size: att.file.size,
+                contentType: att.file.type,
+              }),
+            });
+
+            if (urlRes.ok) {
+              const { uploadUrl, mimeType } = await urlRes.json();
+
+              // Step 2: Upload directly to R2 using presigned URL with progress tracking
+              await new Promise<void>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.addEventListener("progress", (e) => {
+                  if (e.lengthComputable) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    setUploadProgress(percent);
+                  }
+                });
+
+                xhr.addEventListener("load", () => {
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                    resolve();
+                  } else {
+                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                  }
+                });
+
+                xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+
+                xhr.open("PUT", uploadUrl);
+                xhr.setRequestHeader("Content-Type", mimeType);
+                xhr.send(att.file);
+              });
+            }
+          } catch (uploadError) {
+            console.error("Error uploading attachment:", uploadError);
+          }
         }
 
+        setUploadingFile(false);
+        setUploadProgress(0);
+        setUploadFileName("");
         setNewComment("");
         setCommentAttachments([]);
         fetchComments();
