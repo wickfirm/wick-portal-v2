@@ -21,6 +21,7 @@ interface Task {
   status: string;
   priority: string;
   dueDate: string | null;
+  estimatedMinutes: number | null;
   internalNotes: string | null;
   nextSteps: string | null;
   externalLink: string | null;
@@ -1100,6 +1101,75 @@ export default function TaskDetailPage() {
                 }}
                 placeholder="Select a date..."
               />
+            </div>
+
+            {/* ETA (Estimated Time) */}
+            <div style={{ display: "flex", alignItems: "center", marginBottom: 12 }}>
+              <span style={{ width: 120, fontSize: 14, fontWeight: 600, color: "#666", textAlign: "right", paddingRight: 16 }}>
+                ETA
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input
+                  type="number"
+                  min="0"
+                  value={task.estimatedMinutes ? Math.floor(task.estimatedMinutes / 60) : ""}
+                  onChange={(e) => {
+                    const hours = parseInt(e.target.value) || 0;
+                    const currentMinutes = (task.estimatedMinutes || 0) % 60;
+                    updateTask("estimatedMinutes", hours * 60 + currentMinutes || null);
+                  }}
+                  placeholder="0"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    fontSize: 14,
+                    width: 50,
+                    textAlign: "center",
+                  }}
+                />
+                <span style={{ fontSize: 13, color: "#666" }}>h</span>
+                <input
+                  type="number"
+                  min="0"
+                  max="59"
+                  value={task.estimatedMinutes ? task.estimatedMinutes % 60 : ""}
+                  onChange={(e) => {
+                    const minutes = parseInt(e.target.value) || 0;
+                    const currentHours = Math.floor((task.estimatedMinutes || 0) / 60);
+                    updateTask("estimatedMinutes", currentHours * 60 + minutes || null);
+                  }}
+                  placeholder="0"
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 6,
+                    padding: "4px 8px",
+                    fontSize: 14,
+                    width: 50,
+                    textAlign: "center",
+                  }}
+                />
+                <span style={{ fontSize: 13, color: "#666" }}>m</span>
+                {task.estimatedMinutes && (
+                  <button
+                    onClick={() => updateTask("estimatedMinutes", null)}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#9ca3af",
+                      cursor: "pointer",
+                      padding: 4,
+                      marginLeft: 4,
+                    }}
+                    title="Clear ETA"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="18" y1="6" x2="6" y2="18" />
+                      <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* Priority */}

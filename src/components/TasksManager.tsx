@@ -17,6 +17,7 @@ type Task = {
   status: string;
   priority: string;
   dueDate: string | null;
+  estimatedMinutes: number | null;
   externalLink: string | null;
   externalLinkLabel: string | null;
   internalLink: string | null;
@@ -758,6 +759,23 @@ export default function TasksManager({
         />
       </td>
 
+      {/* ETA */}
+      <td style={{ padding: "10px 12px" }}>
+        <span
+          style={{
+            fontSize: 12,
+            color: task.estimatedMinutes ? theme.colors.textSecondary : theme.colors.textMuted,
+            cursor: "pointer",
+          }}
+          onClick={() => window.location.href = `/tasks/${task.id}`}
+          title={task.estimatedMinutes ? `Estimated: ${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60}m` : "No ETA set"}
+        >
+          {task.estimatedMinutes
+            ? `${Math.floor(task.estimatedMinutes / 60)}h${task.estimatedMinutes % 60 > 0 ? ` ${task.estimatedMinutes % 60}m` : ""}`
+            : "—"}
+        </span>
+      </td>
+
       {/* Priority */}
       <td style={{ padding: "10px 12px" }}>
         <select
@@ -1261,6 +1279,9 @@ export default function TasksManager({
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 115 }}>
                       Due Date
                     </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
+                      ETA
+                    </th>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 100 }}>
                       Priority
                     </th>
@@ -1411,6 +1432,9 @@ export default function TasksManager({
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 115 }}>
                       Due Date
+                    </th>
+                    <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 70 }}>
+                      ETA
                     </th>
                     <th style={{ padding: "10px 12px", textAlign: "left", fontSize: 12, fontWeight: 600, color: theme.colors.textSecondary, width: 100 }}>
                       Priority
@@ -1790,6 +1814,7 @@ export default function TasksManager({
             status: t.status,
             priority: t.priority,
             dueDate: t.dueDate,
+            estimatedMinutes: t.estimatedMinutes,
             assignee: t.assignee,
             pinned: t.pinned,
           }))}
@@ -1809,6 +1834,7 @@ export default function TasksManager({
             status: t.status,
             priority: t.priority,
             dueDate: t.dueDate,
+            estimatedMinutes: t.estimatedMinutes,
             assignee: t.assignee,
           }))}
           onTaskClick={(taskId) => {

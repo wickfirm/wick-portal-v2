@@ -9,6 +9,7 @@ type Task = {
   status: string;
   priority: string;
   dueDate: string | null;
+  estimatedMinutes?: number | null;
   assignee: { id: string; name: string; email: string } | null;
 };
 
@@ -655,6 +656,27 @@ export default function TasksCalendarView({
                           >
                             {task.priority}
                           </span>
+                          {task.estimatedMinutes && (
+                            <span
+                              style={{
+                                fontSize: 11,
+                                padding: "2px 8px",
+                                borderRadius: 10,
+                                background: theme.colors.bgTertiary,
+                                color: theme.colors.textMuted,
+                                fontWeight: 500,
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 4,
+                              }}
+                            >
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <polyline points="12 6 12 12 16 14" />
+                              </svg>
+                              {Math.floor(task.estimatedMinutes / 60)}h{task.estimatedMinutes % 60 > 0 ? ` ${task.estimatedMinutes % 60}m` : ""}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -344,6 +344,7 @@ model ClientTask {
   projectId         String?
   ownerType         String?       @default("AGENCY")
   priority          String        @default("MEDIUM")
+  estimatedMinutes  Int?          @map("estimated_minutes") // ETA in minutes for planning
   // Relations
   category          TaskCategory? @relation("CategoryTasks", fields: [categoryId], references: [id])
   client            Client        @relation("ClientTasks", fields: [clientId], references: [id])

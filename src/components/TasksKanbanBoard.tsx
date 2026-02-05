@@ -35,6 +35,7 @@ type Task = {
   status: string;
   priority: string;
   dueDate: string | null;
+  estimatedMinutes?: number | null;
   assignee: { id: string; name: string; email: string } | null;
   pinned?: boolean;
   _count?: { comments: number; attachments: number };
@@ -214,6 +215,36 @@ function TaskCard({
                 month: "short",
                 day: "numeric",
               })}
+            </span>
+          )}
+
+          {/* ETA */}
+          {task.estimatedMinutes && (
+            <span
+              style={{
+                fontSize: 11,
+                color: theme.colors.textMuted,
+                display: "flex",
+                alignItems: "center",
+                gap: 4,
+                background: theme.colors.bgTertiary,
+                padding: "2px 6px",
+                borderRadius: 4,
+              }}
+              title={`Estimated: ${Math.floor(task.estimatedMinutes / 60)}h ${task.estimatedMinutes % 60}m`}
+            >
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              {Math.floor(task.estimatedMinutes / 60)}h{task.estimatedMinutes % 60 > 0 ? ` ${task.estimatedMinutes % 60}m` : ""}
             </span>
           )}
         </div>

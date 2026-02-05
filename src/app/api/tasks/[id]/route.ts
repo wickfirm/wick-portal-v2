@@ -94,6 +94,7 @@ export async function PATCH(
       "assigneeId",
       "categoryId",
       "projectId",
+      "estimatedMinutes",
     ];
 
     for (const field of allowedFields) {
