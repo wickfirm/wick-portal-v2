@@ -44,13 +44,34 @@ export async function GET() {
       select: { id: true, name: true, slug: true }
     });
 
+    // Test the exact OR query that clients/list uses
+    const clientsWithORQuery = currentUser?.agencyId
+      ? await prisma.client.findMany({
+          where: {
+            OR: [
+              { agencyId: currentUser.agencyId },
+              {
+                agencies: {
+                  some: {
+                    agencyId: currentUser.agencyId
+                  }
+                }
+              }
+            ]
+          },
+          select: { id: true, name: true, status: true }
+        })
+      : [];
+
     return NextResponse.json({
       currentUser,
       counts: {
         clientsWithAgencyId,
         clientsViaRelation,
         totalClients,
+        clientsWithORQuery: clientsWithORQuery.length,
       },
+      clientsFromORQuery: clientsWithORQuery,
       sampleClients,
       agencies,
     });
