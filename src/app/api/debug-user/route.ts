@@ -64,6 +64,7 @@ export async function GET() {
       : [];
 
     return NextResponse.json({
+      _version: "v3-with-or-query",
       currentUser,
       counts: {
         clientsWithAgencyId,
