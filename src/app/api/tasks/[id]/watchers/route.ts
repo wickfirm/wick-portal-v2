@@ -1,87 +1,118 @@
-/**
- * Task Watchers API
- * GET: List watchers for a task + isWatching flag for current user
- * POST: Toggle watch/unwatch for current user
- */
+"use server";
 
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
-export const dynamic = "force-dynamic";
-
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = session.user as any;
-
+// GET /api/tasks/[id]/watchers - Get watchers for a task
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const taskId = params.id;
+
     const watchers = await prisma.taskWatcher.findMany({
-      where: { taskId: params.id },
+      where: { taskId },
       include: {
-        user: { select: { id: true, name: true, email: true } },
+        user: {
+          select: { id: true, name: true, email: true },
+        },
       },
-      orderBy: { watchedAt: "desc" },
     });
 
-    const isWatching = watchers.some((w) => w.userId === user.id);
-
-    return NextResponse.json({
-      watchers: watchers.map((w) => ({
-        id: w.id,
-        userId: w.user.id,
-        name: w.user.name,
-        email: w.user.email,
-        watchedAt: w.watchedAt,
-      })),
-      isWatching,
-      count: watchers.length,
-    });
+    return NextResponse.json(watchers);
   } catch (error) {
     console.error("Error fetching watchers:", error);
-    return NextResponse.json({ error: "Failed to fetch watchers" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to fetch watchers" },
+      { status: 500 }
+    );
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const user = session.user as any;
-
+// POST /api/tasks/[id]/watchers - Add current user as watcher
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = session.user as any;
+    const taskId = params.id;
+
     // Check if already watching
-    const existing = await prisma.taskWatcher.findUnique({
+    const existing = await prisma.taskWatcher.findFirst({
       where: {
-        userId_taskId: {
-          userId: user.id,
-          taskId: params.id,
-        },
+        taskId,
+        userId: user.id,
       },
     });
 
     if (existing) {
-      // Unwatch
-      await prisma.taskWatcher.delete({ where: { id: existing.id } });
-      return NextResponse.json({ watching: false });
-    } else {
-      // Watch
-      await prisma.taskWatcher.create({
-        data: {
-          userId: user.id,
-          taskId: params.id,
-        },
-      });
-      return NextResponse.json({ watching: true });
+      return NextResponse.json({ message: "Already watching" });
     }
+
+    // Add watcher
+    const watcher = await prisma.taskWatcher.create({
+      data: {
+        taskId,
+        userId: user.id,
+      },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true },
+        },
+      },
+    });
+
+    return NextResponse.json(watcher, { status: 201 });
   } catch (error) {
-    console.error("Error toggling watch:", error);
-    return NextResponse.json({ error: "Failed to toggle watch" }, { status: 500 });
+    console.error("Error adding watcher:", error);
+    return NextResponse.json(
+      { error: "Failed to add watcher" },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/tasks/[id]/watchers - Remove current user as watcher
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const user = session.user as any;
+    const taskId = params.id;
+
+    await prisma.taskWatcher.deleteMany({
+      where: {
+        taskId,
+        userId: user.id,
+      },
+    });
+
+    return NextResponse.json({ message: "Stopped watching" });
+  } catch (error) {
+    console.error("Error removing watcher:", error);
+    return NextResponse.json(
+      { error: "Failed to remove watcher" },
+      { status: 500 }
+    );
   }
 }
