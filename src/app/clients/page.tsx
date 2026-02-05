@@ -245,13 +245,15 @@ export default function ClientsPage() {
   const { data, isLoading, error, refetch } = useQuery<ClientsData>({
     queryKey: ["clients"],
     queryFn: async () => {
-      const res = await fetch("/api/clients/list");
+      const res = await fetch("/api/clients/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch clients");
       return res.json();
     },
     enabled: status === "authenticated",
     staleTime: 0,
+    gcTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const togglePin = async (clientId: string, currentPinned: boolean, e: React.MouseEvent) => {

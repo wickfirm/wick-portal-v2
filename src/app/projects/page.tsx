@@ -212,13 +212,15 @@ export default function ProjectsPage() {
   const { data, isLoading, error, refetch } = useQuery<ProjectsData>({
     queryKey: ["projects"],
     queryFn: async () => {
-      const res = await fetch("/api/projects/list");
+      const res = await fetch("/api/projects/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch projects");
       return res.json();
     },
     enabled: status === "authenticated",
     staleTime: 0,
+    gcTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const handlePinToggle = async (projectId: string, pinned: boolean) => {

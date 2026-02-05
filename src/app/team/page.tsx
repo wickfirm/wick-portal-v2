@@ -155,9 +155,9 @@ export default function TeamPage() {
     queryKey: ["team-data"],
     queryFn: async () => {
       const [usersRes, agenciesRes, clientsRes] = await Promise.all([
-        fetch("/api/team"),
-        fetch("/api/agencies"),
-        fetch("/api/clients"),
+        fetch("/api/team", { cache: "no-store" }),
+        fetch("/api/agencies", { cache: "no-store" }),
+        fetch("/api/clients", { cache: "no-store" }),
       ]);
 
       const [usersData, agenciesData, clientsData] = await Promise.all([
@@ -174,7 +174,9 @@ export default function TeamPage() {
     },
     enabled: status === "authenticated" && !isExternalPartner,
     staleTime: 0,
+    gcTime: 0,
     refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 
   const users = data?.users || [];
