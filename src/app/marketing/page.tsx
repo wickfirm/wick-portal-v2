@@ -208,25 +208,34 @@ export default function MarketingPage() {
                   ))}
                 </div>
 
-                {/* Project list preview */}
+                {/* Kanban Board Preview */}
                 <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: "12px", padding: "16px" }}>
-                  <div style={{ fontSize: "13px", fontWeight: "600", color: "rgba(255,255,255,0.7)", marginBottom: "12px" }}>Active Projects</div>
-                  {[
-                    { name: "Brand Refresh", client: "Acme Corp", progress: 75 },
-                    { name: "Q1 Campaign", client: "TechStart", progress: 45 },
-                    { name: "Website Redesign", client: "FinanceX", progress: 90 },
-                  ].map((project, i) => (
-                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "12px", padding: "10px 0", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.05)" : "none" }}>
-                      <div style={{ width: "36px", height: "36px", borderRadius: "8px", background: `hsl(${180 + i * 30}, 70%, 50%)`, opacity: 0.2 }} />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: "13px", fontWeight: "500", color: "#fff" }}>{project.name}</div>
-                        <div style={{ fontSize: "11px", color: "rgba(255,255,255,0.4)" }}>{project.client}</div>
-                      </div>
-                      <div style={{ width: "60px", height: "4px", background: "rgba(255,255,255,0.1)", borderRadius: "2px", overflow: "hidden" }}>
-                        <div style={{ width: `${project.progress}%`, height: "100%", background: "#00d4ff", borderRadius: "2px" }} />
-                      </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "12px" }}>
+                    <div style={{ fontSize: "13px", fontWeight: "600", color: "rgba(255,255,255,0.7)" }}>Task Board</div>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <div style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(0,212,255,0.2)", color: "#00d4ff", fontSize: "10px", fontWeight: "500" }}>Board</div>
+                      <div style={{ padding: "4px 8px", borderRadius: "4px", background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.4)", fontSize: "10px" }}>Calendar</div>
                     </div>
-                  ))}
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "8px" }}>
+                    {[
+                      { status: "To Do", color: "#6b7280", tasks: ["Website Copy", "SEO Audit"] },
+                      { status: "In Progress", color: "#f59e0b", tasks: ["Brand Guide"] },
+                      { status: "Done", color: "#22c55e", tasks: ["Logo Design", "Mockups"] },
+                    ].map((col, i) => (
+                      <div key={i} style={{ padding: "8px", background: "rgba(255,255,255,0.02)", borderRadius: "8px" }}>
+                        <div style={{ fontSize: "10px", fontWeight: "600", color: col.color, marginBottom: "8px", display: "flex", alignItems: "center", gap: "4px" }}>
+                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: col.color }} />
+                          {col.status}
+                        </div>
+                        {col.tasks.map((task, j) => (
+                          <div key={j} style={{ padding: "6px 8px", background: "rgba(255,255,255,0.05)", borderRadius: "4px", marginBottom: "4px", fontSize: "10px", color: "rgba(255,255,255,0.7)" }}>
+                            {task}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
@@ -298,17 +307,17 @@ export default function MarketingPage() {
             <div className="feature-card large">
               <div>
                 <div className="feature-icon">{icons.users}</div>
-                <h3 className="feature-title">Client Management</h3>
+                <h3 className="feature-title">Client Management & CRM</h3>
                 <p className="feature-text">
-                  A CRM that actually understands agency relationships. Track clients,
-                  contacts, deals, and history in one place. Auto-link to projects,
-                  tasks, and invoices.
+                  A powerful CRM built for agencies. Full deal pipeline, contact management,
+                  resource libraries, and quick-share links. Everything connected to
+                  projects and invoices automatically.
                 </p>
                 <ul className="feature-list">
+                  <li>{icons.check} Deal pipeline with custom stages & drag-drop</li>
+                  <li>{icons.check} Client resource library with copy-link sharing</li>
+                  <li>{icons.check} Contact management & activity timeline</li>
                   <li>{icons.check} Client portals with real-time project status</li>
-                  <li>{icons.check} Contact management & communication history</li>
-                  <li>{icons.check} Deal pipeline with custom stages</li>
-                  <li>{icons.check} Automated onboarding workflows</li>
                 </ul>
               </div>
               <div style={{ background: "rgba(0,212,255,0.05)", borderRadius: "16px", padding: "24px", border: "1px solid rgba(0,212,255,0.1)" }}>
@@ -336,13 +345,14 @@ export default function MarketingPage() {
               <div className="feature-icon">{icons.zap}</div>
               <h3 className="feature-title">Project & Task Management</h3>
               <p className="feature-text">
-                Kanban boards, timelines, dependencies - all connected to time tracking
-                and client billing automatically.
+                Kanban boards, calendar views, drag-and-drop organization - all connected
+                to time tracking and client billing automatically.
               </p>
               <ul className="feature-list">
-                <li>{icons.check} Multiple project views</li>
-                <li>{icons.check} Time estimates vs actuals</li>
-                <li>{icons.check} Resource allocation</li>
+                <li>{icons.check} Kanban board with drag-and-drop</li>
+                <li>{icons.check} Calendar view for due dates</li>
+                <li>{icons.check} ETA tracking & planning</li>
+                <li>{icons.check} Move tasks between clients</li>
               </ul>
             </div>
 

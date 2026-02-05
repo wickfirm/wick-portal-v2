@@ -23,7 +23,7 @@ const check = (
 
 const features = [
   {
-    category: "Client Management",
+    category: "Client Management & CRM",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -32,35 +32,35 @@ const features = [
         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
-    description: "A CRM built specifically for agency-client relationships, not generic sales pipelines.",
+    description: "A powerful CRM built for agencies with full deal pipeline, resource management, and instant link sharing.",
     items: [
-      "Client profiles with complete history",
-      "Contact management across organizations",
-      "Deal pipeline with custom stages",
-      "Client health scoring",
-      "Automated onboarding workflows",
+      "Deal pipeline with drag-and-drop stages",
+      "Contact management with activity timeline",
+      "Client resource library (Drive, Figma, Docs, etc.)",
+      "One-click copy resource links for team sharing",
       "Client portals with project visibility",
-      "Communication timeline",
+      "Automated onboarding workflows",
+      "Client health scoring & insights",
       "Document management per client",
     ],
   },
   {
-    category: "Project Management",
+    category: "Task Management",
     icon: (
       <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
       </svg>
     ),
-    description: "Plan, track, and deliver projects with tools designed for creative and strategic work.",
+    description: "Basecamp-style task pages with Kanban boards, calendar views, and powerful organization tools.",
     items: [
-      "Multiple views: Kanban, List, Timeline, Calendar",
-      "Task dependencies and milestones",
-      "Time estimates vs actuals tracking",
-      "Subtasks and checklists",
-      "File attachments and comments",
-      "Project templates",
-      "Status automations",
-      "Deadline alerts and notifications",
+      "Kanban board with drag-and-drop between columns",
+      "Calendar view showing tasks by due date",
+      "Standalone task detail pages (Basecamp-style)",
+      "ETA tracking for time planning before work starts",
+      "Move tasks between clients instantly",
+      "Rich text descriptions with comments & attachments",
+      "Custom status & priority configurations",
+      "Activity timeline tracking all changes",
     ],
   },
   {
@@ -93,16 +93,16 @@ const features = [
         <line x1="3" y1="10" x2="21" y2="10" />
       </svg>
     ),
-    description: "See your team's capacity at a glance. No more overbooking or missed opportunities.",
+    description: "See your team's capacity at a glance. Plan with ETA estimates before work begins.",
     items: [
       "Team capacity visualization",
-      "Workload balancing",
-      "Project scheduling with drag-and-drop",
-      "Utilization reports",
+      "ETA estimates for planning (hours & minutes)",
+      "Calendar view for scheduling tasks",
+      "Workload balancing across team",
       "Leave and PTO management",
-      "Skill-based assignment",
-      "Conflict detection",
-      "Forecasting tools",
+      "Skill-based task assignment",
+      "Conflict detection alerts",
+      "Utilization reports & forecasting",
     ],
   },
   {
