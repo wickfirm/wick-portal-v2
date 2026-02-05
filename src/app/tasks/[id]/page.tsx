@@ -64,6 +64,7 @@ interface Activity {
   fieldChanged?: string;
   oldValue: string | null;
   newValue: string | null;
+  notes?: string | null;
   timestamp: string;
   user: { id: string; name: string; email: string };
 }
@@ -578,6 +579,65 @@ export default function TaskDetailPage() {
       insertMention(filteredMembers[selectedMentionIndex]);
     } else if (e.key === "Escape") {
       setShowMentions(false);
+    }
+  };
+
+  // Format activity message based on type
+  const formatActivityMessage = (activity: Activity): { action: string; detail?: string } => {
+    const { type, oldValue, newValue } = activity;
+
+    switch (type) {
+      case "status":
+        return {
+          action: "changed status",
+          detail: oldValue && newValue ? `from "${oldValue}" to "${newValue}"` : `to "${newValue || oldValue}"`,
+        };
+      case "priority":
+        return {
+          action: "changed priority",
+          detail: oldValue && newValue ? `from "${oldValue}" to "${newValue}"` : `to "${newValue || oldValue}"`,
+        };
+      case "assignee":
+      case "assigneeId":
+        if (!oldValue && newValue) return { action: "assigned this task" };
+        if (oldValue && !newValue) return { action: "unassigned this task" };
+        return { action: "reassigned this task" };
+      case "dueDate":
+        if (!oldValue && newValue) return { action: "set due date", detail: `to ${newValue}` };
+        if (oldValue && !newValue) return { action: "removed the due date" };
+        return { action: "changed due date", detail: `from ${oldValue} to ${newValue}` };
+      case "name":
+        return {
+          action: "renamed task",
+          detail: oldValue && newValue ? `from "${oldValue}" to "${newValue}"` : undefined,
+        };
+      case "description":
+        return { action: "updated the description" };
+      case "comment_added":
+        return {
+          action: "added a comment",
+          detail: newValue ? `"${newValue.length > 50 ? newValue.slice(0, 50) + "..." : newValue}"` : undefined,
+        };
+      case "comment_deleted":
+        return { action: "deleted a comment" };
+      case "attachment_added":
+        return {
+          action: "attached a file",
+          detail: newValue ? `"${newValue}"` : undefined,
+        };
+      case "attachment_removed":
+        return {
+          action: "removed attachment",
+          detail: oldValue ? `"${oldValue}"` : undefined,
+        };
+      case "created":
+        return { action: "created this task" };
+      case "watcher_added":
+        return { action: "started watching this task" };
+      case "watcher_removed":
+        return { action: "stopped watching this task" };
+      default:
+        return { action: "made a change" };
     }
   };
 
@@ -1710,23 +1770,26 @@ export default function TaskDetailPage() {
         {/* Activity List */}
         {showActivity && activities.length > 0 && (
           <div style={{ marginTop: 20 }}>
-            {activities.map(activity => (
-              <div key={activity.id} style={{
-                padding: "12px 0",
-                borderBottom: "1px solid #f3f4f6",
-                fontSize: 14,
-                color: "#6b7280",
-              }}>
-                <strong style={{ color: "#374151" }}>{activity.user.name}</strong>
-                {" "}
-                {activity.fieldChanged === "status" ? `changed status to ${activity.newValue}` :
-                 activity.fieldChanged === "priority" ? `changed priority to ${activity.newValue}` :
-                 activity.fieldChanged === "assigneeId" ? (activity.newValue ? "assigned this task" : "unassigned this task") :
-                 "made changes"}
-                {" "}
-                <span style={{ color: "#9ca3af" }}>{formatTimeAgo(activity.timestamp)}</span>
-              </div>
-            ))}
+            {activities.map(activity => {
+              const { action, detail } = formatActivityMessage(activity);
+              return (
+                <div key={activity.id} style={{
+                  padding: "12px 0",
+                  borderBottom: "1px solid #f3f4f6",
+                  fontSize: 14,
+                  color: "#6b7280",
+                }}>
+                  <strong style={{ color: "#374151" }}>{activity.user.name}</strong>
+                  {" "}
+                  <span>{action}</span>
+                  {detail && (
+                    <span style={{ color: "#9ca3af" }}> {detail}</span>
+                  )}
+                  {" · "}
+                  <span style={{ color: "#9ca3af" }}>{formatTimeAgo(activity.timestamp)}</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </main>
