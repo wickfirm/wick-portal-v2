@@ -110,6 +110,22 @@ export default function RichTextEditor({
     setLinkUrl("");
   }, [editor, linkUrl]);
 
+  // Helper to detect if file is a video by extension (browser file.type can be wrong)
+  const isVideoFile = (filename: string, mimeType: string): boolean => {
+    const ext = filename.toLowerCase().split('.').pop() || '';
+    const videoExtensions = ['mp4', 'mov', 'webm', 'avi', 'mkv', '3gp', 'm4v'];
+    return mimeType.startsWith('video/') || videoExtensions.includes(ext);
+  };
+
+  // Helper to detect if file is an image by extension
+  const isImageFile = (filename: string, mimeType: string): boolean => {
+    const ext = filename.toLowerCase().split('.').pop() || '';
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp'];
+    // Only treat as image if NOT a video (video takes priority)
+    if (isVideoFile(filename, mimeType)) return false;
+    return mimeType.startsWith('image/') || imageExtensions.includes(ext);
+  };
+
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
@@ -121,12 +137,17 @@ export default function RichTextEditor({
       let type: "image" | "video" | "file" = "file";
       let preview = "";
 
-      if (file.type.startsWith("image/")) {
-        type = "image";
-        preview = URL.createObjectURL(file);
-      } else if (file.type.startsWith("video/")) {
+      // Check video first (takes priority over image detection)
+      if (isVideoFile(file.name, file.type)) {
         type = "video";
         preview = URL.createObjectURL(file);
+        console.log(`File detected as VIDEO: ${file.name}, browser type: ${file.type}`);
+      } else if (isImageFile(file.name, file.type)) {
+        type = "image";
+        preview = URL.createObjectURL(file);
+        console.log(`File detected as IMAGE: ${file.name}, browser type: ${file.type}`);
+      } else {
+        console.log(`File detected as OTHER: ${file.name}, browser type: ${file.type}`);
       }
 
       newAttachments.push({
