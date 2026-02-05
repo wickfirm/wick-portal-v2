@@ -16,6 +16,41 @@ const s3Client = new S3Client({
 
 const BUCKET_NAME = process.env.R2_BUCKET_NAME || "omnixia-media";
 
+// Helper to get correct MIME type from file extension
+function getMimeTypeFromExtension(filename: string): string | null {
+  const ext = filename.toLowerCase().split('.').pop();
+  const mimeTypes: Record<string, string> = {
+    // Video
+    'mp4': 'video/mp4',
+    'mov': 'video/quicktime',
+    'webm': 'video/webm',
+    'avi': 'video/x-msvideo',
+    'mkv': 'video/x-matroska',
+    '3gp': 'video/3gpp',
+    'm4v': 'video/x-m4v',
+    // Image
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'webp': 'image/webp',
+    'svg': 'image/svg+xml',
+    'bmp': 'image/bmp',
+    // Documents
+    'pdf': 'application/pdf',
+    'doc': 'application/msword',
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'xls': 'application/vnd.ms-excel',
+    'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'ppt': 'application/vnd.ms-powerpoint',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'txt': 'text/plain',
+    'csv': 'text/csv',
+    'zip': 'application/zip',
+  };
+  return ext ? mimeTypes[ext] || null : null;
+}
+
 // POST - Upload attachment for a comment
 export async function POST(
   req: NextRequest,
@@ -55,13 +90,21 @@ export async function POST(
     const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
     const r2Key = `comment-attachments/${commentId}/${timestamp}-${safeName}`;
 
+    // Determine correct MIME type - prefer extension-based detection for videos
+    // because browser's file.type can be wrong (especially for WhatsApp videos)
+    const extensionMimeType = getMimeTypeFromExtension(file.name);
+    const isVideoByExtension = extensionMimeType?.startsWith('video/');
+    const mimeType = isVideoByExtension ? extensionMimeType : (file.type || extensionMimeType || 'application/octet-stream');
+
+    console.log(`Upload: ${file.name}, browser type: ${file.type}, extension type: ${extensionMimeType}, final: ${mimeType}`);
+
     // Upload to R2
     await s3Client.send(
       new PutObjectCommand({
         Bucket: BUCKET_NAME,
         Key: r2Key,
         Body: buffer,
-        ContentType: file.type,
+        ContentType: mimeType,
       })
     );
 
@@ -70,7 +113,7 @@ export async function POST(
         commentId: commentId,
         filename: safeName,
         originalName: file.name,
-        mimeType: file.type,
+        mimeType: mimeType,
         size: BigInt(file.size),
         r2Key: r2Key,
         uploadedBy: user.id,
