@@ -98,10 +98,13 @@ export default function TaskDetailPage() {
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadFileName, setUploadFileName] = useState("");
   const [showActivity, setShowActivity] = useState(false);
 
   const commentInputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const toolbarFileInputRef = useRef<HTMLInputElement>(null);
   const mentionDropdownRef = useRef<HTMLDivElement>(null);
 
   const user = session?.user as any;
@@ -275,22 +278,56 @@ export default function TaskDetailPage() {
     }
   };
 
-  // File upload
+  // File upload with progress
   const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     setUploadingFile(true);
-    for (const file of Array.from(files)) {
+
+    const fileArray = Array.from(files);
+    for (let i = 0; i < fileArray.length; i++) {
+      const file = fileArray[i];
+      setUploadFileName(file.name);
+      setUploadProgress(0);
+
       const formData = new FormData();
       formData.append("file", file);
+
       try {
-        await fetch(`/api/tasks/${taskId}/attachments`, { method: "POST", body: formData });
+        // Use XMLHttpRequest for progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+
+          xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+              const percent = Math.round((e.loaded / e.total) * 100);
+              setUploadProgress(percent);
+            }
+          });
+
+          xhr.addEventListener("load", () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error("Upload failed"));
+            }
+          });
+
+          xhr.addEventListener("error", () => reject(new Error("Upload failed")));
+
+          xhr.open("POST", `/api/tasks/${taskId}/attachments`);
+          xhr.send(formData);
+        });
+
         fetchAttachments();
         fetchActivity();
       } catch (error) {
         console.error("Error uploading file:", error);
       }
     }
+
     setUploadingFile(false);
+    setUploadProgress(0);
+    setUploadFileName("");
     setIsDragging(false);
   };
 
@@ -341,6 +378,25 @@ export default function TaskDetailPage() {
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle keyboard shortcuts for formatting
+    if (e.ctrlKey || e.metaKey) {
+      switch (e.key.toLowerCase()) {
+        case "b":
+          e.preventDefault();
+          handleToolbarAction("bold");
+          return;
+        case "i":
+          e.preventDefault();
+          handleToolbarAction("italic");
+          return;
+        case "k":
+          e.preventDefault();
+          handleToolbarAction("link");
+          return;
+      }
+    }
+
+    // Handle mentions navigation
     if (!showMentions) return;
 
     if (e.key === "ArrowDown") {
@@ -383,6 +439,105 @@ export default function TaskDetailPage() {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  };
+
+  // Text formatting helpers
+  const insertFormatting = (before: string, after: string = before) => {
+    const textarea = commentInputRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = newComment.substring(start, end);
+    const newText = newComment.substring(0, start) + before + selectedText + after + newComment.substring(end);
+
+    setNewComment(newText);
+
+    // Set cursor position after update
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = selectedText ? start + before.length + selectedText.length + after.length : start + before.length;
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    }, 0);
+  };
+
+  const insertLink = () => {
+    const url = prompt("Enter URL:");
+    if (url) {
+      const textarea = commentInputRef.current;
+      if (!textarea) return;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = newComment.substring(start, end) || "link text";
+      const linkMarkdown = `[${selectedText}](${url})`;
+      const newText = newComment.substring(0, start) + linkMarkdown + newComment.substring(end);
+      setNewComment(newText);
+    }
+  };
+
+  const insertList = (ordered: boolean) => {
+    const prefix = ordered ? "1. " : "- ";
+    insertFormatting("\n" + prefix, "");
+  };
+
+  const insertQuote = () => {
+    insertFormatting("\n> ", "");
+  };
+
+  const insertCode = () => {
+    const textarea = commentInputRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = newComment.substring(start, end);
+
+    // If multiline, use code block
+    if (selectedText.includes("\n")) {
+      insertFormatting("\n```\n", "\n```\n");
+    } else {
+      insertFormatting("`", "`");
+    }
+  };
+
+  const handleToolbarAction = (action: string) => {
+    switch (action) {
+      case "bold":
+        insertFormatting("**", "**");
+        break;
+      case "italic":
+        insertFormatting("*", "*");
+        break;
+      case "strikethrough":
+        insertFormatting("~~", "~~");
+        break;
+      case "link":
+        insertLink();
+        break;
+      case "highlight":
+        insertFormatting("==", "==");
+        break;
+      case "heading":
+        insertFormatting("\n## ", "");
+        break;
+      case "quote":
+        insertQuote();
+        break;
+      case "divider":
+        insertFormatting("\n---\n", "");
+        break;
+      case "code":
+        insertCode();
+        break;
+      case "orderedList":
+        insertList(true);
+        break;
+      case "unorderedList":
+        insertList(false);
+        break;
+      case "attach":
+        toolbarFileInputRef.current?.click();
+        break;
+    }
   };
 
   const getStatusColor = (status: string) => statusOptions.find(s => s.value === status)?.color || "#6b7280";
@@ -840,25 +995,156 @@ export default function TaskDetailPage() {
                 borderTopRightRadius: 8,
                 borderBottom: "1px solid #e5e7eb",
               }}>
-                {["B", "I", "S", "🔗", "🖍️", "T", "❝", "≡", "</>", "☰", "☰•", "📎"].map((icon, i) => (
-                  <button
-                    key={i}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      padding: "4px 8px",
-                      cursor: "pointer",
-                      fontSize: 14,
-                      color: "#6b7280",
-                      borderRadius: 4,
-                    }}
-                  >
-                    {icon}
-                  </button>
-                ))}
+                {/* Bold */}
+                <button
+                  onClick={() => handleToolbarAction("bold")}
+                  title="Bold (Ctrl+B)"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontWeight: 700 }}
+                >
+                  B
+                </button>
+                {/* Italic */}
+                <button
+                  onClick={() => handleToolbarAction("italic")}
+                  title="Italic (Ctrl+I)"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontStyle: "italic" }}
+                >
+                  I
+                </button>
+                {/* Strikethrough */}
+                <button
+                  onClick={() => handleToolbarAction("strikethrough")}
+                  title="Strikethrough"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, textDecoration: "line-through" }}
+                >
+                  S
+                </button>
+                {/* Link */}
+                <button
+                  onClick={() => handleToolbarAction("link")}
+                  title="Insert Link (Ctrl+K)"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                  </svg>
+                </button>
+                {/* Highlight */}
+                <button
+                  onClick={() => handleToolbarAction("highlight")}
+                  title="Highlight"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z" />
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
+                    <path d="M2 2l7.586 7.586" />
+                    <circle cx="11" cy="11" r="2" />
+                  </svg>
+                </button>
+                {/* Heading */}
+                <button
+                  onClick={() => handleToolbarAction("heading")}
+                  title="Heading"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4, fontWeight: 600 }}
+                >
+                  T
+                </button>
+                {/* Quote */}
+                <button
+                  onClick={() => handleToolbarAction("quote")}
+                  title="Quote"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 16, color: "#6b7280", borderRadius: 4 }}
+                >
+                  "
+                </button>
+                {/* Divider */}
+                <button
+                  onClick={() => handleToolbarAction("divider")}
+                  title="Divider"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  ―
+                </button>
+                {/* Code */}
+                <button
+                  onClick={() => handleToolbarAction("code")}
+                  title="Code"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 12, color: "#6b7280", borderRadius: 4, fontFamily: "monospace" }}
+                >
+                  {"</>"}
+                </button>
+                {/* Ordered List */}
+                <button
+                  onClick={() => handleToolbarAction("orderedList")}
+                  title="Numbered List"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="10" y1="6" x2="21" y2="6" />
+                    <line x1="10" y1="12" x2="21" y2="12" />
+                    <line x1="10" y1="18" x2="21" y2="18" />
+                    <path d="M4 6h1v4" />
+                    <path d="M4 10h2" />
+                    <path d="M6 18H4c0-1 2-2 2-3s-1-1.5-2-1" />
+                  </svg>
+                </button>
+                {/* Unordered List */}
+                <button
+                  onClick={() => handleToolbarAction("unorderedList")}
+                  title="Bullet List"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="9" y1="6" x2="20" y2="6" />
+                    <line x1="9" y1="12" x2="20" y2="12" />
+                    <line x1="9" y1="18" x2="20" y2="18" />
+                    <circle cx="4" cy="6" r="1.5" fill="currentColor" />
+                    <circle cx="4" cy="12" r="1.5" fill="currentColor" />
+                    <circle cx="4" cy="18" r="1.5" fill="currentColor" />
+                  </svg>
+                </button>
+                {/* Attach */}
+                <button
+                  onClick={() => handleToolbarAction("attach")}
+                  title="Attach File"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", fontSize: 14, color: "#6b7280", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </button>
+                <input
+                  ref={toolbarFileInputRef}
+                  type="file"
+                  multiple
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                  style={{ display: "none" }}
+                />
                 <div style={{ flex: 1 }} />
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>↩</button>
-                <button style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af" }}>↪</button>
+                {/* Undo */}
+                <button
+                  onClick={() => document.execCommand("undo")}
+                  title="Undo"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", color: "#9ca3af", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 7v6h6" />
+                    <path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13" />
+                  </svg>
+                </button>
+                {/* Redo */}
+                <button
+                  onClick={() => document.execCommand("redo")}
+                  title="Redo"
+                  style={{ background: "none", border: "none", padding: "4px 8px", cursor: "pointer", color: "#9ca3af", borderRadius: 4 }}
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M21 7v6h-6" />
+                    <path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7" />
+                  </svg>
+                </button>
               </div>
 
               {/* Textarea */}
@@ -886,6 +1172,61 @@ export default function TaskDetailPage() {
                 onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
                 onBlur={(e) => e.target.style.borderColor = "#e5e7eb"}
               />
+
+              {/* Upload Progress Bar */}
+              {uploadingFile && (
+                <div style={{
+                  padding: "12px 16px",
+                  background: "#f0f9ff",
+                  borderRadius: 8,
+                  marginTop: 8,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                }}>
+                  <div style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    background: "#dbeafe",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 16,
+                  }}>
+                    📄
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      marginBottom: 6,
+                    }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: "#374151" }}>
+                        {uploadFileName}
+                      </span>
+                      <span style={{ fontSize: 12, color: "#6b7280" }}>
+                        {uploadProgress}%
+                      </span>
+                    </div>
+                    <div style={{
+                      height: 6,
+                      background: "#e5e7eb",
+                      borderRadius: 3,
+                      overflow: "hidden",
+                    }}>
+                      <div style={{
+                        height: "100%",
+                        width: `${uploadProgress}%`,
+                        background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
+                        borderRadius: 3,
+                        transition: "width 0.2s ease",
+                      }} />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Mentions Dropdown - FIXED POSITION */}
               {showMentions && filteredMembers.length > 0 && (
