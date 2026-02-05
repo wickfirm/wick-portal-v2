@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import Header from "@/components/Header";
-import { theme, STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
+import { STATUS_STYLES, PRIORITY_STYLES } from "@/lib/theme";
 
 type Stats = {
   clientCount: number;
@@ -115,12 +115,13 @@ function AnimatedNumber({ value, duration = 1000 }: { value: number; duration?: 
 }
 
 // Circular progress component
-function CircularProgress({ value, max, size = 120, strokeWidth = 8, color = "#7c3aed" }: {
+function CircularProgress({ value, max, size = 120, strokeWidth = 8, color = "#7c3aed", trackColor = "rgba(0,0,0,0.08)" }: {
   value: number;
   max: number;
   size?: number;
   strokeWidth?: number;
   color?: string;
+  trackColor?: string;
 }) {
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
@@ -134,7 +135,7 @@ function CircularProgress({ value, max, size = 120, strokeWidth = 8, color = "#7
         cy={size / 2}
         r={radius}
         fill="none"
-        stroke="rgba(255,255,255,0.1)"
+        stroke={trackColor}
         strokeWidth={strokeWidth}
       />
       <circle
@@ -153,16 +154,59 @@ function CircularProgress({ value, max, size = 120, strokeWidth = 8, color = "#7
   );
 }
 
+// Theme toggle component
+function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      className="theme-toggle"
+      title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+    >
+      {isDark ? (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="5" />
+          <line x1="12" y1="1" x2="12" y2="3" />
+          <line x1="12" y1="21" x2="12" y2="23" />
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+          <line x1="1" y1="12" x2="3" y2="12" />
+          <line x1="21" y1="12" x2="23" y2="12" />
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+        </svg>
+      ) : (
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/login");
   }, [status, router]);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // Load theme preference from localStorage
+    const savedTheme = localStorage.getItem("dashboard-theme");
+    if (savedTheme === "dark") {
+      setIsDark(true);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = !isDark;
+    setIsDark(newTheme);
+    localStorage.setItem("dashboard-theme", newTheme ? "dark" : "light");
+  };
 
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-all"],
@@ -184,10 +228,10 @@ export default function DashboardPage() {
 
   if (status === "loading") {
     return (
-      <div style={{ minHeight: "100vh", background: "#0a0a0f" }}>
+      <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
         <Header />
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "32px 24px" }}>
-          <div style={{ textAlign: "center", padding: 64, color: "rgba(255,255,255,0.5)" }}>
+          <div style={{ textAlign: "center", padding: 64, color: "#64748b" }}>
             <div className="loading-spinner" />
           </div>
         </main>
@@ -198,13 +242,11 @@ export default function DashboardPage() {
   if (!session) return null;
 
   const user = session.user as any;
-  const isSuperAdmin = user.role === "SUPER_ADMIN";
   const isAdmin = ["ADMIN", "SUPER_ADMIN", "PLATFORM_ADMIN"].includes(user.role);
   const firstName = user.name?.split(" ")[0] || "there";
 
   const overdueCount = taskData?.taskSummary?.overdue || 0;
   const todayCount = taskData?.taskSummary?.dueToday || 0;
-  const completedWeek = taskData?.taskSummary?.completedThisWeek || 0;
   const totalActive = taskData?.taskSummary?.total || 0;
 
   const anim = (delay: number) => ({
@@ -219,10 +261,47 @@ export default function DashboardPage() {
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
 
         .dash {
+          --bg-primary: #f8fafc;
+          --bg-secondary: #ffffff;
+          --bg-tertiary: #f1f5f9;
+          --bg-hover: #e2e8f0;
+          --text-primary: #0f172a;
+          --text-secondary: #334155;
+          --text-muted: #64748b;
+          --text-faint: #94a3b8;
+          --border: #e2e8f0;
+          --border-hover: #cbd5e1;
+          --shadow: rgba(0, 0, 0, 0.04);
+          --shadow-hover: rgba(0, 0, 0, 0.08);
+          --accent: #7c3aed;
+          --accent-light: #a78bfa;
+          --accent-bg: rgba(124, 58, 237, 0.08);
+          --gradient-bg: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.08), transparent);
+          --progress-track: rgba(0, 0, 0, 0.06);
           min-height: 100vh;
-          background: linear-gradient(180deg, #0a0a0f 0%, #0f0f18 50%, #0a0a0f 100%);
+          background: var(--bg-primary);
           position: relative;
           overflow-x: hidden;
+          transition: all 0.3s ease;
+        }
+
+        .dash.dark {
+          --bg-primary: #0a0a0f;
+          --bg-secondary: rgba(255,255,255,0.03);
+          --bg-tertiary: rgba(255,255,255,0.05);
+          --bg-hover: rgba(255,255,255,0.08);
+          --text-primary: #ffffff;
+          --text-secondary: rgba(255,255,255,0.8);
+          --text-muted: rgba(255,255,255,0.5);
+          --text-faint: rgba(255,255,255,0.3);
+          --border: rgba(255,255,255,0.06);
+          --border-hover: rgba(255,255,255,0.12);
+          --shadow: rgba(0, 0, 0, 0.2);
+          --shadow-hover: rgba(0, 0, 0, 0.4);
+          --accent-bg: rgba(124, 58, 237, 0.15);
+          --gradient-bg: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.15), transparent);
+          --progress-track: rgba(255,255,255,0.1);
+          background: linear-gradient(180deg, #0a0a0f 0%, #0f0f18 50%, #0a0a0f 100%);
         }
 
         .dash::before {
@@ -232,7 +311,7 @@ export default function DashboardPage() {
           left: 0;
           right: 0;
           height: 600px;
-          background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(124, 58, 237, 0.15), transparent);
+          background: var(--gradient-bg);
           pointer-events: none;
           z-index: 0;
         }
@@ -243,6 +322,27 @@ export default function DashboardPage() {
           padding: 24px 32px 64px;
           position: relative;
           z-index: 1;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 40px;
+          height: 40px;
+          background: var(--bg-secondary);
+          border: 1px solid var(--border);
+          border-radius: 12px;
+          color: var(--text-secondary);
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+          background: var(--bg-hover);
+          border-color: var(--border-hover);
+          color: var(--accent);
         }
 
         /* Header Section */
@@ -257,7 +357,7 @@ export default function DashboardPage() {
           font-family: 'Space Grotesk', sans-serif;
           font-size: 36px;
           font-weight: 600;
-          color: #fff;
+          color: var(--text-primary);
           margin: 0 0 4px 0;
           letter-spacing: -0.02em;
         }
@@ -271,7 +371,7 @@ export default function DashboardPage() {
 
         .dash-greeting p {
           font-size: 15px;
-          color: rgba(255,255,255,0.5);
+          color: var(--text-muted);
           margin: 0;
         }
 
@@ -285,11 +385,10 @@ export default function DashboardPage() {
           align-items: center;
           gap: 8px;
           padding: 10px 18px;
-          background: rgba(255,255,255,0.05);
-          backdrop-filter: blur(10px);
-          border: 1px solid rgba(255,255,255,0.1);
+          background: var(--bg-secondary);
+          border: 1px solid var(--border);
           border-radius: 12px;
-          color: rgba(255,255,255,0.8);
+          color: var(--text-secondary);
           font-size: 14px;
           font-weight: 500;
           font-family: 'Inter', sans-serif;
@@ -299,8 +398,8 @@ export default function DashboardPage() {
         }
 
         .dash-btn:hover {
-          background: rgba(255,255,255,0.1);
-          border-color: rgba(255,255,255,0.2);
+          background: var(--bg-hover);
+          border-color: var(--border-hover);
           transform: translateY(-1px);
         }
 
@@ -324,14 +423,17 @@ export default function DashboardPage() {
         }
 
         .bento-card {
-          background: rgba(255,255,255,0.03);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: var(--bg-secondary);
+          border: 1px solid var(--border);
           border-radius: 20px;
           padding: 24px;
           position: relative;
           overflow: hidden;
           transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .dash.dark .bento-card {
+          backdrop-filter: blur(20px);
         }
 
         .bento-card::before {
@@ -341,14 +443,13 @@ export default function DashboardPage() {
           left: 0;
           right: 0;
           height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+          background: linear-gradient(90deg, transparent, var(--border-hover), transparent);
         }
 
         .bento-card:hover {
-          background: rgba(255,255,255,0.05);
-          border-color: rgba(255,255,255,0.1);
+          border-color: var(--border-hover);
           transform: translateY(-2px);
-          box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+          box-shadow: 0 20px 40px var(--shadow-hover);
         }
 
         .bento-card.clickable {
@@ -374,14 +475,14 @@ export default function DashboardPage() {
           font-family: 'Space Grotesk', sans-serif;
           font-size: 42px;
           font-weight: 600;
-          color: #fff;
+          color: var(--text-primary);
           line-height: 1;
           margin-bottom: 4px;
         }
 
         .stat-label {
           font-size: 14px;
-          color: rgba(255,255,255,0.5);
+          color: var(--text-muted);
         }
 
         .stat-trend {
@@ -398,11 +499,21 @@ export default function DashboardPage() {
         }
 
         .stat-trend.up {
+          background: rgba(34, 197, 94, 0.1);
+          color: #16a34a;
+        }
+
+        .dash.dark .stat-trend.up {
           background: rgba(34, 197, 94, 0.15);
           color: #22c55e;
         }
 
         .stat-trend.down {
+          background: rgba(239, 68, 68, 0.1);
+          color: #dc2626;
+        }
+
+        .dash.dark .stat-trend.down {
           background: rgba(239, 68, 68, 0.15);
           color: #ef4444;
         }
@@ -416,6 +527,10 @@ export default function DashboardPage() {
           align-items: center;
           justify-content: center;
           text-align: center;
+          background: var(--accent-bg);
+        }
+
+        .dash.dark .time-card {
           background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(139, 92, 246, 0.05));
         }
 
@@ -423,20 +538,20 @@ export default function DashboardPage() {
           font-family: 'Space Grotesk', sans-serif;
           font-size: 64px;
           font-weight: 700;
-          color: #fff;
+          color: var(--text-primary);
           line-height: 1;
           position: absolute;
         }
 
         .time-label {
           font-size: 14px;
-          color: rgba(255,255,255,0.5);
+          color: var(--text-muted);
           margin-top: 16px;
         }
 
         .time-target {
           font-size: 13px;
-          color: rgba(255,255,255,0.3);
+          color: var(--text-faint);
           margin-top: 4px;
         }
 
@@ -457,20 +572,20 @@ export default function DashboardPage() {
           font-family: 'Space Grotesk', sans-serif;
           font-size: 18px;
           font-weight: 600;
-          color: #fff;
+          color: var(--text-primary);
           margin: 0;
         }
 
         .card-link {
           font-size: 13px;
-          color: #a78bfa;
+          color: var(--accent);
           text-decoration: none;
           font-weight: 500;
           transition: color 0.2s;
         }
 
         .card-link:hover {
-          color: #c4b5fd;
+          color: var(--accent-light);
         }
 
         .task-list {
@@ -484,16 +599,16 @@ export default function DashboardPage() {
           align-items: center;
           gap: 14px;
           padding: 14px 16px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.04);
+          background: var(--bg-tertiary);
+          border: 1px solid transparent;
           border-radius: 12px;
           text-decoration: none;
           transition: all 0.2s ease;
         }
 
         .task-item:hover {
-          background: rgba(255,255,255,0.05);
-          border-color: rgba(255,255,255,0.08);
+          background: var(--bg-hover);
+          border-color: var(--border);
           transform: translateX(4px);
         }
 
@@ -504,8 +619,8 @@ export default function DashboardPage() {
           flex-shrink: 0;
         }
 
-        .task-dot.overdue { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.5); }
-        .task-dot.today { background: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.5); }
+        .task-dot.overdue { background: #ef4444; box-shadow: 0 0 12px rgba(239, 68, 68, 0.4); }
+        .task-dot.today { background: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
         .task-dot.normal { background: #22c55e; }
 
         .task-content {
@@ -516,7 +631,7 @@ export default function DashboardPage() {
         .task-name {
           font-size: 14px;
           font-weight: 500;
-          color: #fff;
+          color: var(--text-primary);
           margin-bottom: 2px;
           white-space: nowrap;
           overflow: hidden;
@@ -525,7 +640,7 @@ export default function DashboardPage() {
 
         .task-meta {
           font-size: 12px;
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
         }
 
         .task-priority {
@@ -546,8 +661,8 @@ export default function DashboardPage() {
         .project-item {
           display: block;
           padding: 16px;
-          background: rgba(255,255,255,0.02);
-          border: 1px solid rgba(255,255,255,0.04);
+          background: var(--bg-tertiary);
+          border: 1px solid transparent;
           border-radius: 12px;
           text-decoration: none;
           margin-bottom: 10px;
@@ -559,8 +674,8 @@ export default function DashboardPage() {
         }
 
         .project-item:hover {
-          background: rgba(255,255,255,0.05);
-          border-color: rgba(255,255,255,0.08);
+          background: var(--bg-hover);
+          border-color: var(--border);
         }
 
         .project-top {
@@ -573,12 +688,12 @@ export default function DashboardPage() {
         .project-name {
           font-size: 14px;
           font-weight: 500;
-          color: #fff;
+          color: var(--text-primary);
         }
 
         .project-client {
           font-size: 12px;
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
           margin-top: 2px;
         }
 
@@ -593,7 +708,7 @@ export default function DashboardPage() {
 
         .project-progress {
           height: 4px;
-          background: rgba(255,255,255,0.1);
+          background: var(--progress-track);
           border-radius: 2px;
           overflow: hidden;
         }
@@ -610,7 +725,7 @@ export default function DashboardPage() {
           justify-content: space-between;
           margin-top: 6px;
           font-size: 11px;
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
         }
 
         /* Clients Card */
@@ -625,7 +740,7 @@ export default function DashboardPage() {
           gap: 14px;
           padding: 12px 0;
           text-decoration: none;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid var(--border);
           transition: all 0.2s ease;
         }
 
@@ -653,12 +768,12 @@ export default function DashboardPage() {
         .client-name {
           font-size: 14px;
           font-weight: 500;
-          color: #fff;
+          color: var(--text-primary);
         }
 
         .client-industry {
           font-size: 12px;
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
           margin-top: 2px;
         }
 
@@ -672,7 +787,7 @@ export default function DashboardPage() {
           display: flex;
           gap: 12px;
           padding: 12px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.04);
+          border-bottom: 1px solid var(--border);
         }
 
         .activity-item:last-child {
@@ -689,18 +804,18 @@ export default function DashboardPage() {
 
         .activity-text {
           font-size: 13px;
-          color: rgba(255,255,255,0.7);
+          color: var(--text-secondary);
           line-height: 1.5;
         }
 
         .activity-text strong {
-          color: #fff;
+          color: var(--text-primary);
           font-weight: 500;
         }
 
         .activity-time {
           font-size: 11px;
-          color: rgba(255,255,255,0.3);
+          color: var(--text-faint);
           margin-top: 4px;
         }
 
@@ -710,21 +825,30 @@ export default function DashboardPage() {
           display: flex;
           gap: 16px;
           padding: 20px 24px;
-          background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
-          border: 1px solid rgba(239, 68, 68, 0.2);
+          background: rgba(239, 68, 68, 0.06);
+          border: 1px solid rgba(239, 68, 68, 0.15);
           border-radius: 16px;
           align-items: center;
+        }
+
+        .dash.dark .alert-banner {
+          background: linear-gradient(135deg, rgba(239, 68, 68, 0.1), rgba(239, 68, 68, 0.05));
+          border-color: rgba(239, 68, 68, 0.2);
         }
 
         .alert-icon {
           width: 48px;
           height: 48px;
           border-radius: 12px;
-          background: rgba(239, 68, 68, 0.15);
+          background: rgba(239, 68, 68, 0.1);
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
+        }
+
+        .dash.dark .alert-icon {
+          background: rgba(239, 68, 68, 0.15);
         }
 
         .alert-content {
@@ -734,28 +858,39 @@ export default function DashboardPage() {
         .alert-title {
           font-size: 16px;
           font-weight: 600;
-          color: #fff;
+          color: var(--text-primary);
           margin-bottom: 4px;
         }
 
         .alert-text {
           font-size: 14px;
-          color: rgba(255,255,255,0.6);
+          color: var(--text-muted);
         }
 
         .alert-action {
           padding: 10px 20px;
-          background: rgba(239, 68, 68, 0.2);
-          border: 1px solid rgba(239, 68, 68, 0.3);
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.2);
           border-radius: 10px;
-          color: #fca5a5;
+          color: #dc2626;
           font-size: 14px;
           font-weight: 500;
           text-decoration: none;
           transition: all 0.2s;
         }
 
+        .dash.dark .alert-action {
+          background: rgba(239, 68, 68, 0.2);
+          border-color: rgba(239, 68, 68, 0.3);
+          color: #fca5a5;
+        }
+
         .alert-action:hover {
+          background: rgba(239, 68, 68, 0.15);
+          border-color: rgba(239, 68, 68, 0.3);
+        }
+
+        .dash.dark .alert-action:hover {
           background: rgba(239, 68, 68, 0.3);
           border-color: rgba(239, 68, 68, 0.4);
         }
@@ -764,16 +899,20 @@ export default function DashboardPage() {
         .empty-state {
           text-align: center;
           padding: 40px 20px;
-          color: rgba(255,255,255,0.4);
+          color: var(--text-muted);
           font-size: 14px;
+        }
+
+        .empty-state svg {
+          stroke: var(--text-faint);
         }
 
         /* Loading Spinner */
         .loading-spinner {
           width: 40px;
           height: 40px;
-          border: 3px solid rgba(255,255,255,0.1);
-          border-top-color: #7c3aed;
+          border: 3px solid var(--border);
+          border-top-color: var(--accent);
           border-radius: 50%;
           animation: spin 1s linear infinite;
           margin: 0 auto;
@@ -805,7 +944,7 @@ export default function DashboardPage() {
         }
       `}</style>
 
-      <div className="dash">
+      <div className={`dash ${isDark ? 'dark' : ''}`}>
         <Header />
 
         <main className="dash-main">
@@ -816,6 +955,7 @@ export default function DashboardPage() {
               <p>{getDateString()}</p>
             </div>
             <div className="dash-actions">
+              <ThemeToggle isDark={isDark} onToggle={toggleTheme} />
               {isAdmin && (
                 <Link href="/clients/new" className="dash-btn primary">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -864,8 +1004,8 @@ export default function DashboardPage() {
 
             {/* Stat Cards */}
             <Link href="/clients" className="bento-card stat-card clickable" style={anim(0.15)}>
-              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(124, 58, 237, 0.2), rgba(139, 92, 246, 0.1))" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="2">
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(139, 92, 246, 0.08))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2">
                   <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                   <circle cx="12" cy="7" r="4" />
                 </svg>
@@ -881,8 +1021,8 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/projects" className="bento-card stat-card clickable" style={anim(0.2)}>
-              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(74, 222, 128, 0.1))" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2">
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(74, 222, 128, 0.08))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2">
                   <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
                 </svg>
               </div>
@@ -897,8 +1037,8 @@ export default function DashboardPage() {
             </Link>
 
             <Link href="/tasks" className="bento-card stat-card clickable" style={anim(0.25)}>
-              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(96, 165, 250, 0.1))" }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2">
+              <div className="stat-icon" style={{ background: "linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(96, 165, 250, 0.08))" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
                   <path d="M9 11l3 3L22 4" />
                   <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
                 </svg>
@@ -906,7 +1046,7 @@ export default function DashboardPage() {
               <div className="stat-value">{loading ? "-" : <AnimatedNumber value={totalActive} />}</div>
               <div className="stat-label">Open Tasks</div>
               {todayCount > 0 && (
-                <div className="stat-trend down" style={{ background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" }}>
+                <div className="stat-trend down" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#d97706" }}>
                   {todayCount} due today
                 </div>
               )}
@@ -915,7 +1055,14 @@ export default function DashboardPage() {
             {/* Time Logged Today */}
             <div className="bento-card time-card" style={anim(0.3)}>
               <div style={{ position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <CircularProgress value={timeToday} max={8} size={160} strokeWidth={10} color="#7c3aed" />
+                <CircularProgress
+                  value={timeToday}
+                  max={8}
+                  size={160}
+                  strokeWidth={10}
+                  color="#7c3aed"
+                  trackColor={isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)"}
+                />
                 <div className="time-value">{loading ? "-" : timeToday}h</div>
               </div>
               <div className="time-label">Logged Today</div>
@@ -932,7 +1079,7 @@ export default function DashboardPage() {
                 <div className="empty-state"><div className="loading-spinner" /></div>
               ) : !taskData || (taskData.overdueTasks.length === 0 && taskData.dueTodayTasks.length === 0) ? (
                 <div className="empty-state">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1.5" style={{ marginBottom: 12 }}>
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" strokeWidth="1.5" style={{ marginBottom: 12 }}>
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                     <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
@@ -949,8 +1096,8 @@ export default function DashboardPage() {
                       </div>
                       {task.priority && (
                         <span className="task-priority" style={{
-                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(255,255,255,0.1)",
-                          color: PRIORITY_STYLES[task.priority]?.color || "#fff",
+                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(0,0,0,0.05)",
+                          color: PRIORITY_STYLES[task.priority]?.color || "#64748b",
                         }}>{task.priority}</span>
                       )}
                     </Link>
@@ -964,8 +1111,8 @@ export default function DashboardPage() {
                       </div>
                       {task.priority && (
                         <span className="task-priority" style={{
-                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(255,255,255,0.1)",
-                          color: PRIORITY_STYLES[task.priority]?.color || "#fff",
+                          background: PRIORITY_STYLES[task.priority]?.bg || "rgba(0,0,0,0.05)",
+                          color: PRIORITY_STYLES[task.priority]?.color || "#64748b",
                         }}>{task.priority}</span>
                       )}
                     </Link>
@@ -997,8 +1144,8 @@ export default function DashboardPage() {
                           <div className="project-client">{project.client.nickname || project.client.name}</div>
                         </div>
                         <span className="project-badge" style={{
-                          background: STATUS_STYLES[project.status]?.bg || "rgba(255,255,255,0.1)",
-                          color: STATUS_STYLES[project.status]?.color || "#fff",
+                          background: STATUS_STYLES[project.status]?.bg || "rgba(0,0,0,0.05)",
+                          color: STATUS_STYLES[project.status]?.color || "#64748b",
                         }}>{project.status.replace(/_/g, " ")}</span>
                       </div>
                       <div className="project-progress">
@@ -1063,7 +1210,7 @@ export default function DashboardPage() {
                       background: a.activityType === "task_complete" ? "#22c55e"
                         : a.activityType === "sod" ? "#7c3aed"
                         : a.activityType === "eod" ? "#f59e0b"
-                        : "rgba(255,255,255,0.3)",
+                        : isDark ? "rgba(255,255,255,0.3)" : "rgba(0,0,0,0.2)",
                     }} />
                     <div>
                       <div className="activity-text">
