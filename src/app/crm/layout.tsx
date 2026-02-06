@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import Header from "@/components/Header";
 import { theme } from "@/lib/theme";
 
 const crmNavItems = [
@@ -47,8 +48,10 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div>
-      {/* CRM Sub-navigation */}
+    <>
+      <Header />
+      <div>
+        {/* CRM Sub-navigation */}
       <div style={{
         background: theme.colors.bgSecondary,
         borderBottom: `1px solid ${theme.colors.borderLight}`,
@@ -119,6 +122,7 @@ export default function CRMLayout({ children }: { children: React.ReactNode }) {
       }}>
         {children}
       </div>
-    </div>
+      </div>
+    </>
   );
 }

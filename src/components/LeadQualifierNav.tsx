@@ -5,6 +5,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import Header from '@/components/Header';
 import { theme } from '@/lib/theme';
 
 interface NavItem {
@@ -25,11 +26,13 @@ export function LeadQualifierNav() {
   const pathname = usePathname();
 
   return (
-    <div style={{
-      background: theme.colors.bgSecondary,
-      borderBottom: `1px solid ${theme.colors.borderLight}`,
-      marginBottom: '2rem',
-    }}>
+    <>
+      <Header />
+      <div style={{
+        background: theme.colors.bgSecondary,
+        borderBottom: `1px solid ${theme.colors.borderLight}`,
+        marginBottom: '2rem',
+      }}>
       <div style={{
         maxWidth: '1400px',
         margin: '0 auto',
@@ -69,7 +72,8 @@ export function LeadQualifierNav() {
           })}
         </nav>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
