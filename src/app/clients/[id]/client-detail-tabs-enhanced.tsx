@@ -191,6 +191,59 @@ const StatusBadge = memo(({ status }: { status: string }) => {
 });
 StatusBadge.displayName = "StatusBadge";
 
+// Loading skeleton for tab content transitions
+const TabContentSkeleton = () => (
+  <div style={{
+    animation: "pulse 1.5s ease-in-out infinite",
+  }}>
+    <style>{`
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+      }
+    `}</style>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, marginBottom: 28 }}>
+      {[1, 2, 3, 4].map(i => (
+        <div key={i} style={{
+          background: theme.colors.bgSecondary,
+          borderRadius: 20,
+          padding: 24,
+          height: 140,
+          border: `1px solid ${theme.colors.borderLight}`,
+        }}>
+          <div style={{ width: "60%", height: 40, background: theme.colors.bgTertiary, borderRadius: 8, marginBottom: 12 }} />
+          <div style={{ width: "40%", height: 14, background: theme.colors.bgTertiary, borderRadius: 6 }} />
+        </div>
+      ))}
+    </div>
+    <div style={{
+      background: theme.colors.bgSecondary,
+      borderRadius: 20,
+      padding: 28,
+      border: `1px solid ${theme.colors.borderLight}`,
+    }}>
+      {[1, 2, 3].map(i => (
+        <div key={i} style={{ marginBottom: 20 }}>
+          <div style={{ width: "70%", height: 16, background: theme.colors.bgTertiary, borderRadius: 4, marginBottom: 10 }} />
+          <div style={{ width: "50%", height: 12, background: theme.colors.bgTertiary, borderRadius: 4 }} />
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+// Tab content wrapper with transition
+const TabContent = memo(({ children, isTransitioning }: { children: React.ReactNode; isTransitioning: boolean }) => (
+  <div style={{
+    opacity: isTransitioning ? 0 : 1,
+    transform: isTransitioning ? "translateY(10px)" : "translateY(0)",
+    transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+  }}>
+    {children}
+  </div>
+));
+TabContent.displayName = "TabContent";
+
 export default function ClientDetailTabsEnhanced({
   client,
   onboarding,
@@ -206,10 +259,20 @@ export default function ClientDetailTabsEnhanced({
   const searchParams = useSearchParams();
   const activeTab = searchParams.get("tab") || "overview";
   const [mounted, setMounted] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [contentKey, setContentKey] = useState(0);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Handle tab content transitions
+  useEffect(() => {
+    setIsTransitioning(true);
+    setContentKey(prev => prev + 1);
+    const timer = setTimeout(() => setIsTransitioning(false), 300);
+    return () => clearTimeout(timer);
+  }, [activeTab]);
 
   // Memoize expensive calculations
   const stats = useMemo(() => ({
@@ -237,7 +300,13 @@ export default function ClientDetailTabsEnhanced({
   ], [projects.length, onboarding, team.length, resources.length, client.status]);
 
   const setActiveTab = (tabId: string) => {
-    router.push(`/clients/${client.id}?tab=${tabId}`, { scroll: false });
+    // Instant visual feedback - no waiting for router
+    const newUrl = `/clients/${client.id}?tab=${tabId}`;
+    window.history.pushState({}, '', newUrl);
+
+    // Trigger transition immediately
+    setIsTransitioning(true);
+    setTimeout(() => setIsTransitioning(false), 300);
   };
 
   return (
@@ -491,7 +560,27 @@ export default function ClientDetailTabsEnhanced({
           marginBottom: 32,
           border: `1px solid ${theme.colors.borderLight}`,
           boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+          position: "relative",
         }}>
+          {/* Loading indicator */}
+          {isTransitioning && (
+            <div style={{
+              position: "absolute",
+              bottom: -2,
+              left: 6,
+              right: 6,
+              height: 2,
+              background: theme.gradients.primary,
+              borderRadius: 2,
+              animation: "slideProgress 0.3s ease-out",
+            }} />
+          )}
+          <style>{`
+            @keyframes slideProgress {
+              from { width: 0%; opacity: 0; }
+              to { width: 100%; opacity: 1; }
+            }
+          `}</style>
           {tabs.map(tab => {
             const TabIcon = tab.icon;
             return (
@@ -558,8 +647,13 @@ export default function ClientDetailTabsEnhanced({
         </div>
 
         {/* Tab Content */}
-        {activeTab === "overview" && (
-          <div style={{ display: "grid", gap: 28 }}>
+        {isTransitioning ? (
+          <TabContentSkeleton />
+        ) : (
+          <>
+            {activeTab === "overview" && (
+              <TabContent isTransitioning={false}>
+                <div style={{ display: "grid", gap: 28 }}>
             {/* Enhanced Stats Grid */}
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18 }}>
               <StatCard
@@ -674,9 +768,11 @@ export default function ClientDetailTabsEnhanced({
             {/* Agencies */}
             <AgenciesManager clientId={client.id} initialAgencies={client.agencies} />
           </div>
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "projects" && (
+      {activeTab === "projects" && (
+        <TabContent isTransitioning={false}>
           <div style={{
             background: theme.colors.bgSecondary,
             border: `1px solid ${theme.colors.borderLight}`,
@@ -786,38 +882,51 @@ export default function ClientDetailTabsEnhanced({
               </div>
             )}
           </div>
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "onboarding" && (
+      {activeTab === "onboarding" && (
+        <TabContent isTransitioning={false}>
           <OnboardingManager
             clientId={client.id}
             clientStatus={client.status}
             initialItems={onboarding}
           />
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "team" && (
+      {activeTab === "team" && (
+        <TabContent isTransitioning={false}>
           <TeamManager
             clientId={client.id}
             initialTeam={team}
             canEdit={canManageTeam}
           />
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "resources" && (
+      {activeTab === "resources" && (
+        <TabContent isTransitioning={false}>
           <ClientResources
             clientId={client.id}
             initialResources={resources}
           />
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "calendar" && (
+      {activeTab === "calendar" && (
+        <TabContent isTransitioning={false}>
           <ClientCalendar clientId={client.id} />
-        )}
+        </TabContent>
+      )}
 
-        {activeTab === "key-dates" && (
+      {activeTab === "key-dates" && (
+        <TabContent isTransitioning={false}>
           <KeyDatesManager clientId={client.id} />
-        )}
+        </TabContent>
+      )}
+    </>
+  )}
       </main>
     </div>
   );
