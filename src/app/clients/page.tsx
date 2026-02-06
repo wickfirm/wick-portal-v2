@@ -200,12 +200,8 @@ function ClientsError({ error, retry }: { error: Error; retry: () => void }) {
 // Animated number component
 function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    if (hasAnimated) return;
-    setHasAnimated(true);
-
     let startTime: number;
     let animationFrame: number;
 
@@ -221,7 +217,7 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
 
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [value, duration, hasAnimated]);
+  }, [value, duration]);
 
   return <>{displayValue}</>;
 }
@@ -247,11 +243,7 @@ export default function ClientsPage() {
     queryFn: async () => {
       const res = await fetch("/api/clients/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch clients");
-      const json = await res.json();
-      console.log("🔍 API Response:", json);
-      console.log("📊 Stats:", json.stats);
-      console.log("👥 Clients count:", json.clients?.length);
-      return json;
+      return res.json();
     },
     enabled: status === "authenticated",
     staleTime: 0,
@@ -305,9 +297,6 @@ export default function ClientsPage() {
   if (!data) return <ClientsError error={new Error("No data received")} retry={() => refetch()} />;
 
   const { clients, stats, isAdmin: isAdminFromApi } = data;
-
-  console.log("🎯 Data destructured:", { clients, stats, isAdminFromApi });
-  console.log("📈 Stats values:", stats);
 
   const filteredClients = clients.filter(client => {
     if (hideChurned && client.status === "CHURNED") return false;

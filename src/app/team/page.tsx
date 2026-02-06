@@ -68,12 +68,8 @@ function getAvatarColor(name: string): string {
 // Animated number component
 function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    if (hasAnimated) return;
-    setHasAnimated(true);
-
     let startTime: number;
     let animationFrame: number;
 
@@ -89,7 +85,7 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
 
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [value, duration, hasAnimated]);
+  }, [value, duration]);
 
   return <>{displayValue}</>;
 }

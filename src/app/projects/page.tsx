@@ -170,12 +170,8 @@ function ProjectsError({ error, retry }: { error: Error; retry: () => void }) {
 // Animated number component
 function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: number }) {
   const [displayValue, setDisplayValue] = useState(0);
-  const [hasAnimated, setHasAnimated] = useState(false);
 
   useEffect(() => {
-    if (hasAnimated) return;
-    setHasAnimated(true);
-
     let startTime: number;
     let animationFrame: number;
 
@@ -191,7 +187,7 @@ function AnimatedNumber({ value, duration = 800 }: { value: number; duration?: n
 
     animationFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrame);
-  }, [value, duration, hasAnimated]);
+  }, [value, duration]);
 
   return <>{displayValue}</>;
 }
@@ -214,11 +210,7 @@ export default function ProjectsPage() {
     queryFn: async () => {
       const res = await fetch("/api/projects/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch projects");
-      const json = await res.json();
-      console.log("🔍 Projects API Response:", json);
-      console.log("📊 Projects Stats:", json.stats);
-      console.log("📁 Projects count:", json.projects?.length);
-      return json;
+      return res.json();
     },
     enabled: status === "authenticated",
     staleTime: 0,
@@ -266,9 +258,6 @@ export default function ProjectsPage() {
   if (!data) return <ProjectsError error={new Error("No data received")} retry={() => refetch()} />;
 
   const { projects, stats, isAdmin } = data;
-
-  console.log("🎯 Projects Data destructured:", { projects, stats, isAdmin });
-  console.log("📈 Projects Stats values:", stats);
 
   const statCards = [
     { label: "Total Projects", value: stats.total, icon: icons.layers, color: theme.colors.primary, bg: theme.colors.primaryBg },
