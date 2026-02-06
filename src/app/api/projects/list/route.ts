@@ -45,7 +45,7 @@ export async function GET() {
         INNER JOIN clients c ON p."clientId" = c.id
         INNER JOIN client_agencies ca ON c.id = ca.client_id
         WHERE ca.agency_id = ${currentUser.agencyId}
-        ORDER BY p.pinned DESC NULLS LAST, p."createdAt" DESC
+        ORDER BY p.pinned DESC NULLS LAST, p.name ASC
       `;
 
       // Get client info and stages for each project
@@ -90,7 +90,7 @@ export async function GET() {
     } else if (isAdmin && !currentUser.agencyId) {
       // SUPER_ADMIN or PLATFORM_ADMIN with no agencyId sees all projects
       projects = await prisma.project.findMany({
-        orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ pinned: "desc" }, { name: "asc" }],
         select: {
           id: true,
           name: true,
@@ -119,7 +119,7 @@ export async function GET() {
             },
           },
         },
-        orderBy: [{ pinned: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ pinned: "desc" }, { name: "asc" }],
         select: {
           id: true,
           name: true,
