@@ -78,6 +78,7 @@ export default function TasksManager({
   const [filterAssignee, setFilterAssignee] = useState<string>("ALL");
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [hideCompleted, setHideCompleted] = useState(true);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
   
   // Side panel state
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -1680,7 +1681,11 @@ export default function TasksManager({
               <label style={{ fontSize: 12, fontWeight: 600, color: theme.colors.textMuted, textTransform: "uppercase" as const, letterSpacing: "0.03em" }}>{label}</label>
               <select
                 value={value}
-                onChange={(e) => setter(e.target.value)}
+                onChange={(e) => {
+                  setIsFilterTransitioning(true);
+                  setter(e.target.value);
+                  setTimeout(() => setIsFilterTransitioning(false), 300);
+                }}
                 style={{
                   padding: "6px 12px",
                   borderRadius: 8,
@@ -1805,6 +1810,11 @@ export default function TasksManager({
       </div>
 
       {/* Tasks Display */}
+      <div style={{
+        opacity: isFilterTransitioning ? 0 : 1,
+        transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+      }}>
       {activeView === "board" ? (
         /* Kanban Board View */
         <TasksKanbanBoard
@@ -1853,6 +1863,7 @@ export default function TasksManager({
           </>
         )
       )}
+      </div>
 
       {/* Edit Task Side Panel */}
       {selectedTask && (
