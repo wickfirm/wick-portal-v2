@@ -229,12 +229,21 @@ export default function ClientsPage() {
   const [search, setSearch] = useState("");
   const [mounted, setMounted] = useState(false);
   const [hideChurned, setHideChurned] = useState(true);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Handle filter transitions
+  const handleFilterChange = (newFilter: string) => {
+    if (newFilter === filter) return;
+    setIsFilterTransitioning(true);
+    setFilter(newFilter);
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
 
   const queryClient = useQueryClient();
 
@@ -717,7 +726,7 @@ export default function ClientsPage() {
                 <button
                   key={s}
                   onClick={() => {
-                    setFilter(s);
+                    handleFilterChange(s);
                     if (s === "CHURNED") setHideChurned(false);
                   }}
                   className={`filter-btn ${filter === s ? 'active' : ''} ${filter === s && s === "CHURNED" ? 'churned' : ''}`}
@@ -729,6 +738,11 @@ export default function ClientsPage() {
           </div>
 
           {/* Clients List */}
+          <div style={{
+            opacity: isFilterTransitioning ? 0 : 1,
+            transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}>
           {filteredClients.length === 0 ? (
             <div className={`empty-state ${mounted ? 'mounted' : ''}`}>
               <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}>
@@ -808,6 +822,7 @@ export default function ClientsPage() {
               })}
             </div>
           )}
+          </div>
         </main>
       </div>
     </>
