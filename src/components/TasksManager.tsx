@@ -215,6 +215,8 @@ export default function TasksManager({
           fetch(getTasksEndpoint()).then(res => res.json()),
           fetch("/api/task-categories").then(res => res.json()),
           fetch("/api/users").then(res => res.json()),
+          fetch("/api/projects").then(res => res.json()), // All projects for dropdown
+          fetch("/api/tasks/watched").then(res => res.ok ? res.json() : { taskIds: [] }), // Watched tasks
         ];
 
         // Fetch client data if in client context
@@ -242,42 +244,38 @@ export default function TasksManager({
         }
 
         const results = await Promise.all(requests);
-        
+
         const tasksData = results[0];
         const categoriesData = results[1];
         const usersData = results[2];
+        const allProjectsData = results[3];
+        const watchedData = results[4];
 
         setTasks(Array.isArray(tasksData) ? tasksData : tasksData.tasks || []);
         setCategories(Array.isArray(categoriesData) ? categoriesData : []);
         setUsers(Array.isArray(usersData) ? usersData : []);
+        setAllProjects(Array.isArray(allProjectsData) ? allProjectsData : []);
+        setWatchedTaskIds(new Set(watchedData.taskIds || []));
 
         if (context === "client") {
-          setClient(results[3]);
+          setClient(results[5]);
           setQuickAddClient(clientId || ""); // Pre-set client for quick add
-          setProjects(Array.isArray(results[4]) ? results[4] : []);
+          setProjects(Array.isArray(results[6]) ? results[6] : []);
         } else if (context === "general") {
-          const clientsData = results[3];
+          const clientsData = results[5];
           const clientsList = Array.isArray(clientsData) ? clientsData : clientsData.clients || [];
           setClients(clientsList);
-          setProjects(Array.isArray(results[4]) ? results[4] : []);
-          
+          setProjects(Array.isArray(results[6]) ? results[6] : []);
+
           // Collapse all clients by default in general context
           const allClientIds = new Set<string>(clientsList.map((c: any) => c.id));
           setCollapsedClients(allClientIds);
         } else if (context === "project") {
-          const projectData = results[3];
+          const projectData = results[5];
           setProjects(projectData ? [projectData] : []);
         }
 
-        // Fetch all projects for the "Move to Project" dropdown in edit panel
-        try {
-          const allProjectsRes = await fetch("/api/projects");
-          const allProjectsData = await allProjectsRes.json();
-          setAllProjects(Array.isArray(allProjectsData) ? allProjectsData : []);
-        } catch { setAllProjects([]); }
-
-        // Fetch watched task IDs + active timer
-        fetchWatchedTasks();
+        // Fetch active timer
         fetchActiveTimer();
 
         setLoading(false);
