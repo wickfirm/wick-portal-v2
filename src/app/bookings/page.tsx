@@ -48,11 +48,26 @@ export default function BookingsDashboardPage() {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [viewMode, setViewMode] = useState<"upcoming" | "past">("upcoming");
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     fetchAppointments();
   }, [viewMode, filterStatus]);
+
+  const handleViewModeChange = (mode: "upcoming" | "past") => {
+    if (mode === viewMode) return;
+    setIsFilterTransitioning(true);
+    setViewMode(mode);
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
+
+  const handleFilterStatusChange = (status: string) => {
+    if (status === filterStatus) return;
+    setIsFilterTransitioning(true);
+    setFilterStatus(status);
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
 
   const fetchAppointments = async () => {
     setLoading(true);
@@ -259,7 +274,7 @@ export default function BookingsDashboardPage() {
             {(["upcoming", "past"] as const).map((mode) => (
               <button
                 key={mode}
-                onClick={() => setViewMode(mode)}
+                onClick={() => handleViewModeChange(mode)}
                 style={{
                   padding: "8px 16px",
                   background: viewMode === mode ? theme.gradients.primary : "transparent",
@@ -280,7 +295,7 @@ export default function BookingsDashboardPage() {
           {/* Status Filter */}
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => handleFilterStatusChange(e.target.value)}
             style={inputStyle}
           >
             <option value="ALL">All Statuses</option>
@@ -298,38 +313,45 @@ export default function BookingsDashboardPage() {
         </div>
 
         {/* Appointments List */}
-        {loading ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 64,
-              color: theme.colors.textMuted,
-            }}
-          >
-            Loading appointments...
-          </div>
-        ) : Object.keys(groupedAppointments).length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: 64,
-              background: theme.colors.bgSecondary,
-              borderRadius: 16,
-              border: "1px solid " + theme.colors.borderLight,
-            }}
-          >
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
-            <h3 style={{ margin: 0, marginBottom: 8, color: theme.colors.textPrimary }}>
-              No {viewMode} appointments
-            </h3>
-            <p style={{ margin: 0, color: theme.colors.textMuted }}>
-              {viewMode === "upcoming"
-                ? "Your upcoming bookings will appear here"
-                : "Your past appointments will appear here"}
-            </p>
-          </div>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+        <div
+          style={{
+            opacity: isFilterTransitioning ? 0 : 1,
+            transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          {loading ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: 64,
+                color: theme.colors.textMuted,
+              }}
+            >
+              Loading appointments...
+            </div>
+          ) : Object.keys(groupedAppointments).length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: 64,
+                background: theme.colors.bgSecondary,
+                borderRadius: 16,
+                border: "1px solid " + theme.colors.borderLight,
+              }}
+            >
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📅</div>
+              <h3 style={{ margin: 0, marginBottom: 8, color: theme.colors.textPrimary }}>
+                No {viewMode} appointments
+              </h3>
+              <p style={{ margin: 0, color: theme.colors.textMuted }}>
+                {viewMode === "upcoming"
+                  ? "Your upcoming bookings will appear here"
+                  : "Your past appointments will appear here"}
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
             {Object.entries(groupedAppointments).map(([dateKey, dayAppointments]) => (
               <div key={dateKey}>
                 <h3
@@ -704,7 +726,8 @@ export default function BookingsDashboardPage() {
               )}
             </div>
           </>
-        )}
+          )}
+        </div>
       </main>
     </div>
   );

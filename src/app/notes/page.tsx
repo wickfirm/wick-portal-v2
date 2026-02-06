@@ -57,6 +57,7 @@ export default function NotesPage() {
     pinned: false,
     search: "",
   });
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -69,6 +70,12 @@ export default function NotesPage() {
       fetchNotes();
     }
   }, [session, filter]);
+
+  const handleFilterChange = (newFilter: Partial<typeof filter>) => {
+    setIsFilterTransitioning(true);
+    setFilter({ ...filter, ...newFilter });
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
 
   const fetchNotes = async () => {
     try {
@@ -152,7 +159,7 @@ export default function NotesPage() {
             type="text"
             placeholder="Search notes..."
             value={filter.search}
-            onChange={(e) => setFilter({ ...filter, search: e.target.value })}
+            onChange={(e) => handleFilterChange({ search: e.target.value })}
             style={{
               flex: 1,
               minWidth: 250,
@@ -165,7 +172,7 @@ export default function NotesPage() {
 
           <select
             value={filter.color}
-            onChange={(e) => setFilter({ ...filter, color: e.target.value })}
+            onChange={(e) => handleFilterChange({ color: e.target.value })}
             style={{
               padding: "8px 12px",
               border: `1px solid ${theme.colors.borderLight}`,
@@ -182,7 +189,7 @@ export default function NotesPage() {
           </select>
 
           <button
-            onClick={() => setFilter({ ...filter, pinned: !filter.pinned })}
+            onClick={() => handleFilterChange({ pinned: !filter.pinned })}
             style={{
               padding: "8px 16px",
               border: `1px solid ${theme.colors.borderLight}`,
@@ -198,21 +205,28 @@ export default function NotesPage() {
         </div>
 
         {/* Notes Grid */}
-        {loading ? (
-          <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>Loading...</div>
-        ) : notes.length === 0 ? (
-          <div style={{ textAlign: "center", padding: 64 }}>
-            <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></div>
-            <p style={{ color: theme.colors.textMuted, fontSize: 16 }}>No notes yet. Create your first one!</p>
-          </div>
-        ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-              gap: 16,
-            }}
-          >
+        <div
+          style={{
+            opacity: isFilterTransitioning ? 0 : 1,
+            transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}
+        >
+          {loading ? (
+            <div style={{ textAlign: "center", padding: 64, color: theme.colors.textMuted }}>Loading...</div>
+          ) : notes.length === 0 ? (
+            <div style={{ textAlign: "center", padding: 64 }}>
+              <div style={{ color: theme.colors.textMuted, marginBottom: 16, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></div>
+              <p style={{ color: theme.colors.textMuted, fontSize: 16 }}>No notes yet. Create your first one!</p>
+            </div>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+                gap: 16,
+              }}
+            >
             {notes.map((note) => {
               const colorObj = COLOR_OPTIONS.find((c) => c.value === note.color);
               return (
@@ -358,8 +372,9 @@ export default function NotesPage() {
                 </div>
               );
             })}
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Create/Edit Modal */}

@@ -73,6 +73,7 @@ export default function FinancePage() {
   const [filterClient, setFilterClient] = useState<string>("ALL");
   const [filterPricingModel, setFilterPricingModel] = useState<string>("ALL");
   const [filterProfitability, setFilterProfitability] = useState<string>("ALL");
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
 
   useEffect(() => { setMounted(true); }, []);
 
@@ -135,10 +136,24 @@ export default function FinancePage() {
     });
   }
 
+  const handleFilterChange = (filterType: 'client' | 'pricing' | 'profitability', value: string) => {
+    setIsFilterTransitioning(true);
+    if (filterType === 'client') {
+      setFilterClient(value);
+    } else if (filterType === 'pricing') {
+      setFilterPricingModel(value);
+    } else {
+      setFilterProfitability(value);
+    }
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
+
   function clearFilters() {
+    setIsFilterTransitioning(true);
     setFilterClient("ALL");
     setFilterPricingModel("ALL");
     setFilterProfitability("ALL");
+    setTimeout(() => setIsFilterTransitioning(false), 300);
   }
 
   if (status === "loading" || loading) {
@@ -301,9 +316,9 @@ export default function FinancePage() {
           }}>
             <div style={{ display: "flex", gap: 14, flexWrap: "wrap", alignItems: "flex-end" }}>
               {[
-                { label: "Client", value: filterClient, onChange: (v: string) => setFilterClient(v), options: [{ v: "ALL", l: "All Clients" }, ...clients.map((c: any) => ({ v: c.id, l: c.nickname || c.name }))] },
-                { label: "Pricing Model", value: filterPricingModel, onChange: (v: string) => setFilterPricingModel(v), options: [{ v: "ALL", l: "All Models" }, { v: "FIXED_FEE", l: "Fixed Fee" }, { v: "TIME_AND_MATERIALS", l: "Time & Materials" }] },
-                { label: "Status", value: filterProfitability, onChange: (v: string) => setFilterProfitability(v), options: [{ v: "ALL", l: "All Projects" }, { v: "PROFITABLE", l: "Profitable" }, { v: "LOSS", l: "Loss" }] },
+                { label: "Client", value: filterClient, onChange: (v: string) => handleFilterChange('client', v), options: [{ v: "ALL", l: "All Clients" }, ...clients.map((c: any) => ({ v: c.id, l: c.nickname || c.name }))] },
+                { label: "Pricing Model", value: filterPricingModel, onChange: (v: string) => handleFilterChange('pricing', v), options: [{ v: "ALL", l: "All Models" }, { v: "FIXED_FEE", l: "Fixed Fee" }, { v: "TIME_AND_MATERIALS", l: "Time & Materials" }] },
+                { label: "Status", value: filterProfitability, onChange: (v: string) => handleFilterChange('profitability', v), options: [{ v: "ALL", l: "All Projects" }, { v: "PROFITABLE", l: "Profitable" }, { v: "LOSS", l: "Loss" }] },
               ].map(f => (
                 <div key={f.label}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: theme.colors.textMuted, marginBottom: 6, display: "block", textTransform: "uppercase" as const, letterSpacing: "0.5px" }}>{f.label}</label>
@@ -330,7 +345,12 @@ export default function FinancePage() {
           </div>
         </div>
 
-        <div style={anim(0.2)}>
+        <div style={{
+          ...anim(0.2),
+          opacity: isFilterTransitioning ? 0 : (mounted ? 1 : 0),
+          transform: isFilterTransitioning ? "translateY(10px)" : (mounted ? "translateY(0)" : "translateY(16px)"),
+          transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+        }}>
         {Object.keys(projectsByClient).length === 0 ? (
           <div style={{
             background: theme.colors.bgSecondary, border: `1px solid ${theme.colors.borderLight}`,

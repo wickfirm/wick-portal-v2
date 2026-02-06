@@ -62,10 +62,21 @@ export default function LeadsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sourceFilter, setSourceFilter] = useState("all");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
 
   useEffect(() => {
     fetchLeads();
   }, [statusFilter, sourceFilter]);
+
+  const handleFilterChange = (filterType: 'status' | 'source', value: string) => {
+    setIsFilterTransitioning(true);
+    if (filterType === 'status') {
+      setStatusFilter(value);
+    } else {
+      setSourceFilter(value);
+    }
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
 
   const fetchLeads = async (page = 1) => {
     setLoading(true);
@@ -229,7 +240,7 @@ export default function LeadsPage() {
         <div style={{ display: "flex", gap: 12 }}>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => handleFilterChange('status', e.target.value)}
             style={{
               padding: "10px 14px",
               border: `1px solid ${theme.colors.borderLight}`,
@@ -248,7 +259,7 @@ export default function LeadsPage() {
 
           <select
             value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
+            onChange={(e) => handleFilterChange('source', e.target.value)}
             style={{
               padding: "10px 14px",
               border: `1px solid ${theme.colors.borderLight}`,
@@ -273,6 +284,9 @@ export default function LeadsPage() {
         border: `1px solid ${theme.colors.borderLight}`,
         borderRadius: 12,
         overflow: "hidden",
+        opacity: isFilterTransitioning ? 0 : 1,
+        transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+        transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       }}>
         {loading ? (
           <div style={{
