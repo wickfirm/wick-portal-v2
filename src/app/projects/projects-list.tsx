@@ -125,10 +125,16 @@ export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) 
               style={{
                 padding: "14px 20px", cursor: "pointer",
                 display: "flex", justifyContent: "space-between", alignItems: "center",
-                transition: "background 0.12s",
+                transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
-              onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = `linear-gradient(90deg, ${theme.colors.primaryBg}50, transparent)`;
+                e.currentTarget.style.paddingLeft = "24px";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+                e.currentTarget.style.paddingLeft = "20px";
+              }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <span style={{
@@ -175,10 +181,16 @@ export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) 
                         padding: "14px 20px 14px 68px",
                         borderBottom: idx < clientProjects.length - 1 ? `1px solid ${theme.colors.bgTertiary}` : "none",
                         display: "flex", alignItems: "center", gap: 16,
-                        transition: "background 0.12s",
+                        transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = theme.colors.bgPrimary)}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = `linear-gradient(90deg, ${theme.colors.primaryBg}50, transparent)`;
+                        e.currentTarget.style.paddingLeft = "72px";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = "transparent";
+                        e.currentTarget.style.paddingLeft = "68px";
+                      }}
                     >
                       {/* Project Info */}
                       <div style={{ flex: 1, minWidth: 0 }}>
