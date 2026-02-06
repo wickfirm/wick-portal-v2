@@ -105,6 +105,7 @@ export default function TeamPage() {
   const [showForm, setShowForm] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("ALL");
+  const [isFilterTransitioning, setIsFilterTransitioning] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
     name: "",
@@ -138,6 +139,14 @@ export default function TeamPage() {
     const timer = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(timer);
   }, []);
+
+  // Handle filter transitions
+  const handleRoleFilterChange = (newRole: string) => {
+    if (newRole === roleFilter) return;
+    setIsFilterTransitioning(true);
+    setRoleFilter(newRole);
+    setTimeout(() => setIsFilterTransitioning(false), 300);
+  };
 
   // Redirect external partners - they shouldn't access team management
   useEffect(() => {
@@ -715,7 +724,7 @@ export default function TeamPage() {
               {Object.entries(roleLabels).map(([role, label]) => (
                 <button
                   key={role}
-                  onClick={() => setRoleFilter(role)}
+                  onClick={() => handleRoleFilterChange(role)}
                   className={`filter-btn ${roleFilter === role ? 'active' : ''}`}
                 >
                   {label}
@@ -824,6 +833,11 @@ export default function TeamPage() {
           )}
 
           {/* Team List */}
+          <div style={{
+            opacity: isFilterTransitioning ? 0 : 1,
+            transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+            transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
+          }}>
           <div className={`team-list ${mounted ? 'mounted' : ''}`}>
             {filteredUsers.length === 0 ? (
               <div className="empty-state">
@@ -919,6 +933,7 @@ export default function TeamPage() {
                 );
               })
             )}
+          </div>
           </div>
         </main>
 
