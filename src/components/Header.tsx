@@ -226,7 +226,7 @@ export default function Header() {
           minHeight: 60,
         }}>
           <Link href="/dashboard">
-            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 36 : 48, transition: "height 0.2s" }} />
+            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 18 : 24, transition: "height 0.2s" }} />
           </Link>
           {!collapsed && (
             <button

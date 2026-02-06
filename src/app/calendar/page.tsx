@@ -23,9 +23,8 @@ export default function CalendarPage() {
       <Header />
       <main
         style={{
-          marginLeft: 64,
           padding: "24px 32px",
-          minHeight: "calc(100vh - 60px)",
+          minHeight: "100vh",
           background: theme.colors.bgPrimary,
         }}
       >
