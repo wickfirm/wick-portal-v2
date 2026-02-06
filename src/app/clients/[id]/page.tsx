@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import ClientDetailTabs from "./client-detail-tabs";
+import ClientDetailTabsEnhanced from "./client-detail-tabs-enhanced";
 
 export const dynamic = "force-dynamic";
 
@@ -109,7 +109,7 @@ export default async function ClientViewPage({ params }: { params: { id: string 
   const canSeeBudget = user.role === "SUPER_ADMIN";
 
   return (
-    <ClientDetailTabs
+    <ClientDetailTabsEnhanced
       client={{
         id: client.id,
         name: client.name,
