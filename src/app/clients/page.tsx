@@ -247,7 +247,11 @@ export default function ClientsPage() {
     queryFn: async () => {
       const res = await fetch("/api/clients/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch clients");
-      return res.json();
+      const json = await res.json();
+      console.log("🔍 API Response:", json);
+      console.log("📊 Stats:", json.stats);
+      console.log("👥 Clients count:", json.clients?.length);
+      return json;
     },
     enabled: status === "authenticated",
     staleTime: 0,
@@ -301,6 +305,9 @@ export default function ClientsPage() {
   if (!data) return <ClientsError error={new Error("No data received")} retry={() => refetch()} />;
 
   const { clients, stats, isAdmin: isAdminFromApi } = data;
+
+  console.log("🎯 Data destructured:", { clients, stats, isAdminFromApi });
+  console.log("📈 Stats values:", stats);
 
   const filteredClients = clients.filter(client => {
     if (hideChurned && client.status === "CHURNED") return false;

@@ -214,7 +214,11 @@ export default function ProjectsPage() {
     queryFn: async () => {
       const res = await fetch("/api/projects/list", { cache: "no-store" });
       if (!res.ok) throw new Error("Failed to fetch projects");
-      return res.json();
+      const json = await res.json();
+      console.log("🔍 Projects API Response:", json);
+      console.log("📊 Projects Stats:", json.stats);
+      console.log("📁 Projects count:", json.projects?.length);
+      return json;
     },
     enabled: status === "authenticated",
     staleTime: 0,
@@ -262,6 +266,9 @@ export default function ProjectsPage() {
   if (!data) return <ProjectsError error={new Error("No data received")} retry={() => refetch()} />;
 
   const { projects, stats, isAdmin } = data;
+
+  console.log("🎯 Projects Data destructured:", { projects, stats, isAdmin });
+  console.log("📈 Projects Stats values:", stats);
 
   const statCards = [
     { label: "Total Projects", value: stats.total, icon: icons.layers, color: theme.colors.primary, bg: theme.colors.primaryBg },
