@@ -62,7 +62,17 @@ export default function ProjectsList({ projects, isAdmin, onPinToggle }: Props) 
     return acc;
   }, {} as Record<string, { client: Project["client"]; projects: Project[] }>);
 
-  const clientGroups = Object.values(projectsByClient);
+  // Sort client groups alphabetically by client name
+  const clientGroups = Object.values(projectsByClient).sort((a, b) => {
+    const nameA = a.client.nickname || a.client.name;
+    const nameB = b.client.nickname || b.client.name;
+    return nameA.localeCompare(nameB);
+  });
+
+  // Sort projects within each client group alphabetically
+  clientGroups.forEach(group => {
+    group.projects.sort((a, b) => a.name.localeCompare(b.name));
+  });
   const [expandedClients, setExpandedClients] = useState<Record<string, boolean>>({});
 
   const toggleClient = (clientId: string) => {
