@@ -130,7 +130,7 @@ export default function Header() {
   const { data: session } = useSession();
   const user = session?.user as any;
   const userRole = user?.role || "";
-  const [collapsed, setCollapsed] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   const isPlatformAdmin = userRole === "PLATFORM_ADMIN";
   const isSuperAdmin = userRole === "SUPER_ADMIN";
@@ -216,18 +216,47 @@ export default function Header() {
         transition: "width 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
         zIndex: 1000,
       }}>
-        {/* Logo */}
+        {/* Logo & Collapse Button */}
         <div style={{
           padding: collapsed ? "18px 14px" : "18px 22px",
           borderBottom: `1px solid ${theme.colors.borderLight}`,
           display: "flex",
-          justifyContent: collapsed ? "center" : "flex-start",
+          justifyContent: "space-between",
           alignItems: "center",
           minHeight: 60,
         }}>
           <Link href="/dashboard">
-            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 32 : 38, transition: "height 0.2s" }} />
+            <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 36 : 48, transition: "height 0.2s" }} />
           </Link>
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              style={{
+                padding: "8px",
+                border: "none",
+                background: "transparent",
+                cursor: "pointer",
+                color: theme.colors.textMuted,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "color 0.15s",
+                borderRadius: 6,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = theme.colors.textPrimary;
+                e.currentTarget.style.background = theme.colors.bgTertiary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = theme.colors.textMuted;
+                e.currentTarget.style.background = "transparent";
+              }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Nav */}
@@ -292,28 +321,30 @@ export default function Header() {
           </div>
         </nav>
 
-        {/* Toggle */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          style={{
-            padding: "14px 0",
-            border: "none",
-            borderTop: `1px solid ${theme.colors.borderLight}`,
-            background: "transparent",
-            cursor: "pointer",
-            color: theme.colors.textMuted,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "color 0.15s",
-          }}
-          onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.textPrimary}
-          onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: collapsed ? "rotate(0)" : "rotate(180deg)", transition: "transform 0.2s" }}>
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </button>
+        {/* Expand button when collapsed */}
+        {collapsed && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            style={{
+              padding: "14px 0",
+              border: "none",
+              borderTop: `1px solid ${theme.colors.borderLight}`,
+              background: "transparent",
+              cursor: "pointer",
+              color: theme.colors.textMuted,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "color 0.15s",
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.color = theme.colors.textPrimary}
+            onMouseLeave={(e) => e.currentTarget.style.color = theme.colors.textMuted}
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: "rotate(180deg)", transition: "transform 0.2s" }}>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        )}
       </aside>
 
       {/* Top Bar */}
