@@ -91,7 +91,11 @@ export default function TaskViewToggle({
       {views.map((view) => (
         <button
           key={view.id}
-          onClick={() => onViewChange(view.id)}
+          onClick={() => {
+            if (activeView !== view.id) {
+              onViewChange(view.id);
+            }
+          }}
           style={{
             display: "flex",
             alignItems: "center",

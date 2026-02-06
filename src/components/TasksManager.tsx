@@ -104,6 +104,7 @@ export default function TasksManager({
   // View state (table, board, calendar)
   type ViewType = "table" | "board" | "calendar";
   const [activeView, setActiveView] = useState<ViewType>("table");
+  const [isViewTransitioning, setIsViewTransitioning] = useState(false);
   const [statusColumnsData, setStatusColumnsData] = useState<Array<{ id: string; name: string; color: string; order: number }>>([]);
 
   // Timer state
@@ -1662,7 +1663,16 @@ export default function TasksManager({
       }}>
         {/* View Toggle Row */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <TaskViewToggle activeView={activeView} onViewChange={setActiveView} />
+          <TaskViewToggle
+            activeView={activeView}
+            onViewChange={(view) => {
+              if (view !== activeView) {
+                setIsViewTransitioning(true);
+                setActiveView(view);
+                setTimeout(() => setIsViewTransitioning(false), 300);
+              }
+            }}
+          />
           <div style={{ fontSize: 13, color: theme.colors.textMuted }}>
             {tasks.filter(matchesFilters).length} tasks
           </div>
@@ -1811,8 +1821,8 @@ export default function TasksManager({
 
       {/* Tasks Display */}
       <div style={{
-        opacity: isFilterTransitioning ? 0 : 1,
-        transform: isFilterTransitioning ? "translateY(10px)" : "translateY(0)",
+        opacity: (isFilterTransitioning || isViewTransitioning) ? 0 : 1,
+        transform: (isFilterTransitioning || isViewTransitioning) ? "translateY(10px)" : "translateY(0)",
         transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
       }}>
       {activeView === "board" ? (
