@@ -221,11 +221,11 @@ export default function Header() {
           padding: collapsed ? "18px 14px" : "18px 22px",
           borderBottom: `1px solid ${theme.colors.borderLight}`,
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: collapsed ? "center" : "space-between",
           alignItems: "center",
           minHeight: 60,
         }}>
-          <Link href="/dashboard">
+          <Link href="/dashboard" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
             <img src="/Wick-logo-black.png" alt="Wick" style={{ height: collapsed ? 18 : 24, transition: "height 0.2s" }} />
           </Link>
           {!collapsed && (
