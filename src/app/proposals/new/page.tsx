@@ -106,6 +106,9 @@ export default function NewProposalPage() {
   const [language, setLanguage] = useState("en");
   const [briefSource, setBriefSource] = useState("");
   const [briefContent, setBriefContent] = useState("");
+  const [briefSections, setBriefSections] = useState<{ label: string; content: string }[]>([
+    { label: "Email / Main Brief", content: "" },
+  ]);
   const [isCreating, setIsCreating] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
@@ -800,29 +803,146 @@ export default function NewProposalPage() {
             </div>
           </div>
 
-          {/* Brief Content */}
+          {/* Brief Sections — paste from multiple docs */}
           <div style={{ marginBottom: 24 }}>
-            <label style={labelStyle}>
-              Paste the client&apos;s requirements below
-              <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 6 }}>
-                (email, brief document, call notes, etc.)
-              </span>
-            </label>
-            <textarea
-              value={briefContent}
-              onChange={(e) => setBriefContent(e.target.value)}
-              placeholder="Paste the client's email, brief, requirements document, or call notes here...&#10;&#10;The more detail you provide, the better the AI analysis will be."
-              rows={12}
-              style={{
-                ...inputStyle,
-                resize: "vertical",
-                minHeight: 200,
-                lineHeight: 1.6,
-              }}
-            />
-            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+              <label style={{ ...labelStyle, marginBottom: 0 }}>
+                Paste client requirements
+                <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 6 }}>
+                  (add a section per document/email)
+                </span>
+              </label>
+              <button
+                onClick={() => setBriefSections([...briefSections, { label: `Document ${briefSections.length + 1}`, content: "" }])}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 5,
+                  padding: "5px 12px",
+                  borderRadius: 6,
+                  border: `1px solid ${theme.colors.borderLight}`,
+                  background: "transparent",
+                  color: theme.colors.primary,
+                  fontWeight: 600,
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                  transition: "all 0.15s ease",
+                }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+                Add Section
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {briefSections.map((section, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    borderRadius: 10,
+                    border: `1px solid ${theme.colors.borderLight}`,
+                    overflow: "hidden",
+                  }}
+                >
+                  {/* Section header */}
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "8px 12px",
+                    background: theme.colors.bgPrimary,
+                    borderBottom: `1px solid ${theme.colors.borderLight}`,
+                  }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={theme.colors.textMuted} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                    </svg>
+                    <input
+                      type="text"
+                      value={section.label}
+                      onChange={(e) => {
+                        const updated = [...briefSections];
+                        updated[idx].label = e.target.value;
+                        setBriefSections(updated);
+                      }}
+                      style={{
+                        flex: 1,
+                        border: "none",
+                        outline: "none",
+                        background: "transparent",
+                        fontSize: 13,
+                        fontWeight: 600,
+                        color: theme.colors.textPrimary,
+                        fontFamily: "inherit",
+                      }}
+                      placeholder="Section label (e.g., Brand Guidelines)"
+                    />
+                    <span style={{ fontSize: 11, color: theme.colors.textMuted, whiteSpace: "nowrap" }}>
+                      {section.content ? `${section.content.split(/\s+/).filter(Boolean).length} words` : ""}
+                    </span>
+                    {briefSections.length > 1 && (
+                      <button
+                        onClick={() => setBriefSections(briefSections.filter((_, i) => i !== idx))}
+                        style={{
+                          background: "transparent",
+                          border: "none",
+                          color: theme.colors.textMuted,
+                          cursor: "pointer",
+                          padding: 2,
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                        title="Remove section"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  {/* Section textarea */}
+                  <textarea
+                    value={section.content}
+                    onChange={(e) => {
+                      const updated = [...briefSections];
+                      updated[idx].content = e.target.value;
+                      setBriefSections(updated);
+                      // Also combine into briefContent for the API
+                      const combined = updated
+                        .filter(s => s.content.trim())
+                        .map(s => `--- ${s.label} ---\n${s.content}`)
+                        .join("\n\n");
+                      setBriefContent(combined);
+                    }}
+                    placeholder={idx === 0
+                      ? "Paste the client's email or main brief here..."
+                      : "Paste content from the next document here..."
+                    }
+                    rows={idx === 0 ? 8 : 6}
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      border: "none",
+                      outline: "none",
+                      fontSize: 14,
+                      color: theme.colors.textPrimary,
+                      background: theme.colors.bgSecondary,
+                      resize: "vertical",
+                      minHeight: idx === 0 ? 160 : 120,
+                      lineHeight: 1.6,
+                      fontFamily: "inherit",
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
               <span style={{ fontSize: 12, color: theme.colors.textMuted }}>
-                {briefContent.length > 0 ? `${briefContent.split(/\s+/).filter(Boolean).length} words` : ""}
+                {briefSections.length} section{briefSections.length > 1 ? "s" : ""}
+                {briefContent.length > 0 ? ` · ${briefContent.split(/\s+/).filter(Boolean).length} total words` : ""}
               </span>
               <span style={{ fontSize: 12, color: theme.colors.textMuted }}>
                 You can also skip this and build the proposal manually
