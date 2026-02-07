@@ -118,8 +118,12 @@ export default function NewProposalPage() {
   const [quickAddName, setQuickAddName] = useState("");
   const [quickAddEmail, setQuickAddEmail] = useState("");
   const [quickAddIndustry, setQuickAddIndustry] = useState("");
+  const [quickAddPartnerAgency, setQuickAddPartnerAgency] = useState("");
   const [isAddingClient, setIsAddingClient] = useState(false);
   const clientDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Partner agency for the proposal (sourced through another agency)
+  const [partnerAgencyId, setPartnerAgencyId] = useState("");
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -146,6 +150,18 @@ export default function NewProposalPage() {
 
   const clients = clientsData?.clients || [];
   const selectedClient = clients.find((c: any) => c.id === clientId);
+
+  // Fetch partner agencies
+  const { data: partnerAgencies = [] } = useQuery({
+    queryKey: ["partner-agencies"],
+    queryFn: async () => {
+      const res = await fetch("/api/partner-agencies");
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: status === "authenticated",
+    staleTime: 5 * 60 * 1000,
+  });
 
   // Filter clients by search
   const filteredClients = clients.filter((c: any) => {
@@ -195,6 +211,7 @@ export default function NewProposalPage() {
       setQuickAddName("");
       setQuickAddEmail("");
       setQuickAddIndustry("");
+      setQuickAddPartnerAgency("");
       setShowClientDropdown(false);
     } catch (error) {
       console.error("Error adding client:", error);
@@ -580,6 +597,26 @@ export default function NewProposalPage() {
                             fontFamily: "inherit",
                           }}
                         />
+                        <select
+                          value={quickAddPartnerAgency}
+                          onChange={(e) => setQuickAddPartnerAgency(e.target.value)}
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            border: `1px solid ${theme.colors.borderLight}`,
+                            fontSize: 13,
+                            outline: "none",
+                            fontFamily: "inherit",
+                            color: quickAddPartnerAgency ? theme.colors.textPrimary : theme.colors.textMuted,
+                            cursor: "pointer",
+                            background: "white",
+                          }}
+                        >
+                          <option value="">Sourced through (optional)</option>
+                          {partnerAgencies.map((pa: any) => (
+                            <option key={pa.id} value={pa.id}>{pa.name}</option>
+                          ))}
+                        </select>
                         <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
                           <button
                             onClick={() => {
@@ -587,6 +624,7 @@ export default function NewProposalPage() {
                               setQuickAddName("");
                               setQuickAddEmail("");
                               setQuickAddIndustry("");
+                              setQuickAddPartnerAgency("");
                             }}
                             style={{
                               flex: 1,
@@ -622,7 +660,7 @@ export default function NewProposalPage() {
                           </button>
                         </div>
                         <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: "center" }}>
-                          Client will be added to CRM as a Lead
+                          Client will be added to your CRM pipeline as a Lead
                         </div>
                       </div>
                     </div>
@@ -659,7 +697,7 @@ export default function NewProposalPage() {
             />
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 28 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 20, marginBottom: 20 }}>
             {/* Currency */}
             <div>
               <label style={labelStyle}>Currency</label>
@@ -676,6 +714,25 @@ export default function NewProposalPage() {
               <select value={language} onChange={(e) => setLanguage(e.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
                 <option value="en">English</option>
                 <option value="ar">Arabic</option>
+              </select>
+            </div>
+
+            {/* Partner Agency */}
+            <div>
+              <label style={labelStyle}>Sourced Through</label>
+              <select
+                value={partnerAgencyId}
+                onChange={(e) => setPartnerAgencyId(e.target.value)}
+                style={{
+                  ...inputStyle,
+                  cursor: "pointer",
+                  color: partnerAgencyId ? theme.colors.textPrimary : theme.colors.textMuted,
+                }}
+              >
+                <option value="">Direct client</option>
+                {partnerAgencies.map((pa: any) => (
+                  <option key={pa.id} value={pa.id}>{pa.name}</option>
+                ))}
               </select>
             </div>
           </div>
