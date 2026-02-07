@@ -57,6 +57,7 @@ model User {
   taskComments         TaskComment[]        @relation("UserTaskComments")
   commentAttachments   TaskCommentAttachment[] @relation("UserCommentAttachments")
   taskAttachments      TaskAttachment[]     @relation("UserTaskAttachments")
+  proposals            Proposal[]           @relation("UserProposals")
 
   @@index([email], map: "idx_users_email")
   @@map("users")
@@ -100,6 +101,7 @@ model Client {
   users            User[]          @relation("UserClient")
   expenses         ProjectExpense[] @relation("ClientExpenses")
   keyDates         ClientKeyDate[]  @relation("ClientKeyDates")
+  proposals        Proposal[]       @relation("ClientProposals")
   pinned           Boolean       @default(false)
 
   @@index([status])
@@ -602,6 +604,8 @@ model Agency {
   mediaFiles    MediaFile[]
   mediaFolders  MediaFolder[]
   conversations Conversation[]  @relation("ConversationAgency")
+  proposals     Proposal[]      @relation("AgencyProposals")
+  servicePackages ServicePackage[] @relation("AgencyServicePackages")
 
   @@index([slug])
   @@index([slug], map: "idx_agencies_slug")
@@ -1884,4 +1888,292 @@ model TaskAttachment {
   @@index([mediaFileId])
   @@index([uploadedBy])
   @@map("task_attachments")
+}
+
+// ==========================================
+// ==========================================
+// PROPOSALS MODULE
+// ==========================================
+
+model Proposal {
+  id                String           @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId          String           @map("agency_id")
+  clientId          String           @map("client_id")
+
+  // Brief intake
+  briefSource       String?          @map("brief_source") // EMAIL, DOCUMENT, MANUAL, CALL_NOTES
+  briefContent      String?          @map("brief_content") @db.Text // Original client requirements (pasted/uploaded)
+  briefAttachments  Json?            @map("brief_attachments") // S3 keys for uploaded docs
+  extractedData     Json?            @map("extracted_data") // AI-extracted: { projectType, requirements, budget, timeline, painPoints, missingInfo }
+
+  // Proposal details
+  title             String
+  projectType       String           @map("project_type") // WEB_DEV, BRANDING, SEO, SOCIAL_MEDIA, FULL_PACKAGE, CUSTOM
+  status            ProposalStatus   @default(DRAFT)
+  language          String           @default("en") // en, ar — for multi-language proposals
+  currency          String           @default("AED")
+
+  // Content sections (rich text, stored as JSON array)
+  // Each: { id, title, titleAr?, content, contentAr?, order, type: COVER|ABOUT|SCOPE|TIMELINE|PRICING|TERMS|CUSTOM }
+  sections          Json             @default("[]")
+
+  // Pricing summary
+  subtotal          Decimal          @default(0) @db.Decimal(10, 2)
+  taxRate           Decimal?         @map("tax_rate") @db.Decimal(5, 2)
+  taxAmount         Decimal?         @map("tax_amount") @db.Decimal(10, 2)
+  discountType      String?          @map("discount_type") // PERCENTAGE, FIXED
+  discountValue     Decimal?         @map("discount_value") @db.Decimal(10, 2)
+  total             Decimal          @default(0) @db.Decimal(10, 2)
+
+  // Tiered pricing (startup vs ongoing — like Habits UAE model)
+  startupPrice      Decimal?         @map("startup_price") @db.Decimal(10, 2) // Price for first N months
+  startupMonths     Int?             @map("startup_months") // How many months at startup price
+  ongoingPrice      Decimal?         @map("ongoing_price") @db.Decimal(10, 2) // Price after startup period
+
+  // Payment terms
+  // milestones: [{ name: "Upfront", percentage: 50 }, { name: "Design Approval", percentage: 30 }, { name: "Delivery", percentage: 20 }]
+  paymentTerms      Json?            @map("payment_terms")
+  paymentSchedule   String?          @map("payment_schedule") // MILESTONE, MONTHLY, NET_30, CUSTOM
+
+  // Public access
+  password          String?
+  publicToken       String?          @unique @map("public_token")
+  expiresAt         DateTime?        @map("expires_at") @db.Timestamp(6)
+
+  // Engagement tracking
+  viewCount         Int              @default(0) @map("view_count")
+  lastViewedAt      DateTime?        @map("last_viewed_at") @db.Timestamp(6)
+  timePerSection    Json?            @map("time_per_section") // { sectionId: seconds }
+
+  // E-Signature
+  signedAt          DateTime?        @map("signed_at") @db.Timestamp(6)
+  signedBy          String?          @map("signed_by")
+  signedEmail       String?          @map("signed_email")
+  signatureData     String?          @map("signature_data") @db.Text // Base64 signature
+  signedIpAddress   String?          @map("signed_ip_address")
+  signedUserAgent   String?          @map("signed_user_agent") @db.Text
+
+  // Payment collection (Stripe Connect — each agency has their own Stripe)
+  paymentRequired   Boolean          @default(false) @map("payment_required")
+  paymentStatus     PaymentStatus?   @map("payment_status")
+  stripeAccountId   String?          @map("stripe_account_id") // Agency's Stripe Connect account
+  paymentIntentId   String?          @map("payment_intent_id")
+  paidAt            DateTime?        @map("paid_at") @db.Timestamp(6)
+  paidAmount        Decimal?         @map("paid_amount") @db.Decimal(10, 2)
+
+  // Version control
+  version           Int              @default(1)
+  parentId          String?          @map("parent_id")
+
+  // Metadata
+  createdBy         String           @map("created_by")
+  sentAt            DateTime?        @map("sent_at") @db.Timestamp(6)
+  acceptedAt        DateTime?        @map("accepted_at") @db.Timestamp(6)
+  declinedAt        DateTime?        @map("declined_at") @db.Timestamp(6)
+  declinedReason    String?          @map("declined_reason") @db.Text
+  createdAt         DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt         DateTime         @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  items             ProposalItem[]   @relation("ProposalItems")
+  comments          ProposalComment[] @relation("ProposalComments")
+  activities        ProposalActivity[] @relation("ProposalActivities")
+  parent            Proposal?        @relation("ProposalRevisions", fields: [parentId], references: [id])
+  revisions         Proposal[]       @relation("ProposalRevisions")
+  client            Client           @relation("ClientProposals", fields: [clientId], references: [id])
+  agency            Agency           @relation("AgencyProposals", fields: [agencyId], references: [id])
+  createdByUser     User             @relation("UserProposals", fields: [createdBy], references: [id])
+
+  @@index([agencyId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdBy])
+  @@index([publicToken])
+  @@index([createdAt])
+  @@map("proposals")
+}
+
+model ProposalItem {
+  id             String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  proposalId     String    @map("proposal_id")
+
+  // Item details
+  type           String    // SERVICE, DELIVERABLE, PACKAGE, ADD_ON, CUSTOM
+  name           String
+  nameAr         String?   @map("name_ar")
+  description    String?   @db.Text
+  descriptionAr  String?   @map("description_ar") @db.Text
+
+  // Categorization — maps to your service categories
+  // BUILD_AND_FILL, PLAN_AND_PROMOTE, CAPTURE_AND_STORE, TAILOR_AND_AUTOMATE, CUSTOM
+  category       String?
+  subcategory    String?   // Website, Newsletter, SEO, Social Media, etc.
+  order          Int       @default(0)
+
+  // Pricing
+  quantity       Decimal   @default(1) @db.Decimal(10, 2)
+  unitPrice      Decimal   @map("unit_price") @db.Decimal(10, 2)
+  total          Decimal   @db.Decimal(10, 2)
+
+  // Time estimation
+  estimatedHours Decimal?  @map("estimated_hours") @db.Decimal(10, 2)
+  timeline       String?   // "2 weeks", "ongoing monthly"
+
+  // Recurrence (for retainer items)
+  isRecurring    Boolean   @default(false) @map("is_recurring")
+  frequency      String?   // MONTHLY, QUARTERLY, YEARLY
+
+  // Optional/Required — client can toggle optional add-ons
+  isOptional     Boolean   @default(false) @map("is_optional")
+  isSelected     Boolean   @default(true) @map("is_selected")
+
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  proposal       Proposal  @relation("ProposalItems", fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([type])
+  @@index([category])
+  @@map("proposal_items")
+}
+
+// Client questions & feedback per section (like Habits UAE inline questions)
+model ProposalComment {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  proposalId  String    @map("proposal_id")
+  sectionId   String?   @map("section_id") // Links to a section in proposal.sections JSON
+  itemId      String?   @map("item_id") // Links to a ProposalItem
+
+  author      String    // Name of commenter (client or team member)
+  authorEmail String?   @map("author_email")
+  authorType  String    @default("CLIENT") @map("author_type") // CLIENT, TEAM
+  content     String    @db.Text
+  isResolved  Boolean   @default(false) @map("is_resolved")
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  proposal    Proposal  @relation("ProposalComments", fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@map("proposal_comments")
+}
+
+// Audit trail: sent, viewed, signed, paid, commented, revised
+model ProposalActivity {
+  id          String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  proposalId  String    @map("proposal_id")
+
+  action      String    // CREATED, SENT, VIEWED, COMMENTED, SIGNED, PAID, REVISED, DECLINED, EXPIRED
+  details     Json?     // Extra context: { section: "Pricing", viewDuration: 45 }
+  performedBy String?   @map("performed_by") // User ID or client email
+  ipAddress   String?   @map("ip_address")
+
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+
+  proposal    Proposal  @relation("ProposalActivities", fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("proposal_activities")
+}
+
+model ProposalTemplate {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId        String    @map("agency_id")
+
+  name            String
+  description     String?   @db.Text
+  projectType     String    @map("project_type") // WEB_DEV, BRANDING, SEO, SOCIAL_MEDIA, FULL_PACKAGE
+  industry        String?   // Tech, Hospitality, Retail, F&B, Healthcare, etc.
+
+  // Template content
+  sections        Json      @default("[]") // Pre-configured proposal sections
+  defaultItems    Json?     @map("default_items") // Default line items with categories
+
+  // Default settings
+  defaultCurrency     String   @default("AED") @map("default_currency")
+  defaultPaymentTerms Json?    @map("default_payment_terms")
+  defaultLanguage     String   @default("en") @map("default_language")
+
+  // Settings
+  isActive        Boolean   @default(true) @map("is_active")
+  isDefault       Boolean   @default(false) @map("is_default")
+
+  // Usage tracking
+  usageCount      Int       @default(0) @map("usage_count")
+
+  createdBy       String    @map("created_by")
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  @@index([agencyId])
+  @@index([projectType])
+  @@index([isActive])
+  @@map("proposal_templates")
+}
+
+// Service packages — maps to your standard 5-tier pricing (Entry Level → Enterprise)
+// Each package contains service categories with deliverables
+model ServicePackage {
+  id              String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  agencyId        String    @map("agency_id")
+
+  name            String    // "Entry Level", "Starter Plus", "Standard", "Professional", "Enterprise"
+  nameAr          String?   @map("name_ar")
+  tier            Int       @default(0) // 0=Entry, 1=Starter Plus, 2=Standard, 3=Professional, 4=Enterprise
+  tagline         String?   // "For Starters and Digital Newbies"
+  taglineAr       String?   @map("tagline_ar")
+  description     String?   @db.Text
+  descriptionAr   String?   @map("description_ar") @db.Text
+
+  // Pricing
+  basePrice       Decimal   @map("base_price") @db.Decimal(10, 2) // Standard monthly price
+  currency        String    @default("AED")
+  startupPrice    Decimal?  @map("startup_price") @db.Decimal(10, 2) // Discounted startup price
+  startupMonths   Int?      @map("startup_months") @default(3) // Months at startup price
+
+  // Service categories with deliverables (matches your spreadsheet structure)
+  // { "BUILD_AND_FILL": { "website": {...}, "newsletter": {...}, "maintenance": {...}, "socialSetup": {...}, "contentSocial": {...}, "contentSite": {...} },
+  //   "PLAN_AND_PROMOTE": { "seo": {...}, "socialServices": {...}, "paidAds": {...} },
+  //   "CAPTURE_AND_STORE": { "tracking": {...}, "audienceBuilding": {...} },
+  //   "TAILOR_AND_AUTOMATE": { "automation": {...}, "dynamicCampaigns": {...} } }
+  services        Json      @default("{}")
+
+  // Display
+  isActive        Boolean   @default(true) @map("is_active")
+  isPopular       Boolean   @default(false) @map("is_popular") // Highlight as recommended
+  order           Int       @default(0)
+
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  agency          Agency    @relation("AgencyServicePackages", fields: [agencyId], references: [id])
+
+  @@index([agencyId])
+  @@index([isActive])
+  @@index([tier])
+  @@map("service_packages")
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  VIEWED
+  NEGOTIATING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+
+  @@map("proposal_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
 }
