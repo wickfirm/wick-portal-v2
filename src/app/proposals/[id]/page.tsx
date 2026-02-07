@@ -114,6 +114,7 @@ export default function ProposalBuilderPage() {
   const [activeTab, setActiveTab] = useState<"items" | "sections" | "settings" | "activity">("items");
   const [showAddItem, setShowAddItem] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [editingItemData, setEditingItemData] = useState<ProposalItem | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSendModal, setShowSendModal] = useState(false);
   const [sendPassword, setSendPassword] = useState("");
@@ -243,6 +244,42 @@ export default function ProposalBuilderPage() {
       await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
     } catch (err) {
       console.error(err);
+    }
+  }, [id, queryClient]);
+
+  const handleSaveItem = useCallback(async (updatedItem: ProposalItem) => {
+    setIsSaving(true);
+    try {
+      await fetch(`/api/proposals/${id}/items`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: [{
+            id: updatedItem.id,
+            name: updatedItem.name,
+            description: updatedItem.description,
+            category: updatedItem.category,
+            subcategory: updatedItem.subcategory,
+            type: updatedItem.type,
+            quantity: updatedItem.quantity,
+            unitPrice: updatedItem.unitPrice,
+            isRecurring: updatedItem.isRecurring,
+            frequency: updatedItem.frequency,
+            isOptional: updatedItem.isOptional,
+            isSelected: updatedItem.isSelected,
+            timeline: updatedItem.timeline,
+            estimatedHours: updatedItem.estimatedHours,
+            order: updatedItem.order,
+          }],
+        }),
+      });
+      await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
+      setEditingItemId(null);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to save item");
+    } finally {
+      setIsSaving(false);
     }
   }, [id, queryClient]);
 
@@ -819,97 +856,262 @@ export default function ProposalBuilderPage() {
 
                         {/* Items in this category */}
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {items.map((item) => (
-                            <div
-                              key={item.id}
-                              style={{
-                                ...cardStyle,
-                                padding: "14px 18px",
-                                opacity: item.isSelected ? 1 : 0.5,
-                                borderLeft: `3px solid ${cat.color}`,
-                                transition: "all 0.15s ease",
-                              }}
-                            >
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div style={{ flex: 1 }}>
-                                  <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                                    {/* Toggle checkbox */}
-                                    {item.isOptional && isDraft && (
-                                      <input
-                                        type="checkbox"
-                                        checked={item.isSelected}
-                                        onChange={() => handleToggleItem(item)}
-                                        style={{ cursor: "pointer" }}
-                                      />
-                                    )}
-                                    <span style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
-                                      {item.name}
-                                    </span>
-                                    {item.isRecurring && (
-                                      <span style={{
-                                        padding: "1px 8px", borderRadius: 10,
-                                        fontSize: 10, fontWeight: 600,
-                                        background: theme.colors.infoBg, color: theme.colors.info,
-                                      }}>
-                                        {item.frequency || "RECURRING"}
+                          {items.map((item) => {
+                            const isEditing = editingItemId === item.id;
+                            const ed = isEditing ? editingItemData : null;
+
+                            return isEditing && ed ? (
+                              /* ─── Edit Mode ─── */
+                              <div
+                                key={item.id}
+                                style={{
+                                  ...cardStyle,
+                                  padding: "16px 18px",
+                                  borderLeft: `3px solid ${cat.color}`,
+                                  borderColor: theme.colors.primary,
+                                }}
+                              >
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+                                  <div>
+                                    <label style={labelStyle}>Name</label>
+                                    <input
+                                      type="text" value={ed.name}
+                                      onChange={(e) => setEditingItemData({ ...ed, name: e.target.value })}
+                                      style={inputStyle} autoFocus
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={labelStyle}>Category</label>
+                                    <select
+                                      value={ed.category || "CUSTOM"}
+                                      onChange={(e) => setEditingItemData({ ...ed, category: e.target.value })}
+                                      style={{ ...inputStyle, cursor: "pointer" }}
+                                    >
+                                      {SERVICE_CATEGORIES.map((c) => (
+                                        <option key={c.value} value={c.value}>{c.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                                <div style={{ marginBottom: 10 }}>
+                                  <label style={labelStyle}>Description</label>
+                                  <textarea
+                                    value={ed.description || ""}
+                                    onChange={(e) => setEditingItemData({ ...ed, description: e.target.value })}
+                                    rows={2}
+                                    style={{ ...inputStyle, resize: "vertical", minHeight: 50 }}
+                                  />
+                                </div>
+                                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 10, marginBottom: 10 }}>
+                                  <div>
+                                    <label style={labelStyle}>Qty</label>
+                                    <input
+                                      type="number" min="1" value={ed.quantity}
+                                      onChange={(e) => setEditingItemData({ ...ed, quantity: Number(e.target.value) })}
+                                      style={inputStyle}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={labelStyle}>Unit Price ({proposal.currency})</label>
+                                    <input
+                                      type="number" min="0" step="50" value={ed.unitPrice || ""}
+                                      onChange={(e) => setEditingItemData({ ...ed, unitPrice: Number(e.target.value) })}
+                                      style={inputStyle}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={labelStyle}>Timeline</label>
+                                    <input
+                                      type="text" value={ed.timeline || ""}
+                                      onChange={(e) => setEditingItemData({ ...ed, timeline: e.target.value })}
+                                      placeholder="e.g., 4 weeks"
+                                      style={inputStyle}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={labelStyle}>Total</label>
+                                    <div style={{
+                                      padding: "8px 12px", borderRadius: 8,
+                                      background: theme.colors.bgTertiary, fontSize: 13,
+                                      fontWeight: 700, color: theme.colors.textPrimary,
+                                    }}>
+                                      {formatCurrency(ed.quantity * ed.unitPrice)}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+                                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: theme.colors.textSecondary, cursor: "pointer" }}>
+                                    <input
+                                      type="checkbox" checked={ed.isRecurring}
+                                      onChange={(e) => setEditingItemData({ ...ed, isRecurring: e.target.checked })}
+                                    />
+                                    Recurring
+                                  </label>
+                                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: theme.colors.textSecondary, cursor: "pointer" }}>
+                                    <input
+                                      type="checkbox" checked={ed.isOptional}
+                                      onChange={(e) => setEditingItemData({ ...ed, isOptional: e.target.checked })}
+                                    />
+                                    Optional
+                                  </label>
+                                </div>
+                                <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
+                                  <button
+                                    onClick={() => { setEditingItemId(null); setEditingItemData(null); }}
+                                    style={{
+                                      padding: "7px 16px", borderRadius: 8,
+                                      border: `1px solid ${theme.colors.borderLight}`,
+                                      background: "transparent", color: theme.colors.textSecondary,
+                                      fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+                                    }}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    onClick={() => handleSaveItem(ed)}
+                                    disabled={isSaving}
+                                    style={{
+                                      padding: "7px 18px", borderRadius: 8,
+                                      border: "none",
+                                      background: isSaving ? theme.colors.bgTertiary : theme.colors.primary,
+                                      color: isSaving ? theme.colors.textMuted : "#fff",
+                                      fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                                    }}
+                                  >
+                                    {isSaving ? "Saving..." : "Save"}
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              /* ─── View Mode ─── */
+                              <div
+                                key={item.id}
+                                style={{
+                                  ...cardStyle,
+                                  padding: "14px 18px",
+                                  opacity: item.isSelected ? 1 : 0.5,
+                                  borderLeft: `3px solid ${cat.color}`,
+                                  transition: "all 0.15s ease",
+                                  cursor: isDraft ? "pointer" : "default",
+                                }}
+                                onClick={() => {
+                                  if (isDraft && editingItemId !== item.id) {
+                                    setEditingItemId(item.id);
+                                    setEditingItemData({ ...item });
+                                  }
+                                }}
+                              >
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                  <div style={{ flex: 1 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                      {/* Toggle checkbox */}
+                                      {item.isOptional && isDraft && (
+                                        <input
+                                          type="checkbox"
+                                          checked={item.isSelected}
+                                          onChange={(e) => { e.stopPropagation(); handleToggleItem(item); }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          style={{ cursor: "pointer" }}
+                                        />
+                                      )}
+                                      <span style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
+                                        {item.name}
                                       </span>
-                                    )}
-                                    {item.isOptional && (
+                                      {item.isRecurring && (
+                                        <span style={{
+                                          padding: "1px 8px", borderRadius: 10,
+                                          fontSize: 10, fontWeight: 600,
+                                          background: theme.colors.infoBg, color: theme.colors.info,
+                                        }}>
+                                          {item.frequency || "RECURRING"}
+                                        </span>
+                                      )}
+                                      {item.isOptional && (
+                                        <span style={{
+                                          padding: "1px 8px", borderRadius: 10,
+                                          fontSize: 10, fontWeight: 600,
+                                          background: theme.colors.warningBg, color: theme.colors.warning,
+                                        }}>
+                                          OPTIONAL
+                                        </span>
+                                      )}
                                       <span style={{
                                         padding: "1px 8px", borderRadius: 10,
+                                        fontSize: 10, fontWeight: 500,
+                                        background: theme.colors.bgTertiary, color: theme.colors.textMuted,
+                                      }}>
+                                        {item.type}
+                                      </span>
+                                    </div>
+                                    {item.description && (
+                                      <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4, lineHeight: 1.5 }}>
+                                        {item.description}
+                                      </div>
+                                    )}
+                                    <div style={{ display: "flex", gap: 16, fontSize: 12, color: theme.colors.textMuted }}>
+                                      <span>Qty: {item.quantity}</span>
+                                      <span>@ {formatCurrency(item.unitPrice)}</span>
+                                      {item.timeline && <span>Timeline: {item.timeline}</span>}
+                                      {item.estimatedHours && <span>{item.estimatedHours}h estimated</span>}
+                                    </div>
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                                    {item.unitPrice === 0 && isDraft && (
+                                      <span style={{
+                                        padding: "2px 8px", borderRadius: 6,
                                         fontSize: 10, fontWeight: 600,
                                         background: theme.colors.warningBg, color: theme.colors.warning,
                                       }}>
-                                        OPTIONAL
+                                        NEEDS PRICING
                                       </span>
                                     )}
                                     <span style={{
-                                      padding: "1px 8px", borderRadius: 10,
-                                      fontSize: 10, fontWeight: 500,
-                                      background: theme.colors.bgTertiary, color: theme.colors.textMuted,
+                                      fontSize: 15, fontWeight: 700,
+                                      color: item.unitPrice === 0 ? theme.colors.textMuted : item.isSelected ? theme.colors.textPrimary : theme.colors.textMuted,
                                     }}>
-                                      {item.type}
+                                      {formatCurrency(item.total)}
                                     </span>
+                                    {isDraft && (
+                                      <>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingItemId(item.id);
+                                            setEditingItemData({ ...item });
+                                          }}
+                                          style={{
+                                            background: "transparent", border: "none",
+                                            color: theme.colors.textMuted, cursor: "pointer",
+                                            padding: 4, display: "flex", alignItems: "center",
+                                            borderRadius: 4,
+                                          }}
+                                          title="Edit item"
+                                        >
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                          </svg>
+                                        </button>
+                                        <button
+                                          onClick={(e) => { e.stopPropagation(); handleDeleteItem(item.id); }}
+                                          style={{
+                                            background: "transparent", border: "none",
+                                            color: theme.colors.textMuted, cursor: "pointer",
+                                            padding: 4, display: "flex", alignItems: "center",
+                                            borderRadius: 4,
+                                          }}
+                                          title="Remove item"
+                                        >
+                                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                          </svg>
+                                        </button>
+                                      </>
+                                    )}
                                   </div>
-                                  {item.description && (
-                                    <div style={{ fontSize: 12, color: theme.colors.textSecondary, marginBottom: 4, lineHeight: 1.5 }}>
-                                      {item.description}
-                                    </div>
-                                  )}
-                                  <div style={{ display: "flex", gap: 16, fontSize: 12, color: theme.colors.textMuted }}>
-                                    <span>Qty: {item.quantity}</span>
-                                    <span>@ {formatCurrency(item.unitPrice)}</span>
-                                    {item.timeline && <span>Timeline: {item.timeline}</span>}
-                                    {item.estimatedHours && <span>{item.estimatedHours}h estimated</span>}
-                                  </div>
-                                </div>
-                                <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-                                  <span style={{
-                                    fontSize: 15, fontWeight: 700,
-                                    color: item.isSelected ? theme.colors.textPrimary : theme.colors.textMuted,
-                                  }}>
-                                    {formatCurrency(item.total)}
-                                  </span>
-                                  {isDraft && (
-                                    <button
-                                      onClick={() => handleDeleteItem(item.id)}
-                                      style={{
-                                        background: "transparent", border: "none",
-                                        color: theme.colors.textMuted, cursor: "pointer",
-                                        padding: 4, display: "flex", alignItems: "center",
-                                        borderRadius: 4, transition: "all 0.1s ease",
-                                      }}
-                                      title="Remove item"
-                                    >
-                                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                      </svg>
-                                    </button>
-                                  )}
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     );
