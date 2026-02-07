@@ -39,16 +39,16 @@ export async function POST(
 
 Your analysis should identify:
 1. **Project Type**: What kind of project is this? (WEB_DEV, BRANDING, SEO, SOCIAL_MEDIA, FULL_PACKAGE, MARKETING_RETAINER, MOBILE_APP, ECOMMERCE, CUSTOM)
-2. **Requirements**: Key deliverables and requirements mentioned
-3. **Budget Hints**: Any budget indicators or price sensitivities
-4. **Timeline**: Any mentioned deadlines or urgency
-5. **Pain Points**: Problems the client is trying to solve
-6. **Missing Information**: What critical details are missing that should be asked
-7. **Suggested Services**: Based on the brief, what service categories should be included:
+2. **Requirements**: Key high-level requirements mentioned
+3. **Deliverables**: Extract EVERY specific deliverable/solution the client is asking for. Each deliverable should be a concrete, scoped piece of work that could be included or excluded from a proposal. Group them by category. Give each a unique id, a clear name, a short description of what's involved, and map it to one of the service categories:
    - BUILD_AND_FILL (Website, Newsletter, Maintenance, Social Setup, Content)
    - PLAN_AND_PROMOTE (SEO, Social Media Services, Paid Advertising)
    - CAPTURE_AND_STORE (Tracking, Audience Building)
    - TAILOR_AND_AUTOMATE (Automation, Dynamic Campaigns)
+4. **Budget Hints**: Any budget indicators or price sensitivities
+5. **Timeline**: Any mentioned deadlines or urgency
+6. **Pain Points**: Problems the client is trying to solve
+7. **Missing Information**: What critical details are missing that should be asked
 8. **Scope Assessment**: Is this a small, medium, or large project?
 9. **Recommended Package Tier**: Based on the scope (ENTRY_LEVEL, STARTER_PLUS, STANDARD, PROFESSIONAL, ENTERPRISE)
 
@@ -57,8 +57,24 @@ Industry: ${proposal.client?.industry || "Unknown"}
 
 Respond ONLY with valid JSON in this exact format:
 {
-  "projectType": "WEB_DEV",
+  "projectType": "FULL_PACKAGE",
   "requirements": ["requirement 1", "requirement 2"],
+  "deliverables": [
+    {
+      "id": "del_1",
+      "name": "Brand Identity & Logo Design",
+      "description": "Complete brand naming, logo design, color palette, typography, and brand guidelines",
+      "category": "BUILD_AND_FILL",
+      "estimatedScope": "LARGE"
+    },
+    {
+      "id": "del_2",
+      "name": "Website Design & Development",
+      "description": "Responsive project website with property listings, floor plans, gallery, and contact forms",
+      "category": "BUILD_AND_FILL",
+      "estimatedScope": "LARGE"
+    }
+  ],
   "budgetHints": "any budget information found or null",
   "timeline": "any timeline information or null",
   "painPoints": ["pain point 1"],
@@ -72,12 +88,14 @@ Respond ONLY with valid JSON in this exact format:
   "scopeAssessment": "MEDIUM",
   "recommendedTier": "STANDARD",
   "summary": "Brief 2-3 sentence summary of what the client needs"
-}`;
+}
+
+IMPORTANT: Extract as many distinct deliverables as you can find in the brief. Be specific — e.g., instead of "marketing collateral", break it down into "Brochure Design", "Factsheet Design", "EDM Templates" etc. Each should be a billable item that the agency might or might not include in their proposal.`;
 
     const response = await sendMessage({
       messages: [{ role: "user", content: proposal.briefContent }],
       systemPrompt,
-      maxTokens: 2048,
+      maxTokens: 4096,
     });
 
     // Parse the AI response

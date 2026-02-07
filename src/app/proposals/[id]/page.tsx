@@ -121,6 +121,9 @@ export default function ProposalBuilderPage() {
   const [isSending, setIsSending] = useState(false);
   const [sentUrl, setSentUrl] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
+  const [isGeneratingScope, setIsGeneratingScope] = useState(false);
+  const [deliverablesInitialized, setDeliverablesInitialized] = useState(false);
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -171,6 +174,14 @@ export default function ProposalBuilderPage() {
       setOngoingPrice(proposal.ongoingPrice || 0);
     }
   }, [proposal]);
+
+  // Initialize deliverables selection — none selected by default so user picks
+  useEffect(() => {
+    if (proposal?.extractedData?.deliverables && !deliverablesInitialized) {
+      // Don't pre-select any — let user choose their scope
+      setDeliverablesInitialized(true);
+    }
+  }, [proposal, deliverablesInitialized]);
 
   // ─── Handlers ──────────────────────────────────────────────────
   const handleAddItem = useCallback(async () => {
@@ -271,6 +282,51 @@ export default function ProposalBuilderPage() {
       setIsAnalyzing(false);
     }
   }, [id, queryClient]);
+
+  const handleGenerateScope = useCallback(async () => {
+    if (selectedDeliverables.length === 0) {
+      alert("Please select at least one deliverable to include in your scope");
+      return;
+    }
+    setIsGeneratingScope(true);
+    try {
+      const deliverables = proposal?.extractedData?.deliverables || [];
+      const selected = deliverables.filter((d: any) => selectedDeliverables.includes(d.id));
+
+      // Create line items from selected deliverables
+      const items = selected.map((d: any) => ({
+        name: d.name,
+        description: d.description,
+        category: d.category || "CUSTOM",
+        type: "SERVICE",
+        quantity: 1,
+        unitPrice: 0, // User will fill in pricing
+        isRecurring: false,
+        isOptional: false,
+        isSelected: true,
+      }));
+
+      const res = await fetch(`/api/proposals/${id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Failed to create items");
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
+      setActiveTab("items"); // Switch to items tab to price them
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setIsGeneratingScope(false);
+    }
+  }, [id, selectedDeliverables, proposal, queryClient]);
 
   const handleUpdatePricing = useCallback(async () => {
     setIsSaving(true);
@@ -979,27 +1035,228 @@ export default function ProposalBuilderPage() {
                 </div>
               )}
 
-              {/* Content Sections */}
-              <div style={{ ...cardStyle }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: theme.colors.textPrimary }}>Proposal Sections</span>
-                  <span style={{ fontSize: 12, color: theme.colors.textMuted }}>
-                    Customize what the client sees in the final proposal
-                  </span>
-                </div>
-                <div style={{
-                  padding: 40, textAlign: "center",
-                  border: `1px dashed ${theme.colors.borderLight}`,
-                  borderRadius: 10,
-                }}>
-                  <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>
-                    Section editor coming soon
+              {/* Scope Selector — pick which deliverables you're responsible for */}
+              {proposal.extractedData?.deliverables && proposal.extractedData.deliverables.length > 0 && (
+                <div style={{ ...cardStyle, marginBottom: 16 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 4 }}>
+                        Select Your Scope
+                      </div>
+                      <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                        The brief requests {proposal.extractedData.deliverables.length} deliverables — select the ones you&apos;re responsible for
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                      <button
+                        onClick={() => {
+                          const allIds = proposal.extractedData.deliverables.map((d: any) => d.id);
+                          setSelectedDeliverables(selectedDeliverables.length === allIds.length ? [] : allIds);
+                        }}
+                        style={{
+                          padding: "6px 14px", borderRadius: 6,
+                          border: `1px solid ${theme.colors.borderLight}`,
+                          background: "transparent", color: theme.colors.textSecondary,
+                          fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "inherit",
+                        }}
+                      >
+                        {selectedDeliverables.length === proposal.extractedData.deliverables.length ? "Deselect All" : "Select All"}
+                      </button>
+                    </div>
                   </div>
-                  <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
-                    You'll be able to add cover page, about us, scope of work, timeline, pricing, and terms sections
+
+                  {/* Group deliverables by category */}
+                  {(() => {
+                    const grouped: Record<string, any[]> = {};
+                    proposal.extractedData.deliverables.forEach((d: any) => {
+                      const cat = d.category || "CUSTOM";
+                      if (!grouped[cat]) grouped[cat] = [];
+                      grouped[cat].push(d);
+                    });
+
+                    return SERVICE_CATEGORIES.map((cat) => {
+                      const items = grouped[cat.value];
+                      if (!items || items.length === 0) return null;
+                      return (
+                        <div key={cat.value} style={{ marginBottom: 14 }}>
+                          <div style={{
+                            display: "flex", alignItems: "center", gap: 8,
+                            marginBottom: 8,
+                          }}>
+                            <div style={{ width: 8, height: 8, borderRadius: 2, background: cat.color }} />
+                            <span style={{
+                              fontSize: 11, fontWeight: 700, color: theme.colors.textMuted,
+                              textTransform: "uppercase", letterSpacing: "0.5px",
+                            }}>
+                              {cat.label}
+                            </span>
+                            <button
+                              onClick={() => {
+                                const catIds = items.map((d: any) => d.id);
+                                const allSelected = catIds.every((cid: string) => selectedDeliverables.includes(cid));
+                                if (allSelected) {
+                                  setSelectedDeliverables(selectedDeliverables.filter((sid) => !catIds.includes(sid)));
+                                } else {
+                                  setSelectedDeliverables([...new Set([...selectedDeliverables, ...catIds])]);
+                                }
+                              }}
+                              style={{
+                                padding: "2px 8px", borderRadius: 4,
+                                border: `1px solid ${theme.colors.borderLight}`,
+                                background: "transparent", color: theme.colors.textMuted,
+                                fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                              }}
+                            >
+                              {items.every((d: any) => selectedDeliverables.includes(d.id)) ? "deselect" : "select all"}
+                            </button>
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                            {items.map((d: any) => {
+                              const isSelected = selectedDeliverables.includes(d.id);
+                              return (
+                                <div
+                                  key={d.id}
+                                  onClick={() => {
+                                    setSelectedDeliverables(
+                                      isSelected
+                                        ? selectedDeliverables.filter((sid) => sid !== d.id)
+                                        : [...selectedDeliverables, d.id]
+                                    );
+                                  }}
+                                  style={{
+                                    display: "flex", alignItems: "flex-start", gap: 10,
+                                    padding: "10px 14px", borderRadius: 10,
+                                    border: `1.5px solid ${isSelected ? cat.color : theme.colors.borderLight}`,
+                                    background: isSelected ? `${cat.color}08` : "transparent",
+                                    cursor: "pointer", transition: "all 0.15s ease",
+                                  }}
+                                >
+                                  {/* Checkbox */}
+                                  <div style={{
+                                    width: 20, height: 20, borderRadius: 5,
+                                    border: `2px solid ${isSelected ? cat.color : theme.colors.borderMedium}`,
+                                    background: isSelected ? cat.color : "transparent",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    flexShrink: 0, marginTop: 1,
+                                    transition: "all 0.15s ease",
+                                  }}>
+                                    {isSelected && (
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                        <polyline points="20 6 9 17 4 12" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <div style={{ flex: 1, minWidth: 0 }}>
+                                    <div style={{
+                                      fontSize: 13, fontWeight: 600,
+                                      color: isSelected ? theme.colors.textPrimary : theme.colors.textSecondary,
+                                    }}>
+                                      {d.name}
+                                    </div>
+                                    {d.description && (
+                                      <div style={{
+                                        fontSize: 12, color: theme.colors.textMuted,
+                                        lineHeight: 1.4, marginTop: 2,
+                                      }}>
+                                        {d.description}
+                                      </div>
+                                    )}
+                                  </div>
+                                  {d.estimatedScope && (
+                                    <span style={{
+                                      padding: "2px 8px", borderRadius: 10,
+                                      fontSize: 10, fontWeight: 600, flexShrink: 0,
+                                      background: d.estimatedScope === "LARGE" ? theme.colors.errorBg
+                                        : d.estimatedScope === "MEDIUM" ? theme.colors.warningBg
+                                        : theme.colors.successBg,
+                                      color: d.estimatedScope === "LARGE" ? theme.colors.error
+                                        : d.estimatedScope === "MEDIUM" ? theme.colors.warning
+                                        : theme.colors.success,
+                                    }}>
+                                      {d.estimatedScope}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+
+                  {/* Generate scope button */}
+                  <div style={{
+                    display: "flex", justifyContent: "space-between", alignItems: "center",
+                    marginTop: 16, paddingTop: 16,
+                    borderTop: `1px solid ${theme.colors.borderLight}`,
+                  }}>
+                    <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                      {selectedDeliverables.length} of {proposal.extractedData.deliverables.length} deliverables selected
+                    </div>
+                    <button
+                      onClick={handleGenerateScope}
+                      disabled={selectedDeliverables.length === 0 || isGeneratingScope}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "10px 22px", borderRadius: 10,
+                        background: (selectedDeliverables.length === 0 || isGeneratingScope)
+                          ? theme.colors.bgTertiary : theme.gradients.primary,
+                        color: (selectedDeliverables.length === 0 || isGeneratingScope)
+                          ? theme.colors.textMuted : "#fff",
+                        border: "none", fontWeight: 600, fontSize: 13,
+                        cursor: (selectedDeliverables.length === 0 || isGeneratingScope)
+                          ? "not-allowed" : "pointer",
+                        boxShadow: (selectedDeliverables.length === 0 || isGeneratingScope)
+                          ? "none" : theme.shadows.button,
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {isGeneratingScope ? (
+                        <>
+                          <div style={{
+                            width: 14, height: 14, borderRadius: "50%",
+                            border: `2px solid rgba(255,255,255,0.3)`,
+                            borderTopColor: "#fff",
+                            animation: "spin 0.8s linear infinite",
+                          }} />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          Add {selectedDeliverables.length} Items to Proposal
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* No deliverables — show placeholder */}
+              {(!proposal.extractedData?.deliverables || proposal.extractedData.deliverables.length === 0) && (
+                <div style={{ ...cardStyle }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: theme.colors.textPrimary }}>Scope of Work</span>
+                  </div>
+                  <div style={{
+                    padding: 40, textAlign: "center",
+                    border: `1px dashed ${theme.colors.borderLight}`,
+                    borderRadius: 10,
+                  }}>
+                    <div style={{ fontSize: 13, color: theme.colors.textMuted, marginBottom: 4 }}>
+                      {proposal.briefContent
+                        ? "Run AI analysis above to extract deliverables from the brief"
+                        : "Add a brief first, then analyze it to extract deliverables"}
+                    </div>
+                    <div style={{ fontSize: 12, color: theme.colors.textMuted }}>
+                      AI will identify all requested solutions so you can select what&apos;s in your scope
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
