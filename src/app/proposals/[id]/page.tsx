@@ -120,6 +120,7 @@ export default function ProposalBuilderPage() {
   const [sendExpiry, setSendExpiry] = useState("30");
   const [isSending, setIsSending] = useState(false);
   const [sentUrl, setSentUrl] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -247,6 +248,27 @@ export default function ProposalBuilderPage() {
       await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
     } catch (err) {
       console.error(err);
+    }
+  }, [id, queryClient]);
+
+  const handleAnalyzeBrief = useCallback(async () => {
+    setIsAnalyzing(true);
+    try {
+      const res = await fetch(`/api/proposals/${id}/analyze-brief`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Failed to analyze brief");
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
+      setActiveTab("sections");
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong analyzing the brief");
+    } finally {
+      setIsAnalyzing(false);
     }
   }, [id, queryClient]);
 
@@ -844,6 +866,68 @@ export default function ProposalBuilderPage() {
           {/* ─── Tab: Sections ───────────────────────────── */}
           {activeTab === "sections" && (
             <div>
+              {/* Analyze / Re-analyze button */}
+              {proposal.briefContent && (
+                <div style={{
+                  ...cardStyle, marginBottom: 16,
+                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  background: isAnalyzing ? theme.colors.primaryBg : proposal.extractedData ? theme.colors.bgSecondary : theme.colors.primaryBg,
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    {isAnalyzing ? (
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%",
+                        border: `3px solid ${theme.colors.borderLight}`,
+                        borderTopColor: theme.colors.primary,
+                        animation: "spin 0.8s linear infinite",
+                      }} />
+                    ) : (
+                      <div style={{
+                        width: 32, height: 32, borderRadius: 8,
+                        background: proposal.extractedData ? theme.colors.bgTertiary : theme.colors.primary,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        color: proposal.extractedData ? theme.colors.primary : "#fff",
+                      }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: theme.colors.textPrimary }}>
+                        {isAnalyzing ? "Analyzing brief with AI..." : proposal.extractedData ? "AI Analysis Available" : "Brief ready for AI analysis"}
+                      </div>
+                      <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>
+                        {isAnalyzing
+                          ? "Extracting requirements, scope, and service recommendations..."
+                          : proposal.extractedData
+                            ? "Requirements, scope, and services have been extracted from the brief"
+                            : `${proposal.briefContent.split(/\s+/).filter(Boolean).length} words of brief content ready to analyze`}
+                      </div>
+                    </div>
+                  </div>
+                  {!isAnalyzing && (
+                    <button
+                      onClick={handleAnalyzeBrief}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 6,
+                        padding: "8px 18px", borderRadius: 8,
+                        background: proposal.extractedData ? "transparent" : theme.gradients.primary,
+                        color: proposal.extractedData ? theme.colors.primary : "#fff",
+                        border: proposal.extractedData ? `1px solid ${theme.colors.primary}` : "none",
+                        fontWeight: 600, fontSize: 13, cursor: "pointer",
+                        fontFamily: "inherit", flexShrink: 0,
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
+                      {proposal.extractedData ? "Re-analyze" : "Analyze with AI"}
+                    </button>
+                  )}
+                </div>
+              )}
+
               {/* AI Brief Summary */}
               {proposal.extractedData && (
                 <div style={{ ...cardStyle, marginBottom: 16 }}>
