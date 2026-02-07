@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { theme } from "@/lib/theme";
 
 const PROJECT_TYPES = [
@@ -95,6 +95,7 @@ type ExtractedData = {
 export default function NewProposalPage() {
   const router = useRouter();
   const { status } = useSession();
+  const queryClient = useQueryClient();
 
   // Form state
   const [step, setStep] = useState(1); // 1=Client & Details, 2=Brief, 3=AI Analysis
@@ -110,6 +111,27 @@ export default function NewProposalPage() {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [createdProposalId, setCreatedProposalId] = useState<string | null>(null);
 
+  // Client search & quick-add state
+  const [clientSearch, setClientSearch] = useState("");
+  const [showClientDropdown, setShowClientDropdown] = useState(false);
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [quickAddName, setQuickAddName] = useState("");
+  const [quickAddEmail, setQuickAddEmail] = useState("");
+  const [quickAddIndustry, setQuickAddIndustry] = useState("");
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const clientDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (clientDropdownRef.current && !clientDropdownRef.current.contains(e.target as Node)) {
+        setShowClientDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   // Fetch clients
   const { data: clientsData } = useQuery({
     queryKey: ["clients-for-proposal"],
@@ -123,9 +145,64 @@ export default function NewProposalPage() {
   });
 
   const clients = clientsData?.clients || [];
-
-  // Auto-generate title when client and type are selected
   const selectedClient = clients.find((c: any) => c.id === clientId);
+
+  // Filter clients by search
+  const filteredClients = clients.filter((c: any) => {
+    if (!clientSearch) return true;
+    const q = clientSearch.toLowerCase();
+    return (
+      c.name.toLowerCase().includes(q) ||
+      (c.nickname && c.nickname.toLowerCase().includes(q)) ||
+      (c.email && c.email.toLowerCase().includes(q))
+    );
+  });
+
+  // Quick add client handler
+  const handleQuickAddClient = async () => {
+    if (!quickAddName.trim()) return;
+    setIsAddingClient(true);
+    try {
+      const res = await fetch("/api/clients", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: quickAddName.trim(),
+          primaryEmail: quickAddEmail.trim() || null,
+          industry: quickAddIndustry.trim() || null,
+          status: "LEAD", // New client from proposal = Lead
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Failed to create client");
+        return;
+      }
+
+      const newClient = await res.json();
+
+      // Refresh client list
+      await queryClient.invalidateQueries({ queryKey: ["clients-for-proposal"] });
+
+      // Select the new client
+      setClientId(newClient.id);
+      setClientSearch(quickAddName.trim());
+      setTitle(`${quickAddName.trim()} - Proposal`);
+
+      // Reset quick add
+      setShowQuickAdd(false);
+      setQuickAddName("");
+      setQuickAddEmail("");
+      setQuickAddIndustry("");
+      setShowClientDropdown(false);
+    } catch (error) {
+      console.error("Error adding client:", error);
+      alert("Something went wrong");
+    } finally {
+      setIsAddingClient(false);
+    }
+  };
 
   const handleCreateAndAnalyze = useCallback(async () => {
     if (!clientId || !title) return;
@@ -268,27 +345,290 @@ export default function NewProposalPage() {
           padding: 28,
         }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
-            {/* Client Select */}
-            <div>
+            {/* Client Select with Search & Quick Add */}
+            <div ref={clientDropdownRef} style={{ position: "relative" }}>
               <label style={labelStyle}>Client *</label>
-              <select
-                value={clientId}
-                onChange={(e) => {
-                  setClientId(e.target.value);
-                  const client = clients.find((c: any) => c.id === e.target.value);
-                  if (client && !title) {
-                    setTitle(`${client.name} - Proposal`);
-                  }
+              <div
+                style={{
+                  ...inputStyle,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  cursor: "text",
+                  padding: 0,
+                  overflow: "hidden",
                 }}
-                style={{ ...inputStyle, cursor: "pointer" }}
+                onClick={() => setShowClientDropdown(true)}
               >
-                <option value="">Select a client...</option>
-                {clients.map((c: any) => (
-                  <option key={c.id} value={c.id}>
-                    {c.nickname || c.name}
-                  </option>
-                ))}
-              </select>
+                {selectedClient && !showClientDropdown ? (
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", width: "100%", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <div style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 6,
+                        background: theme.colors.primaryBg,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: theme.colors.primary,
+                      }}>
+                        {selectedClient.name.charAt(0).toUpperCase()}
+                      </div>
+                      <span style={{ fontSize: 14 }}>{selectedClient.nickname || selectedClient.name}</span>
+                      {selectedClient.status && (
+                        <span style={{
+                          padding: "1px 8px",
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: selectedClient.status === "ACTIVE" ? theme.colors.successBg : selectedClient.status === "LEAD" ? theme.colors.warningBg : theme.colors.bgTertiary,
+                          color: selectedClient.status === "ACTIVE" ? theme.colors.success : selectedClient.status === "LEAD" ? theme.colors.warning : theme.colors.textMuted,
+                        }}>
+                          {selectedClient.status}
+                        </span>
+                      )}
+                    </div>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={theme.colors.textMuted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    onChange={(e) => {
+                      setClientSearch(e.target.value);
+                      setShowClientDropdown(true);
+                      if (clientId) {
+                        setClientId("");
+                        setTitle("");
+                      }
+                    }}
+                    onFocus={() => setShowClientDropdown(true)}
+                    placeholder="Search or add a client..."
+                    style={{
+                      border: "none",
+                      outline: "none",
+                      background: "transparent",
+                      fontSize: 14,
+                      color: theme.colors.textPrimary,
+                      width: "100%",
+                      padding: "10px 14px",
+                      fontFamily: "inherit",
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Dropdown */}
+              {showClientDropdown && (
+                <div style={{
+                  position: "absolute",
+                  top: "calc(100% + 4px)",
+                  left: 0,
+                  right: 0,
+                  background: theme.colors.bgSecondary,
+                  border: `1px solid ${theme.colors.borderLight}`,
+                  borderRadius: 10,
+                  boxShadow: theme.shadows.lg,
+                  zIndex: 50,
+                  maxHeight: 280,
+                  overflowY: "auto",
+                }}>
+                  {/* Client results */}
+                  {filteredClients.length > 0 ? (
+                    filteredClients.map((c: any) => (
+                      <div
+                        key={c.id}
+                        onClick={() => {
+                          setClientId(c.id);
+                          setClientSearch(c.nickname || c.name);
+                          setShowClientDropdown(false);
+                          setShowQuickAdd(false);
+                          if (!title) setTitle(`${c.name} - Proposal`);
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          padding: "10px 14px",
+                          cursor: "pointer",
+                          transition: "background 0.1s ease",
+                          borderBottom: `1px solid ${theme.colors.bgTertiary}`,
+                        }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = theme.colors.bgPrimary; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                      >
+                        <div style={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: 8,
+                          background: theme.colors.primaryBg,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: theme.colors.primary,
+                          flexShrink: 0,
+                        }}>
+                          {c.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: theme.colors.textPrimary }}>{c.nickname || c.name}</div>
+                          <div style={{ fontSize: 12, color: theme.colors.textMuted }}>{c.email || c.industry || ""}</div>
+                        </div>
+                        <span style={{
+                          padding: "2px 8px",
+                          borderRadius: 10,
+                          fontSize: 10,
+                          fontWeight: 600,
+                          background: c.status === "ACTIVE" ? theme.colors.successBg : c.status === "LEAD" ? theme.colors.warningBg : theme.colors.bgTertiary,
+                          color: c.status === "ACTIVE" ? theme.colors.success : c.status === "LEAD" ? theme.colors.warning : theme.colors.textMuted,
+                        }}>
+                          {c.status}
+                        </span>
+                      </div>
+                    ))
+                  ) : clientSearch ? (
+                    <div style={{ padding: "14px", textAlign: "center", fontSize: 13, color: theme.colors.textMuted }}>
+                      No clients found for &ldquo;{clientSearch}&rdquo;
+                    </div>
+                  ) : null}
+
+                  {/* Quick Add Button */}
+                  <div
+                    onClick={() => {
+                      setShowQuickAdd(true);
+                      setQuickAddName(clientSearch || "");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "10px 14px",
+                      cursor: "pointer",
+                      borderTop: `1px solid ${theme.colors.borderLight}`,
+                      color: theme.colors.primary,
+                      fontWeight: 600,
+                      fontSize: 13,
+                      transition: "background 0.1s ease",
+                    }}
+                    onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = theme.colors.primaryBg; }}
+                    onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "transparent"; }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    {clientSearch ? `Add "${clientSearch}" as new client` : "Add new client"}
+                  </div>
+
+                  {/* Quick Add Form (inline) */}
+                  {showQuickAdd && (
+                    <div style={{
+                      padding: 14,
+                      borderTop: `1px solid ${theme.colors.borderLight}`,
+                      background: theme.colors.bgPrimary,
+                    }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 10 }}>
+                        Quick Add Client
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                        <input
+                          type="text"
+                          value={quickAddName}
+                          onChange={(e) => setQuickAddName(e.target.value)}
+                          placeholder="Client name *"
+                          autoFocus
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            border: `1px solid ${theme.colors.borderLight}`,
+                            fontSize: 13,
+                            outline: "none",
+                            fontFamily: "inherit",
+                          }}
+                        />
+                        <input
+                          type="email"
+                          value={quickAddEmail}
+                          onChange={(e) => setQuickAddEmail(e.target.value)}
+                          placeholder="Email (optional)"
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            border: `1px solid ${theme.colors.borderLight}`,
+                            fontSize: 13,
+                            outline: "none",
+                            fontFamily: "inherit",
+                          }}
+                        />
+                        <input
+                          type="text"
+                          value={quickAddIndustry}
+                          onChange={(e) => setQuickAddIndustry(e.target.value)}
+                          placeholder="Industry (optional)"
+                          style={{
+                            padding: "8px 12px",
+                            borderRadius: 6,
+                            border: `1px solid ${theme.colors.borderLight}`,
+                            fontSize: 13,
+                            outline: "none",
+                            fontFamily: "inherit",
+                          }}
+                        />
+                        <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                          <button
+                            onClick={() => {
+                              setShowQuickAdd(false);
+                              setQuickAddName("");
+                              setQuickAddEmail("");
+                              setQuickAddIndustry("");
+                            }}
+                            style={{
+                              flex: 1,
+                              padding: "8px",
+                              borderRadius: 6,
+                              border: `1px solid ${theme.colors.borderLight}`,
+                              background: "transparent",
+                              fontSize: 13,
+                              color: theme.colors.textSecondary,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={handleQuickAddClient}
+                            disabled={!quickAddName.trim() || isAddingClient}
+                            style={{
+                              flex: 1,
+                              padding: "8px",
+                              borderRadius: 6,
+                              border: "none",
+                              background: (!quickAddName.trim() || isAddingClient) ? theme.colors.bgTertiary : theme.colors.primary,
+                              color: (!quickAddName.trim() || isAddingClient) ? theme.colors.textMuted : "#fff",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              cursor: (!quickAddName.trim() || isAddingClient) ? "not-allowed" : "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            {isAddingClient ? "Adding..." : "Add as Lead"}
+                          </button>
+                        </div>
+                        <div style={{ fontSize: 11, color: theme.colors.textMuted, textAlign: "center" }}>
+                          Client will be added to CRM as a Lead
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Project Type */}
