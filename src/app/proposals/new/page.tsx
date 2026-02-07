@@ -104,7 +104,7 @@ export default function NewProposalPage() {
   const [projectType, setProjectType] = useState("");
   const [currency, setCurrency] = useState("AED");
   const [language, setLanguage] = useState("en");
-  const [briefSource, setBriefSource] = useState("");
+  const [briefSources, setBriefSources] = useState<string[]>([]);
   const [briefContent, setBriefContent] = useState("");
   const [briefSections, setBriefSections] = useState<{ label: string; content: string }[]>([
     { label: "Email / Main Brief", content: "" },
@@ -237,7 +237,7 @@ export default function NewProposalPage() {
           clientId,
           title,
           projectType: projectType || "CUSTOM",
-          briefSource: briefSource || "MANUAL",
+          briefSource: briefSources.length > 0 ? briefSources.join(",") : "MANUAL",
           briefContent: briefContent || null,
           currency,
           language,
@@ -282,7 +282,7 @@ export default function NewProposalPage() {
     } finally {
       setIsCreating(false);
     }
-  }, [clientId, title, projectType, briefSource, briefContent, currency, language, router]);
+  }, [clientId, title, projectType, briefSources, briefContent, currency, language, router]);
 
   const inputStyle = {
     width: "100%",
@@ -773,33 +773,68 @@ export default function NewProposalPage() {
           border: `1px solid ${theme.colors.borderLight}`,
           padding: 28,
         }}>
-          {/* Brief Source Selection */}
+          {/* Brief Source Selection — multi-select */}
           <div style={{ marginBottom: 24 }}>
-            <label style={labelStyle}>How did the client send their brief?</label>
+            <label style={labelStyle}>
+              How did the client send their brief?
+              <span style={{ fontWeight: 400, color: theme.colors.textMuted, marginLeft: 6 }}>
+                (select all that apply)
+              </span>
+            </label>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 10 }}>
-              {BRIEF_SOURCES.map((src) => (
-                <button
-                  key={src.value}
-                  onClick={() => setBriefSource(src.value)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 8,
-                    padding: "16px 12px",
-                    borderRadius: 12,
-                    border: `2px solid ${briefSource === src.value ? theme.colors.primary : theme.colors.borderLight}`,
-                    background: briefSource === src.value ? theme.colors.primaryBg : "transparent",
-                    color: briefSource === src.value ? theme.colors.primary : theme.colors.textSecondary,
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  {icons[src.icon]}
-                  <span style={{ fontSize: 13, fontWeight: 600 }}>{src.label}</span>
-                </button>
-              ))}
+              {BRIEF_SOURCES.map((src) => {
+                const isSelected = briefSources.includes(src.value);
+                return (
+                  <button
+                    key={src.value}
+                    onClick={() => {
+                      setBriefSources((prev) =>
+                        prev.includes(src.value)
+                          ? prev.filter((v) => v !== src.value)
+                          : [...prev, src.value]
+                      );
+                    }}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "16px 12px",
+                      borderRadius: 12,
+                      border: `2px solid ${isSelected ? theme.colors.primary : theme.colors.borderLight}`,
+                      background: isSelected ? theme.colors.primaryBg : "transparent",
+                      color: isSelected ? theme.colors.primary : theme.colors.textSecondary,
+                      cursor: "pointer",
+                      transition: "all 0.15s ease",
+                      fontFamily: "inherit",
+                      position: "relative",
+                    }}
+                  >
+                    {/* Checkmark badge */}
+                    {isSelected && (
+                      <div style={{
+                        position: "absolute",
+                        top: 6,
+                        right: 6,
+                        width: 18,
+                        height: 18,
+                        borderRadius: "50%",
+                        background: theme.colors.primary,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#fff",
+                      }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                      </div>
+                    )}
+                    {icons[src.icon]}
+                    <span style={{ fontSize: 13, fontWeight: 600 }}>{src.label}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
