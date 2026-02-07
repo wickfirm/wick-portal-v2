@@ -125,6 +125,21 @@ export default function ProposalBuilderPage() {
   const [selectedDeliverables, setSelectedDeliverables] = useState<string[]>([]);
   const [isGeneratingScope, setIsGeneratingScope] = useState(false);
   const [deliverablesInitialized, setDeliverablesInitialized] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+
+  // Website calculator state
+  const [calcTemplates, setCalcTemplates] = useState<number>(5);
+  const [calcPhases, setCalcPhases] = useState([
+    { name: "Wireframes", baseCost: 3500, templateCost: 1000, enabled: true },
+    { name: "Design", baseCost: 4400, templateCost: 1105, enabled: true },
+    { name: "Front-end Development", baseCost: 3250, templateCost: 880, enabled: true },
+    { name: "Back-end Development", baseCost: 4250, templateCost: 880, enabled: true },
+  ]);
+  const [calcExtras, setCalcExtras] = useState([
+    { name: "Project Management", cost: 9650.50, enabled: true, isPercentage: false, percentage: 15 },
+    { name: "Database Setup", cost: 8685.45, enabled: true, isPercentage: false, percentage: 0 },
+    { name: "Additional Animations", cost: 0, enabled: false, isPercentage: false, percentage: 0 },
+  ]);
 
   // New item form state
   const [newItem, setNewItem] = useState({
@@ -364,6 +379,71 @@ export default function ProposalBuilderPage() {
       setIsGeneratingScope(false);
     }
   }, [id, selectedDeliverables, proposal, queryClient]);
+
+  const handleApplyCalculator = useCallback(async () => {
+    setIsSaving(true);
+    try {
+      const items: any[] = [];
+
+      // Add phase items
+      calcPhases.forEach((phase) => {
+        if (!phase.enabled) return;
+        const total = phase.baseCost + (phase.templateCost * calcTemplates);
+        items.push({
+          name: phase.name,
+          description: `Base: ${proposal?.currency || "AED"} ${phase.baseCost.toLocaleString()} + ${calcTemplates} templates × ${proposal?.currency || "AED"} ${phase.templateCost.toLocaleString()}`,
+          category: "BUILD_AND_FILL",
+          type: "SERVICE",
+          quantity: 1,
+          unitPrice: total,
+          isRecurring: false,
+          isOptional: false,
+          isSelected: true,
+        });
+      });
+
+      // Add extras
+      calcExtras.forEach((extra) => {
+        if (!extra.enabled || extra.cost <= 0) return;
+        items.push({
+          name: extra.name,
+          description: null,
+          category: "BUILD_AND_FILL",
+          type: extra.name.includes("Management") ? "SERVICE" : "DELIVERABLE",
+          quantity: 1,
+          unitPrice: extra.cost,
+          isRecurring: false,
+          isOptional: extra.name.includes("Animation"),
+          isSelected: true,
+        });
+      });
+
+      if (items.length === 0) {
+        alert("No items to add. Enable at least one phase.");
+        return;
+      }
+
+      const res = await fetch(`/api/proposals/${id}/items`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        alert(err.error || "Failed to add items");
+        return;
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["proposal", id] });
+      setShowCalculator(false);
+    } catch (err) {
+      console.error(err);
+      alert("Something went wrong");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [id, calcPhases, calcExtras, calcTemplates, proposal, queryClient]);
 
   const handleUpdatePricing = useCallback(async () => {
     setIsSaving(true);
@@ -667,27 +747,47 @@ export default function ProposalBuilderPage() {
           {/* ─── Tab: Line Items ─────────────────────────── */}
           {activeTab === "items" && (
             <div>
-              {/* Add Item Button */}
+              {/* Add Item Buttons */}
               {isDraft && (
                 <div style={{ marginBottom: 16 }}>
                   {!showAddItem ? (
-                    <button
-                      onClick={() => setShowAddItem(true)}
-                      style={{
-                        display: "flex", alignItems: "center", gap: 6,
-                        padding: "10px 20px", borderRadius: 10,
-                        border: `1px dashed ${theme.colors.borderMedium}`,
-                        background: "transparent", color: theme.colors.primary,
-                        fontWeight: 600, fontSize: 13, cursor: "pointer",
-                        width: "100%", justifyContent: "center",
-                        transition: "all 0.15s ease", fontFamily: "inherit",
-                      }}
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      Add Line Item
-                    </button>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={() => setShowAddItem(true)}
+                        style={{
+                          flex: 1,
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "10px 20px", borderRadius: 10,
+                          border: `1px dashed ${theme.colors.borderMedium}`,
+                          background: "transparent", color: theme.colors.primary,
+                          fontWeight: 600, fontSize: 13, cursor: "pointer",
+                          justifyContent: "center",
+                          transition: "all 0.15s ease", fontFamily: "inherit",
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Line Item
+                      </button>
+                      <button
+                        onClick={() => setShowCalculator(true)}
+                        style={{
+                          display: "flex", alignItems: "center", gap: 6,
+                          padding: "10px 20px", borderRadius: 10,
+                          border: `1px solid ${theme.colors.borderMedium}`,
+                          background: theme.colors.bgSecondary, color: theme.colors.textSecondary,
+                          fontWeight: 600, fontSize: 13, cursor: "pointer",
+                          transition: "all 0.15s ease", fontFamily: "inherit",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="4" y="2" width="16" height="20" rx="2" /><line x1="8" y1="6" x2="16" y2="6" /><line x1="8" y1="10" x2="10" y2="10" /><line x1="14" y1="10" x2="16" y2="10" /><line x1="8" y1="14" x2="10" y2="14" /><line x1="14" y1="14" x2="16" y2="14" /><line x1="8" y1="18" x2="16" y2="18" />
+                        </svg>
+                        Website Calculator
+                      </button>
+                    </div>
                   ) : (
                     /* Add Item Form */
                     <div style={{ ...cardStyle, marginBottom: 0 }}>
@@ -1918,6 +2018,327 @@ export default function ProposalBuilderPage() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ─── Website Calculator Modal ────────────────────── */}
+      {showCalculator && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(0,0,0,0.5)", display: "flex",
+          alignItems: "center", justifyContent: "center", zIndex: 1000,
+        }}
+          onClick={() => { if (!isSaving) setShowCalculator(false); }}
+        >
+          <div
+            style={{
+              background: theme.colors.bgSecondary,
+              borderRadius: 16, padding: 28, width: 640,
+              maxHeight: "90vh", overflowY: "auto",
+              boxShadow: theme.shadows.lg,
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: theme.colors.textPrimary }}>
+                  Website Pricing Calculator
+                </div>
+                <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>
+                  Configure phases and templates to auto-calculate pricing
+                </div>
+              </div>
+              <button
+                onClick={() => setShowCalculator(false)}
+                style={{
+                  background: "transparent", border: "none", cursor: "pointer",
+                  color: theme.colors.textMuted, padding: 4,
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Number of templates */}
+            <div style={{
+              padding: 16, borderRadius: 12,
+              background: theme.colors.primaryBg,
+              marginBottom: 20,
+            }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: theme.colors.textPrimary }}>Number of Templates</div>
+                  <div style={{ fontSize: 12, color: theme.colors.textSecondary }}>Unique page templates to design & develop</div>
+                </div>
+                <input
+                  type="number" min="0.5" step="0.5" value={calcTemplates}
+                  onChange={(e) => setCalcTemplates(Number(e.target.value))}
+                  style={{
+                    width: 80, padding: "8px 12px", borderRadius: 8,
+                    border: `2px solid ${theme.colors.primary}`,
+                    fontSize: 18, fontWeight: 700, textAlign: "center" as const,
+                    color: theme.colors.primary, background: "#fff",
+                    outline: "none", fontFamily: "inherit",
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Phases table */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: theme.colors.textPrimary, marginBottom: 10 }}>
+                Development Phases
+              </div>
+              <div style={{
+                borderRadius: 10, border: `1px solid ${theme.colors.borderLight}`,
+                overflow: "hidden",
+              }}>
+                {/* Header */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "30px 1fr 110px 110px 110px",
+                  gap: 0, padding: "8px 12px",
+                  background: theme.colors.bgTertiary,
+                  fontSize: 11, fontWeight: 700, color: theme.colors.textMuted,
+                  textTransform: "uppercase", letterSpacing: "0.5px",
+                }}>
+                  <span />
+                  <span>Phase</span>
+                  <span style={{ textAlign: "right" }}>Cost Base</span>
+                  <span style={{ textAlign: "right" }}>× Template</span>
+                  <span style={{ textAlign: "right" }}>Total</span>
+                </div>
+                {/* Rows */}
+                {calcPhases.map((phase, idx) => {
+                  const phaseTotal = phase.enabled ? phase.baseCost + (phase.templateCost * calcTemplates) : 0;
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "grid", gridTemplateColumns: "30px 1fr 110px 110px 110px",
+                        gap: 0, padding: "10px 12px",
+                        borderTop: `1px solid ${theme.colors.borderLight}`,
+                        opacity: phase.enabled ? 1 : 0.4,
+                        alignItems: "center",
+                      }}
+                    >
+                      <input
+                        type="checkbox" checked={phase.enabled}
+                        onChange={(e) => {
+                          const updated = [...calcPhases];
+                          updated[idx] = { ...updated[idx], enabled: e.target.checked };
+                          setCalcPhases(updated);
+                        }}
+                        style={{ cursor: "pointer" }}
+                      />
+                      <span style={{ fontSize: 13, fontWeight: 500, color: theme.colors.textPrimary }}>
+                        {phase.name}
+                      </span>
+                      <input
+                        type="number" min="0" step="50"
+                        value={phase.baseCost}
+                        onChange={(e) => {
+                          const updated = [...calcPhases];
+                          updated[idx] = { ...updated[idx], baseCost: Number(e.target.value) };
+                          setCalcPhases(updated);
+                        }}
+                        style={{
+                          width: "100%", padding: "4px 8px", borderRadius: 6,
+                          border: `1px solid ${theme.colors.borderLight}`,
+                          fontSize: 13, textAlign: "right" as const,
+                          fontFamily: "inherit", outline: "none",
+                        }}
+                      />
+                      <input
+                        type="number" min="0" step="5"
+                        value={phase.templateCost}
+                        onChange={(e) => {
+                          const updated = [...calcPhases];
+                          updated[idx] = { ...updated[idx], templateCost: Number(e.target.value) };
+                          setCalcPhases(updated);
+                        }}
+                        style={{
+                          width: "100%", padding: "4px 8px", borderRadius: 6,
+                          border: `1px solid ${theme.colors.borderLight}`,
+                          fontSize: 13, textAlign: "right" as const,
+                          fontFamily: "inherit", outline: "none",
+                        }}
+                      />
+                      <div style={{
+                        fontSize: 13, fontWeight: 600, textAlign: "right" as const,
+                        color: phase.enabled ? theme.colors.textPrimary : theme.colors.textMuted,
+                      }}>
+                        {formatCurrency(phaseTotal)}
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Phases subtotal */}
+                <div style={{
+                  display: "grid", gridTemplateColumns: "30px 1fr 110px 110px 110px",
+                  gap: 0, padding: "10px 12px",
+                  borderTop: `2px solid ${theme.colors.borderMedium}`,
+                  background: theme.colors.bgPrimary,
+                }}>
+                  <span />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: theme.colors.textPrimary }}>Phases Subtotal</span>
+                  <span />
+                  <span />
+                  <div style={{ fontSize: 14, fontWeight: 700, textAlign: "right" as const, color: theme.colors.textPrimary }}>
+                    {formatCurrency(calcPhases.reduce((sum, p) => sum + (p.enabled ? p.baseCost + p.templateCost * calcTemplates : 0), 0))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Additional items */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: theme.colors.textPrimary }}>
+                  Additional Services
+                </div>
+                <button
+                  onClick={() => setCalcExtras([...calcExtras, { name: "", cost: 0, enabled: true, isPercentage: false, percentage: 0 }])}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 4,
+                    padding: "4px 10px", borderRadius: 6,
+                    border: `1px solid ${theme.colors.borderLight}`,
+                    background: "transparent", color: theme.colors.primary,
+                    fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                  }}
+                >
+                  + Add
+                </button>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {calcExtras.map((extra, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8,
+                      padding: "8px 12px", borderRadius: 8,
+                      border: `1px solid ${theme.colors.borderLight}`,
+                      opacity: extra.enabled ? 1 : 0.4,
+                    }}
+                  >
+                    <input
+                      type="checkbox" checked={extra.enabled}
+                      onChange={(e) => {
+                        const updated = [...calcExtras];
+                        updated[idx] = { ...updated[idx], enabled: e.target.checked };
+                        setCalcExtras(updated);
+                      }}
+                      style={{ cursor: "pointer", flexShrink: 0 }}
+                    />
+                    <input
+                      type="text" value={extra.name}
+                      onChange={(e) => {
+                        const updated = [...calcExtras];
+                        updated[idx] = { ...updated[idx], name: e.target.value };
+                        setCalcExtras(updated);
+                      }}
+                      placeholder="Service name"
+                      style={{
+                        flex: 1, padding: "4px 8px", borderRadius: 6,
+                        border: `1px solid ${theme.colors.borderLight}`,
+                        fontSize: 13, fontFamily: "inherit", outline: "none",
+                      }}
+                    />
+                    <input
+                      type="number" min="0" step="50" value={extra.cost || ""}
+                      onChange={(e) => {
+                        const updated = [...calcExtras];
+                        updated[idx] = { ...updated[idx], cost: Number(e.target.value) };
+                        setCalcExtras(updated);
+                      }}
+                      placeholder="Cost"
+                      style={{
+                        width: 120, padding: "4px 8px", borderRadius: 6,
+                        border: `1px solid ${theme.colors.borderLight}`,
+                        fontSize: 13, textAlign: "right" as const,
+                        fontFamily: "inherit", outline: "none",
+                      }}
+                    />
+                    <button
+                      onClick={() => setCalcExtras(calcExtras.filter((_, i) => i !== idx))}
+                      style={{
+                        background: "transparent", border: "none",
+                        color: theme.colors.textMuted, cursor: "pointer", padding: 2,
+                      }}
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Grand Total */}
+            <div style={{
+              padding: 16, borderRadius: 12,
+              background: theme.colors.bgPrimary,
+              border: `1px solid ${theme.colors.borderLight}`,
+              marginBottom: 20,
+            }}>
+              {(() => {
+                const phasesTotal = calcPhases.reduce((sum, p) => sum + (p.enabled ? p.baseCost + p.templateCost * calcTemplates : 0), 0);
+                const extrasTotal = calcExtras.reduce((sum, e) => sum + (e.enabled ? e.cost : 0), 0);
+                const grandTotal = phasesTotal + extrasTotal;
+                return (
+                  <>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6, fontSize: 13 }}>
+                      <span style={{ color: theme.colors.textSecondary }}>Phases ({calcPhases.filter(p => p.enabled).length})</span>
+                      <span style={{ fontWeight: 600, color: theme.colors.textPrimary }}>{formatCurrency(phasesTotal)}</span>
+                    </div>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10, fontSize: 13 }}>
+                      <span style={{ color: theme.colors.textSecondary }}>Additional Services ({calcExtras.filter(e => e.enabled && e.cost > 0).length})</span>
+                      <span style={{ fontWeight: 600, color: theme.colors.textPrimary }}>{formatCurrency(extrasTotal)}</span>
+                    </div>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between",
+                      paddingTop: 10, borderTop: `2px solid ${theme.colors.borderMedium}`,
+                    }}>
+                      <span style={{ fontSize: 16, fontWeight: 800, color: theme.colors.textPrimary }}>Grand Total</span>
+                      <span style={{ fontSize: 20, fontWeight: 800, color: theme.colors.primary }}>{formatCurrency(grandTotal)}</span>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setShowCalculator(false)}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 10,
+                  background: "transparent", color: theme.colors.textSecondary,
+                  border: `1px solid ${theme.colors.borderLight}`,
+                  fontWeight: 500, fontSize: 13,
+                  cursor: "pointer", fontFamily: "inherit",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleApplyCalculator}
+                disabled={isSaving}
+                style={{
+                  flex: 1, padding: "10px", borderRadius: 10,
+                  background: isSaving ? theme.colors.bgTertiary : theme.gradients.primary,
+                  color: isSaving ? theme.colors.textMuted : "#fff",
+                  border: "none", fontWeight: 600, fontSize: 13,
+                  cursor: isSaving ? "not-allowed" : "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {isSaving ? "Adding..." : "Add All Items to Proposal"}
+              </button>
+            </div>
           </div>
         </div>
       )}
