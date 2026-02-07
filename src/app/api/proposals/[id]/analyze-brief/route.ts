@@ -74,16 +74,17 @@ Respond ONLY with valid JSON in this exact format:
   "summary": "Brief 2-3 sentence summary of what the client needs"
 }`;
 
-    const response = await sendMessage(
-      [{ role: "user", content: proposal.briefContent }],
-      systemPrompt
-    );
+    const response = await sendMessage({
+      messages: [{ role: "user", content: proposal.briefContent }],
+      systemPrompt,
+      maxTokens: 2048,
+    });
 
     // Parse the AI response
     let extractedData;
     try {
-      // Try to find JSON in the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      // Try to find JSON in the response text
+      const jsonMatch = response.message.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         extractedData = JSON.parse(jsonMatch[0]);
       } else {
